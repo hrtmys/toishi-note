@@ -27,7 +27,7 @@
     "nodemon": "^3.1.14",
     "postcss": "^8.5.15",
     "postcss-cli": "^11.0.1",
-    "sass": "^1.100.0",
+    "sass": "^1.103.1",
     "sortablejs": "^1.15.7",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
