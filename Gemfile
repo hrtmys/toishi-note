@@ -77,7 +77,7 @@ group :test do
 end
 
 # Bundle multiple exported notes into a single .zip download
-gem "rubyzip", "~> 3.0", require: "zip"
+gem "rubyzip", "~> 3.5", require: "zip"
 
 # Complete locale files (pluralization, date/time, and — the reason this is
 # here — ActiveRecord/ActionView validation error message templates) for
