@@ -1,0 +1,19 @@
+// Use a UD (Universal Design) font throughout for readability.
+body {
+  font-family: "BIZ UDPGothic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+// A bare `monospace` falls back to a proportional CJK face, misaligning
+// full/half-width characters. Orders installable yuru7 fonts first, then
+// a Japanese OS's built-ins, then Latin mono fonts last.
+$cjk-monospace-stack: "Bizin Gothic", "UDEV Gothic", "HackGen", "BIZ UDGothic", "Noto Sans Mono CJK JP", "Osaka-Mono", "MS Gothic", "SFMono-Regular", "Menlo", "Consolas", "Liberation Mono", "Courier New", monospace;
+
+.font-monospace-cjk {
+  font-family: $cjk-monospace-stack;
+}
+
+// The note editor's split/preview panes animate their width when switching
+// between Edit/Split/Preview modes (editor_controller.js).
+.transition-width {
+  transition: width 0.3s ease;
+}

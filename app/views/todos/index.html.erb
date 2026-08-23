@@ -1,0 +1,29 @@
+<div class="container-fluid vh-100 d-flex flex-column p-0 bg-light">
+  <div class="p-4 d-flex flex-column h-100 mx-auto w-100" style="max-width: 700px;">
+    <div class="d-flex align-items-center mb-4 shrink-0">
+      <%= link_to root_path, class: "btn btn-outline-secondary btn-sm me-3", title: "Back" do %>
+        <i class="bi bi-arrow-left"></i>
+      <% end %>
+      <h4 class="fw-bold m-0">All open TODOs</h4>
+    </div>
+
+    <% if @todo_items.empty? %>
+      <div class="text-center text-muted p-5">
+        <i class="bi bi-check2-circle display-1 mb-3 d-block"></i>
+        Nothing open right now.
+      </div>
+    <% else %>
+      <div class="flex-grow-1 overflow-y-auto custom-scrollbar-light bg-white rounded shadow-sm border p-3">
+        <% @todo_items.each do |item| %>
+          <div id="all_todos_item_<%= item.id %>">
+            <%= link_to root_path(notebook_id: item.note.notebook_id, folder_id: item.note.folder_id, note_id: item.note.id),
+                class: "small text-muted text-decoration-none d-block mt-2" do %>
+              <%= item.note.folder.notebook.name %> / <%= item.note.title %>
+            <% end %>
+            <%= render partial: "todo_items/item", locals: { item: item } %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

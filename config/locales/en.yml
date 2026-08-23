@@ -1,0 +1,262 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
+en:
+  activerecord:
+    attributes:
+      user:
+        email_address: "Email address"
+        password: "Password"
+        password_confirmation: "Password confirmation"
+  auth:
+    email_or_username: "Email or username"
+  settings:
+    title: "Settings"
+    tabs:
+      editor: "Editor"
+      account: "Account"
+    account:
+      email_label: "Signed in as"
+      trusted_header_notice: "This deployment is set up for %{mode}. Your session is managed by your reverse proxy (e.g. Cloudflare Access) — there's no sign-out button here, since the very next request would just sign you back in. To actually sign out, do it at the proxy."
+    language:
+      description: "Changes the language used throughout the app. Applies immediately (reloads the page)."
+    editor:
+      fab_label: "🔧 AI formatting tools"
+      fab_description: "Adds a floating button to Markdown notes for copying formatted text (e.g. for Word) and quick text cleanup — off by default, out of the way until you want it."
+      compare_label: "Text comparison"
+      compare_description: "Adds a Before/After text-comparison tool, reachable from the same floating button as AI formatting tools — off by default, and works without it."
+      table_paste_label: "Excel/Sheets table paste"
+      table_paste_description: "Adds a 'Convert to Markdown' button to the same floating button, turning the table you just pasted from Excel/Sheets into a Markdown table on demand. Plain Ctrl+V still just pastes the image, exactly as before — off by default."
+      keep_original_images_label: "Don't compress uploaded images"
+      keep_original_images_description: "Pasted/dropped images are converted to WebP by default to save space. Turn this on to keep the original file instead."
+  home:
+    header:
+      all_open_todos: "All open TODOs"
+      settings: "Settings"
+      organize: "Organize notebooks, folders & notes"
+    organize:
+      heading: "Organize"
+      back: "← Back"
+      empty: "No notebooks yet."
+    sign_out: "Sign out"
+    common:
+      rename: "Rename"
+      delete: "Delete"
+      export: "Export"
+      add: "Add"
+    notebooks:
+      heading: "NOTEBOOKS"
+      new_prompt: "Enter a notebook name"
+      rename_prompt: "Enter a new notebook name"
+      export: "Export (.zip)"
+      delete_confirm: "Delete this notebook?"
+    folders:
+      heading: "FOLDERS"
+      new_prompt: "Enter a folder name"
+      rename_prompt: "Enter a new folder name"
+      delete_confirm: "Delete this folder?"
+    files:
+      heading: "FILES"
+      new_md: "New Markdown note"
+      new_todo: "New TODO"
+      new_scrap: "New Scrap"
+    sort:
+      updated: "Updated"
+      created: "Created"
+      title: "Title (A-Z)"
+    notes:
+      pin: "Pin"
+      export: "Export (.md)"
+      delete_confirm: "Delete this note?"
+      rename_prompt: "Enter a new title"
+    todo:
+      bulk_add: "Bulk add"
+      content_placeholder: "Add a task..."
+      add_due_date: "Add due date"
+      progress: "Progress"
+      bulk_import:
+        title: "Bulk add TODOs"
+        description_html: 'Paste a JSON array of tasks — plain strings, or objects like <code>{"content": "Buy milk", "checked": false}</code>.'
+        cancel: "Cancel"
+    scrap:
+      copy_all: "Copy all"
+      content_placeholder: "Add a scrap... (Ctrl+Enter to submit)"
+      show_more: &scrap_show_more "Show more"
+      show_less: &scrap_show_less "Show less"
+      source_placeholder: "Source (optional, e.g. ChatGPT)"
+      promote_confirm: "Turn this scrap into a note?"
+      promote_title: "Promote to note"
+      delete_confirm: "Delete this?"
+    empty_state:
+      title: "No Note Selected"
+      description: "Choose a note from the sidebar or create a new one."
+      open_menu: "Open Menu"
+  sessions:
+    sign_in: "Sign in"
+    forgot_password: "Forgot password?"
+    flash:
+      rate_limited: "Try again later."
+      invalid_credentials: "Try another email address or password."
+  setup:
+    welcome: "Welcome to Toishi Note"
+    subtitle: "Create the first account to get started."
+    instance_for: "This instance is for"
+    mode_solo: "Just me"
+    mode_team: "My team"
+    mode_team_description: '"My team" makes this an admin-only account for managing logins — you''ll invite the account that actually takes notes next. A company-issued admin login rarely has its own separate email address, so this doesn''t have to be one — a username works too.'
+    mode_team_description_trusted_header: '"My team" signs each teammate in automatically the first time they arrive with a verified header — there''s no admin account and nothing to invite. To remove someone, revoke their access in Cloudflare Access (or your proxy''s equivalent).'
+    auth_method: "Sign-in method"
+    auth_method_password: "Password"
+    auth_method_trusted_header: "Cloudflare Access"
+    trusted_header_detected: "Detected trusted header: %{header}"
+    trusted_header_missing: "No trusted header was found on this request. Check that your Cloudflare Access (or reverse proxy) setup is actually in front of this page, then try again."
+    create_account: "Create account"
+    flash:
+      account_created: "Account created."
+  passwords:
+    forgot_title: "Forgot your password?"
+    forgot_subtitle: "We'll email reset instructions if that address has an account."
+    email_reset_instructions: "Email reset instructions"
+    back_to_sign_in: "Back to sign in"
+    edit_title: "Update your password"
+    new_password: "New password"
+    confirm_new_password: "Confirm new password"
+    save: "Save"
+    flash:
+      rate_limited: "Try again later."
+      instructions_sent: "Password reset instructions sent (if user with that email address exists)."
+      reset: "Password has been reset."
+      mismatch: "Passwords did not match."
+      invalid_or_expired: "Password reset link is invalid or has expired."
+  admin:
+    users:
+      title: "Team logins"
+      create_reset_link: "Create reset link"
+      remove: "Remove"
+      remove_confirm: "Remove %{email}? They won't be able to sign in anymore."
+      remove_confirm_notebooks: " This also permanently deletes %{notebooks} of theirs — notebooks aren't shared, so no one else has a copy."
+      notebook_count:
+        one: "%{count} notebook"
+        other: "%{count} notebooks"
+      invite: "+ Invite a teammate"
+      back: "← Back"
+      not_authorized: "Not authorized."
+      new:
+        title: "Invite a teammate"
+        subtitle: "You'll get a one-time link on the next screen to hand them yourself — there's no invite email, and you'll never see their password."
+        create_invite_link: "Create invite link"
+      invited:
+        heading: "%{email} invited"
+        description: "Share this link with them yourself (chat, etc.) — it lets them set their own password, and works once."
+      password_reset_link:
+        heading: "Reset link for %{email}"
+        description: "Share this link with them yourself (chat, etc.) — it lets them set a new password themselves, and works once."
+      flash:
+        cant_remove_self: "You can't remove your own account."
+        removed: "%{email} removed."
+  notes:
+    title_placeholder: "Note Title"
+    default_title:
+      md: "Untitled Note"
+      todo: "Untitled TODO"
+      scrap: "Untitled Scrap"
+    conflict:
+      message: "This note changed on another device."
+      reload: "Reload"
+      keep_mine: "Keep mine"
+  # Backs the "paste two texts, see a word-level diff" panel — shared as-is
+  # between the md editor's Compare tab and the standalone tool under
+  # Settings (see app/views/shared/_compare_panel.html.erb), so these keys
+  # live at the top level rather than under either.
+  compare:
+    modal_title: "Compare"
+    before_label: "Before"
+    after_label: "After"
+    before_placeholder: "Paste or type the original text..."
+    after_placeholder: "Paste or type the revised text..."
+    empty: "Paste or type text into both boxes to see the differences highlighted."
+    unchanged: "No differences between Before and After."
+    clear: "Clear"
+  palette:
+    search_placeholder: "Jump to a note..."
+    empty: "No notes yet."
+    no_results: "No matching notes."
+  editor:
+    modes:
+      edit_only: "Edit only"
+      split: "Split view"
+      preview_only: "Preview only"
+    content_placeholder: "Write Markdown..."
+    fab:
+      button_title: "Additional tools"
+      copy_for_word_title: "Copy as rich text"
+      copy_for_word: "Copy for Word"
+      quick_formatting_title: "Quick formatting"
+      quick_formatting: "Quick formatting"
+      compare_as_before: "Set as Before"
+      compare_as_after: "Set as After"
+      convert_table_paste: "Convert to Markdown"
+      convert_table_paste_title: "Convert the pasted Excel/Sheets table to Markdown"
+      apply: "Apply"
+      format:
+        fullwidth_to_halfwidth: "Full-width digits → half-width"
+        punctuation_space: "Remove space after punctuation"
+        number_jp_space: "Remove space between numbers and Japanese text"
+        collapse_newlines: "Collapse consecutive blank lines"
+        remove_brackets: "Remove text wrapped in []"
+  passwords_mailer:
+    reset:
+      subject: "Reset your password"
+      link_text: "this password reset page"
+      body_html: "You can reset your password on %{link}. This link will expire in %{duration}."
+      body_text: "You can reset your password on %{url}\n\nThis link will expire in %{duration}."
+  # Everything under here is read client-side, not by Rails' own t() — see
+  # <meta name="translations"> in the layout and app/javascript/lib/
+  # translations.js. Keep it flat-ish and small: this whole subtree ships
+  # to the browser on every page load.
+  js:
+    copied: "Copied."
+    converted_to_markdown: "Converted to Markdown."
+    table_paste:
+      no_pending_table: "No pasted table to convert yet — paste an Excel/Sheets range first."
+    organize:
+      move_failed: "Couldn't save that move — the page will reload to show the real state."
+    image_upload:
+      uploading: "Uploading %{filename}…"
+      failed: "Failed to upload %{filename}"
+    scrap:
+      show_more: *scrap_show_more
+      show_less: *scrap_show_less
+    word_copy:
+      success_title: "Copied"
+      error_title: "Rich text copy failed"
+    bulk_import:
+      invalid_json: "That isn't valid JSON."
+      must_be_array: "The JSON must be an array of tasks."
+      skipped_invalid_task: "Skipped — not a valid task: %{raw}"

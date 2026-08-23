@@ -1,0 +1,209 @@
+---
+title: UX/UI Roadmap
+description: Persona, design principles, and phase-by-phase UX decisions for the product
+status: living
+updated: 2026-08-09
+---
+
+# Toishi Note — UX/UI Direction (fixed)
+
+This document is not a file-by-file task list. It fixes *what* to build, *how it looks*, and *how it behaves* — implementation order and target files belong in separate issues.
+
+## Persona
+
+**Primary: the engineer, going up against OneNote and Obsidian.** Two concrete cases:
+
+- **Self-learning notes.** Studying something technical alongside an LLM (paper proofreading and drafting still apply here too, just as one workflow among several) — dropping good AI output into Scrap, hand-polishing it, turning an AI-generated task list into structured TODOs without retyping it, and having multiple devices (work PC, home PC, phone) just work with zero sync setup.
+- **IT-ops / 情シス incident runbooks.** Collecting recurring bug/incident responses into something searchable, instead of a personal OneNote section or a pile of Obsidian vault notes nobody else can open. In practice this stays a personal notebook too (see "Multiple accounts" below) — the genuinely shared bits get pasted into whatever chat tool the team already uses, same as real IT-ops workflows mostly work today. This is where the earlier "AI meeting notes become TODOs" workflow (consultants, PMs, IT support) lives too.
+
+Engineers reliably show up on Qiita/Zenn/Dev.to, can self-host without hand-holding, and are reachable through normal developer channels — which makes this the persona to build and market to *first*, deliberately ahead of the researcher persona below.
+
+**Secondary, longer-horizon: the AI-augmented researcher / grad student.** Same core workflow (AI proofreading, Scrap, structured TODOs) but a much smaller slice can actually self-host, and researchers don't read the channels (Qiita/Zenn/Dev.to, HN, r/selfhosted) that would ever surface this project to them. Features aimed at this persona (Phase 5: DOI/citation metadata, Zotero) stay real, but stay opt-in and secondary — the project needs to survive on the engineer audience long enough to eventually reach this one, not the other way around.
+
+**Secondary: teachers.** Benefit from rich-text copy when turning AI-drafted material into handouts, but not a priority target.
+
+## Design principles
+
+1. **Progressive disclosure (VS Code style)** — start simple. Features only appear once switched on in Settings. Never force complexity by default.
+2. **Don't grow the attack surface** — no public JSON API, no plugin/add-in system. Favor core PRs from the community over a plugin ecosystem.
+3. **Multiple auth paths, one experience** — whether it's Cloudflare Access or a plain password, the user should feel like they're "just already logged in."
+4. **The server is always right** — writes always happen online. Offline allows read-only access to a recent cache; never wade into edit/sync complexity.
+
+## Non-goals (written down to avoid accidents)
+
+- A public JSON API
+- A plugin/add-in system
+- Offline editing/sync (writes require the server; offline permits read-only only)
+- Integration with paid literature databases like Web of Science (no free API access)
+
+---
+
+## Phase 0: Auth & settings foundation
+
+### Login experience
+
+- **Behind a reverse proxy (Cloudflare Access, etc.)**: no login screen at all. The user is recognized from a trusted header and auto-provisioned on first visit. Zero user action.
+- **Standalone (no proxy)**: email + password form. Passkey/OIDC login buttons will sit on the same screen later ("Continue with password" / "Continue with passkey").
+- Either path lands on an identical post-login screen — users shouldn't have to know which auth method they're on.
+
+### Multiple accounts, each with their own private notebooks
+
+- **Notebooks belong to the account that created them — always, with no sharing or permission model at all.** This was originally going to be an instance-wide "shared" vs "private" choice, but the editor has no answer for two people editing the same note at once (no optimistic locking, autosave is a plain debounced overwrite) — building that safely is real, separate work this doesn't have the resourcing for right now, so "notebooks are always private" sidesteps the problem by construction instead of shipping something that can silently lose someone's edits. "My team" exists to put many individually-private accounts on one shared *deployment* (see below), not to build a shared *workspace*.
+- **The differentiator from Notion/Confluence was never "shared vs. private" anyway** — it's self-hosted (data never leaves your server), no per-seat pricing (an extra teammate costs a few more database rows, not a subscription line item), and a deliberately narrow, opinionated feature set (MD/TODO/Scrap, not infinitely-flexible blocks-and-databases) built around the AI-augmented-note workflow specifically. Per-notebook sharing/permissions would mean competing with Notion on its own turf (flexible permissions) — not the plan.
+- Setup asks once, up front: **"Just me" or "My team."** "Just me" creates a single note-taking account and the team-management UI never appears anywhere — a solo researcher or engineer never sees an "invite" button they'll never use. "My team" creates an **admin account that doesn't take notes at all** — its only job is managing logins (Admin::UsersController) — kept structurally separate so regular member accounts never carry admin chrome either, in either direction. Its real purpose is operational: a company rolling this out to N employees runs *one* deployment with N private accounts, not N separate deployments (each a full Rails/Puma process — the memory cost of that stops scaling well before 10-20 people).
+- Removing a teammate (a "Remove" button next to their row; an admin can't remove their own account this way, so the team is never left admin-less by accident) deletes their notebooks with them — notebooks aren't shared, so nothing else references them, and the confirmation dialog says so before it happens. There's no transfer-ownership or export-on-departure flow yet; if that's ever needed, it's an addition to the Phase 1 Export feature, not a reason to reconsider per-account ownership.
+- An admin invites a teammate with just a login (email or username — see below) — never a password. The response is a one-time link (built on the same `password_reset_token` `has_secure_password` already provides) the admin copies and hands over however they'd normally share anything (chat, etc.); the teammate sets their own password by visiting it. The same mechanism rescues a teammate locked out of their account: an admin issues them a fresh link. An admin never chooses, and never learns, anyone else's password.
+- No dependency on outbound email anywhere in this flow — links are shown on screen, not mailed. A solo deployment that later wants a second account is a one-line console promotion (`user.update!(role: :admin)`) away, deliberately not an in-app toggle, so the button stays invisible for everyone who'll never need it.
+- **Login isn't necessarily an email address.** A company-issued admin account frequently has no separate address of its own (one person, one corporate email, already spoken for by their personal note-taking account) — so the login field accepts a plain username too (`text_field`, not `email_field`; no format validation beyond presence/uniqueness). "Forgot password?" stays email-labeled specifically, since that one path really does try to send mail.
+- **The invite/rescue link is single-use in effect, not by revocation.** Setting a password changes `password_salt`, which invalidates every outstanding token for that account — but a token already issued stays valid (until it expires or that happens) even if the admin generates a newer one instead of using it. There's no way to revoke one specific link early short of that. Given that, `password_reset_token` is deliberately not left at its 15-minute default: 24 hours, so a link sitting unread in chat for a while still works, without weakening the one-use-in-practice property. If a link ever leaks, the fix is the same console command as any other lockout — setting a fresh random password invalidates every token issued so far.
+- **TOTP/2FA is deliberately not in this phase.** It answers a different question ("is this really you," on top of a password you already know) than the one this phase solves ("you forgot your password and email doesn't reach you"). Worth revisiting only if this ever opens up SaaS-style beyond a trusted team.
+- **Noted for later, not built now:** bulk operations on the team list (export, multi-remove) — revisit alongside the Phase 1 Export feature rather than bolting something bespoke onto Admin::UsersController now.
+
+### Settings screen
+
+- A gear icon lives next to the sidebar logo (or top-right). Opens a modal (not a page navigation, so editor state isn't lost).
+- Tabs: "Editor," "TODO," "Integrations (researcher)," "Account."
+- Every feature is a single toggle switch. Flipping it fades the corresponding UI element in immediately — no reload.
+- ~~Don't hide features silently forever. Keep one subtle line of discovery, e.g. "🔧 Try the AI formatting tools," always visible in a corner of the editor, linking into Settings.~~ **Reversed after real use**: a permanent discovery link is UI clutter for everyone who never turns the feature on, which is most people most of the time. The Settings gear alone is the entry point now — features stay found by looking in Settings, not by a standing reminder in the editor.
+- **Built so far: just the one "Editor" toggle** (the AI-formatting FAB below), added when that Phase 1 feature needed *some* Settings surface to live behind. No tab chrome yet — the full four-tab shape is still this section's design, not built ahead of a feature that actually needs it.
+
+### Backups
+
+- User-facing UI stays minimal, but "you're protected" should be visible: a read-only status line at the bottom of the "Account" settings tab — "Last backup: 3 hours ago ✅." No config UI here (backup destination credentials live in ENV, never surfaced in the UI — secrets don't belong in the interface).
+- The actual mechanism is a cron job. Don't hand-roll a Google Drive API integration for SQLite — lean on proven tools instead.
+- **Default recommendation: rclone doing a full periodic snapshot** (hourly, 7-day rolling retention). SQLite files are small enough that a full copy each run is cheap. Continuous streaming replication (Litestream-style) is deliberately not the default — the risk of the stream itself being mid-write during a disaster outweighs the benefit; "reliably back to the state 1 hour ago" wins over finer granularity.
+- Litestream stays an advanced, opt-in option documented in the README; the default runbook only documents rclone (works with GDrive/Dropbox/FTPS/any destination it supports).
+
+---
+
+## Phase 1: Core persona features
+
+### Bulk TODO import via pasted JSON
+
+- "Bulk add" sits next to the "+" button inside a TODO note.
+- Clicking opens a modal with a textarea. Pasting a JSON array renders a live preview list (with checkboxes) below it.
+- Malformed entries are highlighted in red inline; the rest of the list stays importable (don't fail the whole batch).
+- "Add" appends to the end of the existing TODOs (preserves `position` ordering).
+
+### Before/after diff view for AI-edited text
+
+- A **Compare modal**, reached from the same floating button as AI formatting tools (see below) — not a Settings feature, and not a 4th Edit/Split/Preview tab on the md editor. Two plain Before/After text boxes, populated by pasting or by the FAB's own "Set as Before"/"Set as After" (which pull the open note's current content), diffed live as either box changes. A Clear button empties both. No "baseline" concept, no persisted mode to get stuck on — closing the modal never affects which of Edit/Split/Preview the editor was showing.
+- Gated by its own Settings > Editor toggle, independent of the "AI formatting tools" toggle — comparison is useful without AI involved at all. The floating button itself shows as soon as *either* toggle is on; each toggle only controls its own section of the button's menu.
+- **Revision history, for context if this comes up again:** shipped twice before landing here. First version (2026-08, PR #45's predecessor) hid the note's own textarea while its Diff tab was open, so there was no way to actually edit while looking at it — a real bug, not a UI slip. Second version (PR #45, 2026-08-10) fixed that by decoupling Before/After from the note entirely, but put the tool under a standalone Settings tab — a misreading of the intended design (comparison was never meant to live in Settings; only its *on/off toggle* was meant to be independent there). This version is the corrected one.
+- The AI-formatting FAB's Quick Formatting (see below) feeds its own before/after into the same modal automatically, so a formatting change can be checked without retyping anything or duplicating diff UI in the FAB itself.
+
+### Rich-text copy / quick formatting button
+
+- Never shown outside md notes (not on todo/scrap notes).
+- Lives as a small floating action button (FAB, labeled "Additional tools" — see below) in the bottom-right of the md editor. Off by default; only users who enable it in Settings see it.
+- "Copy for Word" button: writes formatted HTML to the clipboard, toast confirms "Copied."
+- Quick-formatting (AI-output cleanup assist) sits in a submenu inside the FAB, collapsed by default.
+- **The FAB is shared with the Compare modal above** (added later than this section's original scope) — its own title stopped being "AI formatting tools" once a feature that has nothing to do with AI joined it. Each feature's menu items are gated on that feature's own Settings toggle; the button itself shows whenever at least one is on.
+
+### TODO due dates & cross-notebook view
+
+- The TODO add form gets one optional "due date" field (collapsed by default, expands on click — no sense of obligation).
+- A "All open TODOs" entry point sits above "NOTEBOOKS" in the sidebar. Opens a dedicated cross-notebook view of unchecked items, sorted by due date, overdue ones badged red.
+
+### Note list sorting — lightweight, not persisted
+
+- Kept separate from notebook/folder reordering. The note list needs no drag-and-drop — **pin + a 3-button sort toggle** is enough.
+- Pinned notes always sit at the top, regardless of sort mode.
+- Three small buttons above "FILES": "Updated," "Created," "A-Z." Click to select; click the active one again to flip ascending/descending.
+- Sort order is not persisted to the DB (reopening the app can default back to "Updated"). Notebooks/folders need deliberate, persisted ordering instead — that's the drag-and-drop organize view described later, which writes `position`.
+
+### Export
+
+- Available per-note and per-notebook (kebab menu on a note, right-click-equivalent menu on a notebook name).
+- Format: Markdown (.md) + a zip bundling attached images. No format-selection dialog — always this one format (don't multiply choices).
+- TODO/Scrap are structured data, so the conversion rules are fixed up front (the "hard" part was just an undecided mapping — once decided, it's simple):
+  - **TODO note** → GFM checklist. `- [ ] task` / `- [x] done`. A due date, if present, is appended inline as `(due: 2026-08-20)` — no new syntax invented.
+  - **Scrap note** → items concatenated in `position` order, separated by `---`. No numbering or headings added (keep the same granularity as the fragment stream it is).
+  - Import is out of scope for now — export only, one direction.
+
+### Image attachments
+
+- Both paste (Ctrl+V) and drag-and-drop into the editor body.
+- A grey placeholder box is inserted at the cursor immediately while uploading, swapped for Markdown image syntax on completion (optimize for perceived speed).
+- Storage backend (local disk vs. S3-compatible) is never surfaced to the end user — that's an admin/deploy-time decision, not a UI toggle.
+- **Uploads are auto-converted to WebP by default.** Keeps a 55MB RAW/TIFF/high-res JPEG straight off a mirrorless camera from blowing up storage. Uses the existing image_processing/vips stack — no new external service.
+- For people who genuinely need the original file, one settings toggle: "Don't compress uploaded images (keep original)." Default is compressed; only opt out if you need to.
+
+### Word/Excel paste → Markdown conversion
+
+Word and Excel/Sheets paste are **not** treated the same way — real-world testing showed why they can't be:
+
+- **Pasting a Word selection** (bold/italic paragraphs, no table) auto-converts to Markdown and inserts it, with no button to find — matches this experience even on Linux, where PowerToys Advanced Paste isn't available. Toasts "Converted to Markdown."
+- **Pasting an Excel/Sheets cell range**, by plain Ctrl+V, pastes the rendered selection image instead — exactly like it always has — rather than silently guessing at a table conversion. Excel/Sheets clipboards always carry a rendered image *alongside* the real table HTML; a real paste of a moderately complex sheet (multi-row grouped headers, merged cells) proved the conversion isn't reliably lossless the way a Word paragraph is, so guessing wrong would silently corrupt a pasted table with no visible sign anything went wrong. The safe default wins.
+- A "Convert to Markdown" button on the floating menu (its own independent Settings toggle, off by default, alongside AI formatting tools and text comparison) converts the *most recently pasted* Excel/Sheets table to a GFM Markdown table on demand, so the user sees and can judge the result rather than have it silently forced into their note.
+- The core conversion (clipboard HTML → Markdown) is not built from scratch — it rides on **Turndown + turndown-plugin-gfm** (the standard HTML→Markdown converter, with a maintained GFM-table plugin). Don't reinvent this wheel. Merged cells (rowspan/colspan) are expanded into a full rectangular grid before conversion — common in real Excel selections (grouped headers, category labels) — but multi-row/nested headers are flattened, not reconstructed: GFM tables have no concept of a multi-row header to begin with, and Word's 80%-is-fine bar applies here too.
+- **Superscript/subscript (`<sup>`/`<sub>`) → KaTeX syntax (`$^2$`/`$_4$`) conversion ships as a separately installable plugin, not baked into the core npm package** (same pattern as `turndown-plugin-gfm`). Most Word/Excel-paste users don't touch math notation and shouldn't have to pull in that dependency.
+
+### Scrap improvements
+
+- Today it's "a fragment list with Markdown support bolted on." Give it one more role that matches the persona.
+- **"Promote to note" button**: one click turns any scrap item into an independent md note. Scrap = temporary catch-basin for AI output, Note = the polished result — this button just makes that existing workflow explicit in the UI.
+- **"Copy all" button**: concatenates every scrap item in a note (in `position` order) and copies it to the clipboard in one shot — built for pasting the whole context back into an AI chat and continuing the conversation.
+- Give items a card-style look (thin border, padding), with long content collapsible. More legible than a flat text stream.
+- Source tags aren't mandatory — a single optional one-line note field ("ChatGPT conversation," etc.) is enough. Never force input.
+
+---
+
+## Phase 2: OSS readiness (presentation, not really UX)
+
+- A 30-second demo GIF at the top of the README (create note → AI formatting → bulk TODO import, one flow).
+- Screenshots can stay in Japanese UI, but README copy and captions lead in English.
+
+---
+
+## Phase 3: i18n
+
+- Language switch (Japanese/English) lives in the "Account" settings tab. Auto-detected from `Accept-Language` on first visit, changeable afterward.
+- Switching updates UI labels immediately (a full page reload is fine; note *content* is never translated — only UI copy).
+
+---
+
+## Phase 4: Organize view
+
+- Clicking the logo at the top of the sidebar opens "Organize" — **not a modal**. The entire main content pane (where the note editor / empty state normally renders) becomes the Organize tree instead, exactly like the editor and the empty state are already two mutually-exclusive states of that same pane. Leaving Organize (a "← Back" link, or clicking any normal sidebar link) is an ordinary navigation back to wherever you were, not a "close" with state to preserve.
+- Scope, corrected from the original draft of this section: **notebooks, folders, and notes are all tree nodes**, each renamable/deletable/movable — a version scoped to "notebooks and folders only" shipped first but turned out to make the app impossible to fully organize (there was nowhere to move a note into a different folder at all). Note *display order* stays out of scope regardless — the existing pin + 3-button sort (above) remains authoritative; dragging a note in the tree only ever changes its folder, never a position.
+- Notebook/folder creation is available from inside Organize; note/file creation stays sidebar-only.
+- The regular editor never pays the drag-and-drop cost — heavy code only loads when the Organize view actually renders (a real conditional server-render, not a hidden-but-present modal, so this falls out naturally rather than needing an explicit lazy-load trigger).
+
+---
+
+## Phase 5: Researcher-only options (off by default)
+
+### DOI / citation metadata
+
+- Pasting a long DOI (e.g. `https://doi.org/10.3390/pr14020243`) into a note body is detected; a small chain-link icon floats at line end. Clicking it offers:
+  - Insert a formatted citation pulled from CrossRef/OpenAlex (title, authors, journal)
+  - **Convert to the short form via the Short DOI Service (shortdoi.org)** for slides (e.g. `https://doi.org/rjjq`) and copy it to the clipboard
+  - Both options live in the same dropdown off the same icon — don't add a new button per feature.
+- No Web of Science integration — no free API, and most users couldn't reach it anyway.
+
+### Zotero integration
+
+- Lives inside the "Integrations (researcher)" settings tab, off by default. Until enabled, nothing Zotero-related appears anywhere in the editor.
+
+---
+
+## Additional candidates for the top two personas
+
+### Researchers / grad students / engineers
+
+- **Character/word counter with selection support**: small, always-visible counter under the editor. **With nothing selected it counts the whole document; select text and it switches to counting just the selection** — built for pulling one relevant chunk out of a pasted AI conversation without the surrounding noise skewing the count. Shows Japanese character count and English word count side by side (`1,234 chars / 210 words`) — fixes the gap where existing browser extensions don't handle English word counts correctly.
+- **BibTeX export**: pairs with DOI/citation metadata (Phase 5) — one button to also copy the fetched citation as `.bib`. A natural extension for LaTeX users.
+
+### AI-meeting-notes users (consulting/PM/sales)
+
+- **Action-item extraction from free text**: detect lines that read like "...will do X" or "TODO:" and surface a low-key inline suggestion, "Convert to TODOs?" A natural extension of the bulk-import modal from Phase 1 — reuse the same UI rather than building a new one.
+- No fixed meeting-note template. Templates constrain more than they help over time (learned the hard way keeping a research notebook to a template — it stops you from writing what actually matters). Free-form text plus the action-item suggestion above is the whole feature.
+
+---
+
+## PWA
+
+- "Add to Home Screen" gets you an app icon and full-screen launch — installability only, no offline sync.
+- **Offline switches to read-only mode.** On detecting a dropped connection, a persistent banner appears: "Offline (read-only)." Recently visited notes stay readable from the Service Worker cache; every editing control (save button, TODO checkboxes, input fields) gets disabled.
+- Addresses the real case of an unreliable university conference-room Wi-Fi: being unable to even *read* your notes is the failure mode to avoid. Writes are refused until the connection returns — no write-queue machinery.

@@ -1,0 +1,32 @@
+<div class="d-flex vh-100 justify-content-center align-items-center bg-light">
+  <div class="card shadow-sm" style="width: 22rem;">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1 fw-bold"><%= t("admin.users.new.title") %></h1>
+      <p class="text-secondary small mb-4"><%= t("admin.users.new.subtitle") %></p>
+
+      <% if @user.errors.any? %>
+        <div class="alert alert-danger py-2 small">
+          <ul class="mb-0 ps-3">
+            <% @user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <%# data-turbo="false": this renders the result (or errors) in the same
+          response — Turbo would otherwise negotiate a turbo-stream response
+          for the form post, and silently drop it since there's no
+          turbo-stream template. %>
+      <%= form_with model: @user, url: admin_users_path, data: { turbo: false } do |f| %>
+        <div class="mb-4">
+          <%= f.label :email_address, t("auth.email_or_username"), class: "form-label small" %>
+          <%= f.text_field :email_address, class: "form-control", required: true, autofocus: true, autocomplete: "off" %>
+        </div>
+        <%= f.submit t("admin.users.new.create_invite_link"), class: "btn btn-primary w-100 mb-3" %>
+      <% end %>
+
+      <%= link_to t("admin.users.back"), admin_users_path, class: "small" %>
+    </div>
+  </div>
+</div>

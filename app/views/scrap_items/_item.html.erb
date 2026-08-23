@@ -1,0 +1,31 @@
+<div id="scrap_item_<%= item.id %>" class="hover-container position-relative mb-3 p-3 bg-white rounded shadow-sm border"
+    data-controller="scrap-item" data-scrap-item-collapsed-class="scrap-content-collapsed"
+    data-scrap-item-url-value="<%= note_scrap_item_path(item.note, item) %>"
+    data-scrap-copy-all-target="item" data-content="<%= item.content %>">
+
+  <% if item.source.present? %>
+    <div class="text-muted small mb-1"><i class="bi bi-tag"></i> <%= item.source %></div>
+  <% end %>
+
+  <div class="mb-1 text-break markdown-content" data-controller="markdown" data-scrap-item-target="content" style="font-size: 0.95em;"><%= item.content %></div>
+  <button type="button" class="btn btn-link btn-sm p-0 d-none" data-scrap-item-target="toggle" data-action="click->scrap-item#toggle"><%= t("home.scrap.show_more") %></button>
+
+  <div class="d-flex justify-content-between align-items-end mt-2">
+    <%= text_field_tag :source, item.source, placeholder: t("home.scrap.source_placeholder"),
+        class: "form-control form-control-sm border-0 bg-transparent hover-target px-0 flex-grow-1 me-2",
+        style: "font-size: 0.75em;", data: { action: "change->scrap-item#saveSource" } %>
+    <div class="text-muted text-nowrap" style="font-size: 0.7em;">
+      <%= item.created_at.strftime("%Y/%m/%d %H:%M") %>
+    </div>
+  </div>
+
+  <div class="position-absolute top-0 end-0 p-1 d-flex">
+    <%= button_to promote_note_scrap_item_path(item.note, item), method: :post,
+        data: { turbo_confirm: t("home.scrap.promote_confirm") },
+        class: "hover-target btn btn-sm text-primary opacity-75 py-0 px-2 border-0 bg-transparent", title: t("home.scrap.promote_title") do %>
+      <i class="bi bi-file-earmark-plus"></i>
+    <% end %>
+    <%= button_to "×", note_scrap_item_path(item.note, item), method: :delete, data: { turbo_confirm: t("home.scrap.delete_confirm") }, class: "hover-target btn btn-sm text-danger opacity-50 py-0 px-2 border-0 bg-transparent" %>
+  </div>
+
+</div>

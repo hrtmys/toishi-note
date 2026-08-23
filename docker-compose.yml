@@ -1,0 +1,38 @@
+# This file is the generic public template — self-contained, works with a
+# plain `docker compose up -d` against nothing but this repo and a filled-
+# in .env. It's meant to be edited freely for OSS-template purposes without
+# worrying about breaking anyone's specific deployment.
+#
+# Need a fixed container name, an existing Docker network, or anything else
+# specific to *your* infrastructure? Don't edit this file — put it in
+# docker-compose.override.yml instead (gitignored; `docker compose` merges
+# it in automatically, no extra flags needed). See
+# docker-compose.override.yml.example and docs/engineering/deployment.md.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      - RAILS_ENV=production
+      # - TRUSTED_HEADER_AUTH_HEADER=Cf-Access-Authenticated-User-Email
+      #   ^ For running behind Cloudflare Access (or any reverse proxy that
+      #   authenticates for you). Off by default (commented out). Enable it
+      #   in .env, not here — turning this on in an environment where the
+      #   proxy isn't configured to strip this header from inbound requests
+      #   and set it itself is an authentication bypass (see the warning
+      #   comment on app/models/trusted_header_login.rb).
+    env_file:
+      # RAILS_MASTER_KEY, APP_HOST, and anything else in .env.example go
+      # here — copy .env.example to .env and fill it in before first run
+      # (see docs/engineering/deployment.md).
+      - .env
+    volumes:
+      # Persists the SQLite databases and uploaded images
+      - ./storage:/rails/storage
+    ports:
+      # Bound to localhost only — this container has no TLS of its own.
+      # Put a reverse proxy (nginx, Caddy, Traefik, a Cloudflare Tunnel...)
+      # in front of it for real use; see docs/engineering/deployment.md.
+      # Change the left side (e.g. "3000:80" with no host part) if you're
+      # fronting this with a proxy running outside Docker instead.
+      - "127.0.0.1:3000:80"

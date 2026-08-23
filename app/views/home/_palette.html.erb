@@ -1,0 +1,23 @@
+<%# The Ctrl+P command palette (palette_controller.js). Mounted once per
+    page, next to the Settings modal — see home/index.html.erb. Server-
+    renders the initial MRU list (locals: notes, from HomeController#index's
+    @palette_notes) directly into the results frame so opening it never
+    needs a round trip: the first thing shown is already the real thing,
+    not an empty frame that then fetches. %>
+<div class="modal fade" id="paletteModal" tabindex="-1" aria-hidden="true"
+    data-controller="palette" data-palette-url-value="<%= palette_path %>">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body p-0">
+        <input type="text" class="form-control form-control-lg border-0 shadow-none rounded-0"
+            placeholder="<%= t("palette.search_placeholder") %>" autocomplete="off"
+            data-palette-target="input"
+            data-action="input->palette#search keydown->palette#keydown">
+        <hr class="m-0">
+        <%= turbo_frame_tag "palette_results" do %>
+          <%= render "home/palette_results", notes: notes, query: "" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

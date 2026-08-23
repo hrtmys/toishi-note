@@ -1,0 +1,15 @@
+<div class="d-flex vh-100 justify-content-center align-items-center bg-light">
+  <div class="card shadow-sm" style="width: 26rem;">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1 fw-bold"><%= heading %></h1>
+      <p class="text-secondary small mb-3"><%= description %></p>
+
+      <div class="input-group mb-4">
+        <input type="text" class="form-control form-control-sm" value="<%= url %>" readonly
+            data-controller="select-on-click" data-action="click->select-on-click#select">
+      </div>
+
+      <%= link_to t("admin.users.back"), admin_users_path, class: "small" %>
+    </div>
+  </div>
+</div>

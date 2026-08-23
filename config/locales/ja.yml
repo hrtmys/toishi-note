@@ -1,0 +1,234 @@
+# See config/locales/en.yml for how these files work. Keys here must match
+# en.yml's structure exactly — a missing key here silently falls back to
+# I18n.default_locale's copy (English) rather than raising, so it's easy
+# to miss one; keep the two files' shapes in sync as new keys are added.
+
+ja:
+  activerecord:
+    attributes:
+      user:
+        email_address: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード（確認）"
+  auth:
+    email_or_username: "メールアドレスまたはユーザー名"
+  settings:
+    title: "設定"
+    tabs:
+      editor: "エディタ"
+      account: "アカウント"
+    account:
+      email_label: "サインイン中のアカウント"
+      trusted_header_notice: "このデプロイは「%{mode}」として設定されています。セッションはリバースプロキシ（例: Cloudflare Access）が管理しているため、ここにサインアウトボタンはありません — サインアウトしても次のリクエストで即座に再度サインインされてしまうためです。実際にサインアウトするには、プロキシ側で行ってください。"
+    language:
+      description: "アプリ全体で使用する言語を切り替えます。すぐに反映されます（ページが再読み込みされます）。"
+    editor:
+      fab_label: "🔧 AI formatting tools"
+      fab_description: "Markdownノートにフローティングボタンを追加し、書式付きテキストのコピー（Word用など）やテキストの簡易整形ができます — デフォルトではオフで、使うまでは邪魔になりません。"
+      compare_label: "差分比較"
+      compare_description: "Before/After形式でテキストを比較するツールを追加します。AI formatting toolsと同じフローティングボタンから開けます — デフォルトではオフで、単独でも使えます。"
+      table_paste_label: "Excel/Sheetsの表貼り付け変換"
+      table_paste_description: "同じフローティングボタンに「Markdownに変換」ボタンを追加し、直前にExcel/Sheetsから貼り付けた表をMarkdownの表に変換できます。通常のCtrl+Vではこれまで通り画像が貼り付けられます — デフォルトではオフです。"
+      keep_original_images_label: "アップロードした画像を圧縮しない"
+      keep_original_images_description: "貼り付け・ドロップした画像は容量節約のためデフォルトでWebPに変換されます。オンにすると元のファイルのまま保存されます。"
+  home:
+    header:
+      all_open_todos: "未完了のTODO一覧"
+      settings: "設定"
+      organize: "ノートブック・フォルダ・ノートを整理"
+    organize:
+      heading: "整理"
+      back: "← 戻る"
+      empty: "まだノートブックがありません。"
+    sign_out: "サインアウト"
+    common:
+      rename: "名前を変更"
+      delete: "削除"
+      export: "エクスポート"
+      add: "追加"
+    notebooks:
+      heading: "NOTEBOOKS"
+      new_prompt: "ノートブック名を入力してください"
+      rename_prompt: "新しいノートブック名を入力してください"
+      export: "エクスポート (.zip)"
+      delete_confirm: "このノートブックを削除しますか？"
+    folders:
+      heading: "FOLDERS"
+      new_prompt: "フォルダ名を入力してください"
+      rename_prompt: "新しいフォルダ名を入力してください"
+      delete_confirm: "このフォルダを削除しますか？"
+    files:
+      heading: "FILES"
+      new_md: "新規Markdownノート"
+      new_todo: "新規TODO"
+      new_scrap: "新規Scrap"
+    # The buttons themselves stay U/C/A-Z regardless of locale — compact,
+    # icon-like abbreviations rather than translatable prose — but their
+    # tooltips are real Japanese here.
+    sort:
+      updated: "更新日時順"
+      created: "作成日時順"
+      title: "タイトル順 (A-Z)"
+    notes:
+      pin: "ピン留め"
+      export: "エクスポート (.md)"
+      delete_confirm: "このノートを削除しますか？"
+      rename_prompt: "新しいタイトルを入力"
+    todo:
+      bulk_add: "一括追加"
+      content_placeholder: "タスクを追加..."
+      add_due_date: "期限を追加"
+      progress: "Progress"
+      bulk_import:
+        title: "TODOを一括追加"
+        description_html: 'タスクのJSON配列を貼り付けてください — 文字列だけでも、<code>{"content": "牛乳を買う", "checked": false}</code> のようなオブジェクトでも構いません。'
+        cancel: "キャンセル"
+    scrap:
+      copy_all: "すべてコピー"
+      content_placeholder: "スクラップを追加... (Ctrl+Enterで送信)"
+      show_more: &scrap_show_more "もっと見る"
+      show_less: &scrap_show_less "閉じる"
+      source_placeholder: "ソース (任意・例: ChatGPT)"
+      promote_confirm: "このスクラップをノートにしますか？"
+      promote_title: "ノートに昇格"
+      delete_confirm: "削除しますか？"
+    empty_state:
+      title: "ノートが選択されていません"
+      description: "サイドバーからノートを選ぶか、新規作成してください。"
+      open_menu: "メニューを開く"
+  sessions:
+    sign_in: "サインイン"
+    forgot_password: "パスワードをお忘れですか？"
+    flash:
+      rate_limited: "しばらくしてからもう一度お試しください。"
+      invalid_credentials: "メールアドレスまたはパスワードが正しくありません。"
+  setup:
+    welcome: "Toishi Noteへようこそ"
+    subtitle: "最初のアカウントを作成してください。"
+    instance_for: "このインスタンスの利用形態"
+    mode_solo: "自分だけ"
+    mode_team: "チーム"
+    mode_team_description: "「チーム」を選ぶと、ログイン管理専用の管理者アカウントになります — 次の画面で、実際にノートを取るアカウントを招待できます。会社発行の管理者アカウントには専用のメールアドレスがないことが多いため、ユーザー名でも構いません。"
+    mode_team_description_trusted_header: "「チーム」では、検証済みヘッダーを持つメンバーが初回アクセス時に自動でサインインできるようになります — 管理者アカウントや招待は不要です。メンバーを外す場合は、Cloudflare Access（またはお使いのプロキシ）側でアクセス権を取り消してください。"
+    auth_method: "サインイン方法"
+    auth_method_password: "パスワード"
+    auth_method_trusted_header: "Cloudflare Access"
+    trusted_header_detected: "検出された信頼ヘッダー: %{header}"
+    trusted_header_missing: "このリクエストに信頼ヘッダーが見つかりませんでした。Cloudflare Access（またはリバースプロキシ）の設定がこのページの前段で有効になっているか確認してから、もう一度お試しください。"
+    create_account: "アカウントを作成"
+    flash:
+      account_created: "アカウントを作成しました。"
+  passwords:
+    forgot_title: "パスワードをお忘れですか？"
+    forgot_subtitle: "該当のアドレスにアカウントがあれば、リセット手順をメールで送信します。"
+    email_reset_instructions: "リセット手順をメールで送信"
+    back_to_sign_in: "サインインに戻る"
+    edit_title: "パスワードを更新"
+    new_password: "新しいパスワード"
+    confirm_new_password: "新しいパスワード（確認）"
+    save: "保存"
+    flash:
+      rate_limited: "しばらくしてからもう一度お試しください。"
+      instructions_sent: "そのメールアドレスのアカウントが存在すれば、リセット手順を送信しました。"
+      reset: "パスワードをリセットしました。"
+      mismatch: "パスワードが一致しませんでした。"
+      invalid_or_expired: "パスワードリセットのリンクが無効か、期限切れです。"
+  admin:
+    users:
+      title: "チームのログイン"
+      create_reset_link: "リセットリンクを発行"
+      remove: "削除"
+      remove_confirm: "%{email} を削除しますか？ このアカウントはサインインできなくなります。"
+      remove_confirm_notebooks: " また、%{notebooks} も完全に削除されます — ノートブックは共有されないため、他に控えはありません。"
+      # Japanese doesn't distinguish singular/plural — CLDR's rule set for
+      # :ja (via the rails-i18n gem) only ever looks up "other", never "one".
+      notebook_count:
+        other: "ノートブック%{count}件"
+      invite: "+ チームメンバーを招待"
+      back: "← 戻る"
+      not_authorized: "権限がありません。"
+      new:
+        title: "チームメンバーを招待"
+        subtitle: "次の画面で、一度きりのリンクが表示されます。それを直接（チャットなどで）本人に共有してください — 招待メールは送信されず、パスワードを知ることもありません。"
+        create_invite_link: "招待リンクを発行"
+      invited:
+        heading: "%{email} を招待しました"
+        description: "このリンクを直接（チャットなどで）本人に共有してください — 自分でパスワードを設定でき、一度だけ使用できます。"
+      password_reset_link:
+        heading: "%{email} 用のリセットリンク"
+        description: "このリンクを直接（チャットなどで）本人に共有してください — 自分で新しいパスワードを設定でき、一度だけ使用できます。"
+      flash:
+        cant_remove_self: "自分自身のアカウントは削除できません。"
+        removed: "%{email} を削除しました。"
+  notes:
+    title_placeholder: "ノートのタイトル"
+    default_title:
+      md: "無題のノート"
+      todo: "無題のTODO"
+      scrap: "無題のスクラップ"
+    conflict:
+      message: "このノートは別のデバイスで更新されました。"
+      reload: "再読み込み"
+      keep_mine: "この内容を保持"
+  compare:
+    modal_title: "比較"
+    before_label: "変更前"
+    after_label: "変更後"
+    before_placeholder: "元のテキストを貼り付け・入力"
+    after_placeholder: "変更後のテキストを貼り付け・入力"
+    empty: "BeforeとAfterの両方にテキストを入力すると、差分がハイライト表示されます。"
+    unchanged: "BeforeとAfterに差分はありません。"
+    clear: "クリア"
+  palette:
+    search_placeholder: "ノートに移動..."
+    empty: "ノートがまだありません。"
+    no_results: "一致するノートがありません。"
+  editor:
+    modes:
+      edit_only: "編集のみ"
+      split: "分割表示"
+      preview_only: "プレビューのみ"
+    content_placeholder: "Markdownで入力..."
+    fab:
+      button_title: "追加機能"
+      copy_for_word_title: "リッチテキストとしてコピー"
+      copy_for_word: "Copy for Word"
+      quick_formatting_title: "テキスト整形"
+      quick_formatting: "Quick formatting"
+      compare_as_before: "この文書を変更前に"
+      compare_as_after: "この文書を変更後に"
+      convert_table_paste: "Markdownに変換"
+      convert_table_paste_title: "貼り付けたExcel/Sheetsの表をMarkdownに変換"
+      apply: "適用"
+      format:
+        fullwidth_to_halfwidth: "全角数字 → 半角数字"
+        punctuation_space: "句読点後の空白削除"
+        number_jp_space: "数値と日本語の間の空白削除"
+        collapse_newlines: "連続改行を1行に"
+        remove_brackets: "[] で囲まれた部分の削除"
+  passwords_mailer:
+    reset:
+      subject: "パスワードの再設定"
+      link_text: "パスワード再設定ページ"
+      body_html: "こちらの%{link}からパスワードを再設定できます。このリンクは%{duration}で有効期限が切れます。"
+      body_text: "こちらのURLからパスワードを再設定できます:\n%{url}\n\nこのリンクは%{duration}で有効期限が切れます。"
+  js:
+    copied: "コピーしました。"
+    converted_to_markdown: "Markdownに変換しました。"
+    table_paste:
+      no_pending_table: "変換できる表がまだありません。先にExcel/Sheetsの範囲を貼り付けてください。"
+    organize:
+      move_failed: "移動を保存できませんでした — 実際の状態を表示するためページを再読み込みします。"
+    image_upload:
+      uploading: "%{filename} をアップロード中…"
+      failed: "%{filename} のアップロードに失敗しました"
+    scrap:
+      show_more: *scrap_show_more
+      show_less: *scrap_show_less
+    word_copy:
+      success_title: "コピーしました"
+      error_title: "リッチテキストコピーに失敗しました"
+    bulk_import:
+      invalid_json: "有効なJSONではありません。"
+      must_be_array: "JSONはタスクの配列である必要があります。"
+      skipped_invalid_task: "スキップ — 有効なタスクではありません: %{raw}"

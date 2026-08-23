@@ -1,0 +1,38 @@
+{
+  "name": "toishi-note",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  },
+  "scripts": {
+    "build": "esbuild app/javascript/*.* --bundle --format=esm --outdir=app/assets/builds --public-path=/assets --splitting --chunk-names=\"chunks/[name]-[hash].digested\" $([ \"$RAILS_ENV\" = \"production\" ] && echo --minify || echo --sourcemap)",
+    "build:css:compile": "sass ./app/assets/stylesheets/application.bootstrap.scss:./app/assets/builds/application.css --no-source-map --style=compressed --load-path=node_modules",
+    "build:css:prefix": "postcss ./app/assets/builds/application.css --use=autoprefixer --output=./app/assets/builds/application.css",
+    "build:css": "yarn build:css:compile && yarn build:css:prefix",
+    "watch:css": "nodemon --watch ./app/assets/stylesheets/ --ext scss --exec \"yarn build:css\""
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "@hotwired/turbo-rails": "^8.0.23",
+    "@popperjs/core": "^2.11.8",
+    "autoprefixer": "^10.5.0",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "diff": "^9.0.0",
+    "dompurify": "^3.4.13",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.18.1",
+    "marked": "^18.0.9",
+    "mermaid": "^11.16.1",
+    "nodemon": "^3.1.14",
+    "postcss": "^8.5.15",
+    "postcss-cli": "^11.0.1",
+    "sass": "^1.100.0",
+    "sortablejs": "^1.15.7",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "browserslist": [
+    "defaults"
+  ]
+}

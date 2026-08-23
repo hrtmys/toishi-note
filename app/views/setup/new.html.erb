@@ -1,0 +1,69 @@
+<div class="d-flex vh-100 justify-content-center align-items-center bg-light">
+  <div class="card shadow-sm" style="width: 22rem;">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1 fw-bold"><%= t("setup.welcome") %></h1>
+      <p class="text-secondary small mb-4"><%= t("setup.subtitle") %></p>
+
+      <% if @user.errors.any? %>
+        <div class="alert alert-danger py-2 small">
+          <ul class="mb-0 ps-3">
+            <% @user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <%
+        # data-turbo="false": Turbo would otherwise negotiate a turbo-stream
+        # response for this form post and silently drop it.
+        form_data = { turbo: false }
+        form_data[:controller] = "setup-auth-method" if @trusted_header_available
+      %>
+      <%= form_with model: @user, url: setup_path, data: form_data do |f| %>
+        <% if @trusted_header_available %>
+          <div class="mb-4">
+            <span class="form-label small d-block"><%= t("setup.auth_method") %></span>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="auth_mode" id="auth_mode_password" value="password" checked data-action="setup-auth-method#toggle">
+              <label class="btn btn-outline-secondary" for="auth_mode_password"><%= t("setup.auth_method_password") %></label>
+
+              <input type="radio" class="btn-check" name="auth_mode" id="auth_mode_trusted_header" value="trusted_header" data-action="setup-auth-method#toggle">
+              <label class="btn btn-outline-secondary" for="auth_mode_trusted_header"><%= t("setup.auth_method_trusted_header") %></label>
+            </div>
+            <p class="text-secondary small mt-1 mb-0"><%= t("setup.trusted_header_detected", header: @trusted_header_name) %></p>
+          </div>
+        <% end %>
+        <div class="mb-4">
+          <span class="form-label small d-block"><%= t("setup.instance_for") %></span>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="mode" id="mode_solo" value="solo" checked>
+            <label class="btn btn-outline-secondary" for="mode_solo"><%= t("setup.mode_solo") %></label>
+
+            <input type="radio" class="btn-check" name="mode" id="mode_team" value="team">
+            <label class="btn btn-outline-secondary" for="mode_team"><%= t("setup.mode_team") %></label>
+          </div>
+          <p class="text-secondary small mt-1 mb-0" data-setup-auth-method-target="teamDescriptionPassword"><%= t("setup.mode_team_description") %></p>
+          <% if @trusted_header_available %>
+            <p class="text-secondary small mt-1 mb-0 d-none" data-setup-auth-method-target="teamDescriptionTrustedHeader"><%= t("setup.mode_team_description_trusted_header") %></p>
+          <% end %>
+        </div>
+        <div data-setup-auth-method-target="passwordFields">
+          <div class="mb-3">
+            <%= f.label :email_address, t("auth.email_or_username"), class: "form-label small" %>
+            <%= f.text_field :email_address, class: "form-control", required: true, autofocus: true, autocomplete: "username" %>
+          </div>
+          <div class="mb-3">
+            <%= f.label :password, class: "form-label small" %>
+            <%= f.password_field :password, class: "form-control", required: true, autocomplete: "new-password", maxlength: 72 %>
+          </div>
+          <div class="mb-4">
+            <%= f.label :password_confirmation, class: "form-label small" %>
+            <%= f.password_field :password_confirmation, class: "form-control", required: true, autocomplete: "new-password", maxlength: 72 %>
+          </div>
+        </div>
+        <%= f.submit t("setup.create_account"), class: "btn btn-primary w-100" %>
+      <% end %>
+    </div>
+  </div>
+</div>

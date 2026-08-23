@@ -1,0 +1,70 @@
+// app/assets/stylesheets/application.bootstrap.scss
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons';
+@import 'github-dark';
+
+// typography defines $cjk-monospace-stack, used by text_diff and
+// markdown_content below — must load first, since Sass @import resolves
+// variables in textual/positional order.
+@import 'typography';
+
+@import 'editor_fab';
+@import 'text_diff';
+@import 'scrap_item';
+@import 'organize';
+@import 'home';
+@import 'palette';
+@import 'markdown_content';
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; // disable page-level scrolling
+}
+
+/* Scrollable, but with the scrollbar itself hidden. */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* --- Custom scrollbar styling --- */
+.custom-scrollbar-dark {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.5); }
+}
+
+.custom-scrollbar-light {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+
+  &::-webkit-scrollbar { width: 6px; height: 6px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+  }
+  &::-webkit-scrollbar-thumb:hover { background-color: rgba(0, 0, 0, 0.4); }
+}
+
+@keyframes completePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); box-shadow: 0 0 10px rgba(32, 201, 151, 0.6); }
+  100% { transform: scale(1); }
+}
+
+.progress-complete {
+  animation: completePulse 0.5s ease-out;
+  background-color: #20c997 !important; /* a slightly brighter green */
+}

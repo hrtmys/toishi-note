@@ -1,0 +1,10 @@
+<input type="text" 
+    id="note_title_input"
+    class="form-control form-control-lg border-0 bg-transparent fw-bold fs-2 mb-0" 
+    style="border-radius: 0; outline: none; box-shadow: none;"
+    value="<%= note.title %>"
+    placeholder="<%= t("notes.title_placeholder") %>"
+    data-controller="autosave" 
+    data-action="input->autosave#save" 
+    data-autosave-url-value="<%= note_path(note) %>"
+    name="note[title]">

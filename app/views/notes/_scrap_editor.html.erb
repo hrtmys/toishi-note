@@ -1,0 +1,28 @@
+<div class="h-100 d-flex flex-column" data-controller="scrap-copy-all">
+  <div class="d-flex justify-content-end mb-2 shrink-0">
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-action="click->scrap-copy-all#copyAll">
+      <i class="bi bi-clipboard me-1"></i><%= t("home.scrap.copy_all") %>
+    </button>
+  </div>
+
+  <div id="scrap_list_<%= note.id %>" class="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar-light pe-2 pb-3">
+    <% note.scrap_items.each do |item| %>
+      <%= render partial: "scrap_items/item", locals: { item: item } %>
+    <% end %>
+  </div>
+
+  <div class="mt-2 bg-white p-2 rounded shadow-sm border shrink-0">
+    <%= form_with url: note_scrap_items_path(note), method: :post,
+        data: { controller: "reset-form", action: "turbo:submit-end->reset-form#reset" } do |f| %>
+      <%= f.text_area :content,
+          class: "form-control border-0 mb-2",
+          rows: 3,
+          placeholder: t("home.scrap.content_placeholder"),
+          autofocus: true,
+          data: { action: "keydown.ctrl+enter->reset-form#submit keydown.meta+enter->reset-form#submit" } %>
+      <div class="text-end">
+        <%= f.submit t("home.common.add"), class: "btn btn-primary btn-sm" %>
+      </div>
+    <% end %>
+  </div>
+</div>

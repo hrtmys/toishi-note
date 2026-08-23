@@ -1,0 +1,5 @@
+<%= render partial: "one_time_link", locals: {
+  heading: t("admin.users.invited.heading", email: @user.email_address),
+  description: t("admin.users.invited.description"),
+  url: @invite_url,
+} %>

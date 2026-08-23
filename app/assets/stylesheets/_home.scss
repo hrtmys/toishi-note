@@ -1,0 +1,62 @@
+// Styles for the main app shell (home/_sidebar.html.erb and the note
+// editor it opens into) that don't belong to any one Stimulus controller.
+
+// Disable the blue focus glow on textareas/inputs.
+.form-control:focus {
+  box-shadow: none !important;
+  border-color: inherit;
+}
+
+.hover-bg-secondary:hover {
+  background-color: #6c757d;
+  color: white !important;
+}
+
+.hover-container .hover-target {
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+}
+
+.hover-container:hover .hover-target {
+  opacity: 1;
+  visibility: visible;
+}
+
+// Like .hover-target, but for the sidebar's icon-only buttons: collapses
+// width to 0 when hidden (not just fading) so they don't crowd the
+// notebook/folder/note name at narrower widths.
+.hover-container .hover-target-icon {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  transition: width 0.15s ease, opacity 0.15s ease, padding 0.15s ease;
+}
+
+.hover-container:hover .hover-target-icon {
+  width: 1.6rem;
+  opacity: 1;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+
+// A pinned note's pin icon stays visible (and keeps its space) without
+// needing to hover.
+.hover-target.pin-active,
+.hover-target-icon.pin-active {
+  opacity: 1;
+  visibility: visible;
+  width: 1.6rem;
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+
+// Highlights whichever of the three sort-mode buttons is active
+// (note_sort_controller.js).
+[data-note-sort-target="button"].active {
+  background-color: #495057;
+  color: #fff;
+  border-color: #495057;
+}

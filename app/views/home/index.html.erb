@@ -1,0 +1,86 @@
+<div class="container-fluid vh-100 d-flex flex-column p-0">
+  <div class="row g-0 flex-grow-1 overflow-hidden">
+
+    <%= render partial: "home/sidebar", locals: {
+      notebooks: @notebooks, current_notebook: @current_notebook,
+      folders: @folders, current_folder: @current_folder,
+      notes: @notes, current_note: @current_note
+    } %>
+
+    <!-- Right column: the note body. -->
+    <div class="col-lg-9 col-xl-10 bg-light p-0 h-100 d-flex flex-column">
+      <!-- Header shown whenever the sidebar is off-canvas (below lg). -->
+      <div class="d-lg-none bg-dark text-white p-2 d-flex align-items-center shrink-0 shadow-sm">
+        <button id="sidebarToggleBtn" class="btn btn-outline-light btn-sm me-2 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+          <i class="bi bi-list fs-4"></i>
+        </button>
+        <%= link_to "Toishi Note", root_path(organize: true, notebook_id: @current_notebook&.id, folder_id: @current_folder&.id, note_id: @current_note&.id),
+            class: "m-0 fw-bold text-decoration-none text-white h6 mb-0", title: t("home.header.organize") %>
+      </div>
+
+      <% if @organize %>
+        <%= render "home/organize", notebooks: Current.user.notebooks.includes(folders: :notes) %>
+      <% else %>
+        <%= turbo_frame_tag "main_editor", class: "h-100 d-flex flex-column overflow-hidden" do %>
+          <% if @current_note %>
+          <%# note-conflict is unconditional (title editing, and its autosave, happens for every
+              note type) — editor only joins it for md notes, which also autosave content.
+              data-note-lock-version is the one shared version both fields' autosave reads and
+              writes, so editing title then content moments later doesn't conflict with itself —
+              see autosave_controller.js. %>
+          <div class="p-4 d-flex flex-column h-100"
+              data-controller="note-conflict<%= ' editor' if @current_note.note_type == 'md' %>"
+              data-note-lock-version="<%= @current_note.lock_version %>">
+
+            <div data-note-conflict-target="banner" class="alert alert-warning d-none d-flex justify-content-between align-items-center mb-2 py-2 shrink-0" role="alert">
+              <span><%= t("notes.conflict.message") %></span>
+              <div class="d-flex shrink-0 ms-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-action="click->note-conflict#reload"><%= t("notes.conflict.reload") %></button>
+                <button type="button" class="btn btn-sm btn-primary" data-action="click->note-conflict#keepMine"><%= t("notes.conflict.keep_mine") %></button>
+              </div>
+            </div>
+
+            <div id="note_editor_header" class="hover-container d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 shrink-0">
+              <%= render partial: "notes/title_input", locals: { note: @current_note } %>
+
+              <div class="d-flex shrink-0 align-items-center">
+                <%= link_to t("home.common.export"), export_note_path(@current_note), class: "hover-target btn btn-outline-secondary ms-3" %>
+                <%# turbo_frame: "_top" is load-bearing, not decorative: this button sits inside
+                    turbo_frame_tag "main_editor", so without it the redirect response only
+                    re-renders that frame — the sidebar (outside the frame entirely) never
+                    finds out the note is gone, and keeps showing it as the active row
+                    indefinitely, pointing at a note that no longer exists. %>
+                <%= button_to t("home.common.delete"), note_path(@current_note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm"), turbo_frame: "_top" }, class: "hover-target btn btn-outline-danger ms-2" %>
+              </div>
+            </div>
+
+            <div class="flex-grow-1 mt-1 overflow-hidden d-flex flex-column">
+              <% if @current_note.note_type == 'todo' %>
+                <%= render partial: "notes/todo_editor", locals: { note: @current_note } %>
+              <% elsif @current_note.note_type == 'scrap' %>
+                <%= render partial: "notes/scrap_editor", locals: { note: @current_note } %>
+              <% else %>
+                <%= render partial: "notes/md_editor", locals: { note: @current_note, user: Current.user } %>
+              <% end %>
+            </div>
+
+          </div>
+        <% else %>
+          <div class="h-100 d-flex align-items-center justify-content-center text-secondary flex-column p-4 text-center" style="opacity: 0.7;">
+            <i class="bi bi-journal-text display-1 mb-3 text-muted"></i>
+            <h2 class="fw-light mb-2" style="letter-spacing: 0.05em;"><%= t("home.empty_state.title") %></h2>
+            <p class="small text-muted"><%= t("home.empty_state.description") %></p>
+            <button class="btn btn-outline-secondary mt-3 d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+              <i class="bi bi-list me-1"></i> <%= t("home.empty_state.open_menu") %>
+            </button>
+          </div>
+        <% end %>
+      <% end %>
+      <% end %>
+    </div>
+
+  </div>
+
+  <%= render partial: "settings/modal", locals: { user: Current.user } %>
+  <%= render partial: "home/palette", locals: { notes: @palette_notes } %>
+</div>

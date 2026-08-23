@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  note: one
+  content: MyString
+  is_checked: false
+  position: 1
+
+two:
+  note: two
+  content: MyString
+  is_checked: false
+  position: 1

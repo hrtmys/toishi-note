@@ -1,0 +1,55 @@
+// The AI-formatting FAB at the bottom-right of the md editor — see
+// app/javascript/controllers/editor_fab_controller.js. Off by default
+// (Settings > Editor); nothing renders in its place until it's turned on.
+.editor-fab {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1030;
+}
+
+// Uses `btn btn-outline-secondary` (set in the view alongside this class)
+// so it matches every other icon button in the toolbar/sidebar instead of
+// looking like a generic filled mobile FAB.
+.editor-fab-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // The view's `bg-white !important` blocks Bootstrap's hover background
+  // invert, which made the icon render white-on-white on hover. Restore it
+  // explicitly.
+  &:hover {
+    background-color: var(--bs-btn-hover-bg) !important;
+  }
+}
+
+.editor-fab-menu {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 0.5rem;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  min-width: 220px;
+  padding: 0.5rem;
+}
+
+.editor-fab-submenu {
+  border-top: 1px solid #dee2e6;
+  padding-top: 0.5rem;
+
+  .form-check {
+    margin-bottom: 0.25rem;
+  }
+
+  button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,8 @@
+<%# Turbo Frame navigation requires the response to contain a matching
+    <turbo-frame id="palette_results"> somewhere in it, so the search
+    results always render wrapped in one — even though the parent page
+    already has one waiting for it (see home/_palette.html.erb), Turbo
+    replaces that element's content with whatever's inside this one. %>
+<%= turbo_frame_tag "palette_results" do %>
+  <%= render "home/palette_results", notes: @notes, query: @query %>
+<% end %>

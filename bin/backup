@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Backs up everything under storage/ — the four SQLite databases (app data,
+# Solid Cache/Queue/Cable) and every uploaded image (Active Storage's local
+# Disk service, also rooted at storage/ — see config/storage.yml) — into a
+# single timestamped, restorable snapshot.
+#
+# Usage: bin/backup [DEST_DIR]   (default: ./backups)
+#
+# Safe to run against a live, currently-serving instance: the SQLite files
+# are captured with `sqlite3 .backup`, not `cp`. A plain `cp` of a live
+# SQLite file can copy it mid-write or miss data still sitting in the
+# write-ahead log that hasn't been checkpointed back into the main file yet
+# — `.backup` is SQLite's own online-backup API, built for exactly this,
+# and produces a file that PRAGMA integrity_check reports as clean even
+# while the source is being written to concurrently. See
+# docs/engineering/backup.md for the full explanation and the restore
+# procedure this pairs with (bin/restore).
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+DEST_ROOT="${1:-./backups}"
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+DEST="$DEST_ROOT/$STAMP"
+
+if [ ! -d storage ]; then
+  echo "storage/ not found — run this from the app root (or inside the container)." >&2
+  exit 1
+fi
+
+mkdir -p "$DEST"
+
+echo "Backing up storage/ into $DEST ..."
+
+for db in storage/*.sqlite3; do
+  [ -e "$db" ] || continue
+  name=$(basename "$db")
+  sqlite3 "$db" ".backup '$DEST/$name'"
+  # Fails loudly rather than silently shipping a corrupt backup — a
+  # corrupt backup found only at restore time, when the live data is
+  # already gone, is the worst possible moment to find out.
+  result=$(sqlite3 "$DEST/$name" "PRAGMA integrity_check;")
+  if [ "$result" != "ok" ]; then
+    echo "INTEGRITY CHECK FAILED for $name: $result" >&2
+    exit 1
+  fi
+  echo "  $name: backed up and verified"
+done
+
+# Everything else under storage/ is Active Storage's uploaded files (plain
+# files, safe to copy directly) plus SQLite's own -wal/-shm/-journal
+# sidecar files, which don't need backing up on their own — .backup above
+# already folded whatever they held into the snapshot.
+rsync -a --exclude='*.sqlite3' --exclude='*.sqlite3-wal' --exclude='*.sqlite3-shm' --exclude='*.sqlite3-journal' \
+  storage/ "$DEST/blobs/"
+echo "  uploaded files: copied"
+
+echo "Backup complete: $DEST"

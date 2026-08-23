@@ -1,0 +1,21 @@
+// Word-level diff rendering for the Compare modal — markup comes from
+// app/javascript/lib/text_diff.js, owned by compare_controller.js.
+.diff-output {
+  white-space: pre-wrap;
+  font-family: $cjk-monospace-stack;
+
+  ins.diff-added {
+    text-decoration: underline;
+    text-decoration-color: #198754;
+    text-decoration-thickness: 2px;
+    background-color: rgba(25, 135, 84, 0.12);
+    color: #146c43;
+  }
+
+  del.diff-removed {
+    text-decoration: line-through;
+    text-decoration-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.12);
+    color: #b02a37;
+  }
+}

@@ -1,0 +1,16 @@
+// The Organize view's drag-and-drop tree (see organize_controller.js) —
+// SortableJS adds/removes these classes itself during a drag; only the
+// look of each state is ours to define.
+.sortable-ghost {
+  // The placeholder left behind at the drop target while dragging.
+  opacity: 0.4;
+}
+
+.sortable-chosen .organize-drag-handle {
+  cursor: grabbing;
+}
+
+.sortable-drag {
+  // The element actually following the pointer.
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}

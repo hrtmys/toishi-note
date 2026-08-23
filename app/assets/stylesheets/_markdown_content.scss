@@ -1,0 +1,55 @@
+// Styles for rendered Markdown output (.markdown-content), shared by the
+// note preview pane and Scrap items, both rendered via
+// lib/markdown_renderer.js.
+
+.markdown-content {
+  table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+  }
+
+  th {
+    background-color: #f8f9fa;
+    font-weight: 700;
+  }
+
+  pre, code {
+    font-family: $cjk-monospace-stack;
+  }
+
+  pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+  }
+
+  blockquote {
+    border-left: 4px solid #adb5bd;
+    padding-left: 1rem;
+    color: #6c757d;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+// Scrap items are compact cards, so images there get rounded corners to
+// match the card — the note preview pane doesn't want this.
+[data-controller~="scrap-item"] .markdown-content img {
+  border-radius: 4px;
+}
+
+// The last item in a Scrap card shouldn't leave trailing whitespace below
+// it.
+[data-controller~="scrap-item"] .markdown-content p:last-child {
+  margin-bottom: 0;
+}

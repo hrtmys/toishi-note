@@ -1,0 +1,23 @@
+# Copy this to docker-compose.override.yml (gitignored — `docker compose`
+# merges it automatically alongside docker-compose.yml, no -f flags
+# needed) and fill in whatever's specific to *your* infrastructure.
+#
+# Nothing here is required — a plain docker-compose.yml + .env is a
+# complete, working deployment on its own. This file exists for the case
+# where you're running this behind existing infrastructure (a shared
+# reverse-proxy network, a fixed container name some other config
+# references, etc.) that shouldn't live in the public template.
+#
+# Example: attaching to an existing Docker network instead of (or in
+# addition to) the published port in docker-compose.yml, so a reverse
+# proxy container elsewhere on that network can reach this one by name.
+services:
+  web:
+    container_name: my-toishi-note
+    networks:
+      - my_existing_network
+
+networks:
+  my_existing_network:
+    external: true
+    name: my_existing_network

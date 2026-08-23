@@ -1,0 +1,124 @@
+<div data-controller="editor" class="h-100 d-flex flex-column">
+  <div class="d-flex justify-content-end mb-2 shrink-0">
+    <div class="btn-group shadow-sm" role="group">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-action="click->editor#showEdit" data-editor-target="editBtn" title="<%= t("editor.modes.edit_only") %>">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-action="click->editor#showSplit" data-editor-target="splitBtn" title="<%= t("editor.modes.split") %>">
+        <i class="bi bi-layout-split"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-action="click->editor#showPreview" data-editor-target="previewBtn" title="<%= t("editor.modes.preview_only") %>">
+        <i class="bi bi-eye"></i>
+      </button>
+    </div>
+  </div>
+  <div class="d-flex flex-grow-1 overflow-hidden gap-2 position-relative">
+    <div class="d-flex flex-column w-50 h-100 transition-width" data-editor-target="editorContainer">
+      <textarea
+          name="note[content]"
+          class="form-control flex-grow-1 border bg-white custom-scrollbar-light p-3 shadow-sm rounded font-monospace-cjk"
+          style="resize: none; outline: none;"
+          data-controller="autosave image-upload word-paste list-continuation"
+          data-action="input->autosave#save input->editor#updatePreview paste->word-paste#paste paste->image-upload#paste drop->image-upload#drop dragover->image-upload#dragover keydown->list-continuation#keydown"
+          data-autosave-url-value="<%= note_path(note) %>"
+          data-image-upload-url-value="<%= note_images_path(note) %>"
+          data-editor-target="textarea"
+          placeholder="<%= t("editor.content_placeholder") %>"
+      ><%= note.content %></textarea>
+    </div>
+
+    <div class="w-50 h-100 overflow-y-auto custom-scrollbar-light p-4 bg-white rounded shadow-sm border markdown-content transition-width" data-editor-target="previewArea"></div>
+
+    <%# Off by default — the Settings gear (see home/index.html.erb) is the only way in.
+        A permanent "still here if you want it" link was tried and dropped: it meant
+        UI in the corner of every note for people who never turn either feature on.
+        Shared by three independent features (AI formatting, text comparison, table-
+        paste conversion) — visible as soon as any one is enabled; each menu section
+        below is gated on its own toggle so a user who only wants one doesn't see the
+        others' controls. %>
+    <div class="editor-fab <%= "d-none" unless user.editor_fab_enabled? || user.compare_enabled? || user.table_paste_enabled? %>"
+        data-editor-fab data-controller="editor-fab word-copy text-format compare-launcher table-paste-launcher"
+        data-action="word-paste:table-pasted@document->table-paste-launcher#cache">
+      <div class="editor-fab-menu d-none" data-editor-fab-target="menu">
+        <div data-editor-fab-section="ai-formatting" class="<%= "d-none" unless user.editor_fab_enabled? %>">
+          <button type="button" class="btn btn-sm btn-light w-100 text-start mb-1"
+              data-word-copy-target="button" data-action="click->word-copy#copy" title="<%= t("editor.fab.copy_for_word_title") %>">
+            <i class="bi bi-clipboard" data-word-copy-target="icon"></i> <%= t("editor.fab.copy_for_word") %>
+          </button>
+          <button type="button" class="btn btn-sm btn-light w-100 text-start" data-action="click->text-format#toggleModal" title="<%= t("editor.fab.quick_formatting_title") %>">
+            <i class="bi bi-tools"></i> <%= t("editor.fab.quick_formatting") %>
+          </button>
+
+          <div data-text-format-target="modal" class="editor-fab-submenu d-none mt-1">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="fullwidth_to_halfwidth" id="fmtFullwidth" data-text-format-target="option">
+              <label class="form-check-label" for="fmtFullwidth"><%= t("editor.fab.format.fullwidth_to_halfwidth") %></label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="punctuation_space" id="fmtPunct" data-text-format-target="option">
+              <label class="form-check-label" for="fmtPunct"><%= t("editor.fab.format.punctuation_space") %></label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="number_jp_space" id="fmtNumJp" data-text-format-target="option">
+              <label class="form-check-label" for="fmtNumJp"><%= t("editor.fab.format.number_jp_space") %></label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="collapse_newlines" id="fmtNewlines" data-text-format-target="option">
+              <label class="form-check-label" for="fmtNewlines"><%= t("editor.fab.format.collapse_newlines") %></label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="remove_brackets" id="fmtBrackets" data-text-format-target="option">
+              <label class="form-check-label" for="fmtBrackets"><%= t("editor.fab.format.remove_brackets") %></label>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm mt-2" data-action="click->text-format#applyFormatting"><%= t("editor.fab.apply") %></button>
+          </div>
+        </div>
+
+        <div data-editor-fab-section="compare" class="<%= "d-none" unless user.compare_enabled? %>">
+          <button type="button" class="btn btn-sm btn-light w-100 text-start mb-1"
+              data-action="click->compare-launcher#setBefore"><%= t("editor.fab.compare_as_before") %></button>
+          <button type="button" class="btn btn-sm btn-light w-100 text-start"
+              data-action="click->compare-launcher#setAfter"><%= t("editor.fab.compare_as_after") %></button>
+        </div>
+
+        <%# Plain Ctrl+V of an Excel/Sheets range always pastes the rendered
+            selection image (word_paste_controller.js deliberately leaves it
+            alone rather than silently guessing at a table conversion — see
+            "Word/Excel paste" in ux-roadmap.md.old). This button converts the
+            most recently pasted table on demand instead. %>
+        <div data-editor-fab-section="table-paste" class="<%= "d-none" unless user.table_paste_enabled? %>">
+          <button type="button" class="btn btn-sm btn-light w-100 text-start"
+              data-action="click->table-paste-launcher#convert" title="<%= t("editor.fab.convert_table_paste_title") %>">
+            <i class="bi bi-table"></i> <%= t("editor.fab.convert_table_paste") %>
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="editor-fab-button btn btn-outline-secondary bg-white shadow"
+          data-editor-fab-target="button" data-action="click->editor-fab#toggleMenu" title="<%= t("editor.fab.button_title") %>">
+        <i class="bi bi-puzzle"></i>
+      </button>
+    </div>
+  </div>
+
+  <%# The Compare modal — opened from the FAB's "Set as Before"/"Set as After"
+      (compare_launcher_controller.js), which preload one side with the open
+      note's current content before showing it. Mounted once per note view,
+      independent of which editor mode (Edit/Split/Preview) is showing. %>
+  <div class="modal fade" id="compareModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" data-controller="compare" data-action="text-format:formatted@document->compare#load compare-launcher:stage@document->compare#stage">
+        <div class="modal-header">
+          <h5 class="modal-title"><%= t("compare.modal_title") %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <%= render "shared/compare_panel" %>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-action="click->compare#clear"><%= t("compare.clear") %></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

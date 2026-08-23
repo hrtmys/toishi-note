@@ -1,0 +1,33 @@
+<div class="modal fade" id="bulk_import_modal_<%= note.id %>" tabindex="-1" aria-hidden="true" data-controller="bulk-todo-import">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <%= form_with url: bulk_create_note_todo_items_path(note), method: :post, data: { bulk_todo_import_target: "form", action: "turbo:submit-end->bulk-todo-import#submitEnd" } do %>
+        <div class="modal-header">
+          <h5 class="modal-title"><%= t("home.todo.bulk_import.title") %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <p class="text-muted small">
+            <%= t("home.todo.bulk_import.description_html") %>
+          </p>
+
+          <%= text_area_tag :entries, nil,
+              class: "form-control mb-3",
+              rows: 6,
+              placeholder: '["Buy milk", "Call plumber"]',
+              data: { bulk_todo_import_target: "textarea", action: "input->bulk-todo-import#preview" } %>
+
+          <div data-bulk-todo-import-target="error" class="text-danger small mb-2 d-none"></div>
+
+          <ul class="list-group" data-bulk-todo-import-target="preview"></ul>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><%= t("home.todo.bulk_import.cancel") %></button>
+          <button type="submit" class="btn btn-primary" data-bulk-todo-import-target="submit" disabled><%= t("home.common.add") %></button>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,32 @@
+<li class="mb-2" id="organize_folder_<%= folder.id %>" data-folder-id="<%= folder.id %>">
+  <div class="d-flex align-items-center p-2 bg-white rounded shadow-sm border">
+    <i class="bi bi-grip-vertical me-2 text-muted organize-drag-handle" style="cursor: grab;"></i>
+    <i class="bi bi-folder me-2"></i>
+    <span class="text-truncate flex-grow-1"><%= folder.name %></span>
+
+    <div class="d-flex shrink-0 ms-2">
+      <%= form_with url: notebook_folder_path(folder.notebook, folder), method: :patch,
+          data: { controller: "prompt-form", prompt_message: t("home.folders.rename_prompt"), action: "submit->prompt-form#submit" }, class: "d-inline" do |f| %>
+        <%= f.hidden_field :name, value: folder.name, data: { prompt_form_target: "input" } %>
+        <%= organize_context_fields %>
+        <button type="submit" class="btn btn-sm py-0 px-1 border-0" title="<%= t("home.common.rename") %>"><i class="bi bi-pencil"></i></button>
+      <% end %>
+
+      <%= form_with url: notebook_folder_path(folder.notebook, folder), method: :delete,
+          data: { turbo_confirm: t("home.folders.delete_confirm") }, class: "d-inline" do %>
+        <%= organize_context_fields %>
+        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="<%= t("home.common.delete") %>"><i class="bi bi-x-lg"></i></button>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Always rendered, even empty — see the matching comment on the
+      folder-list <ul> in _organize_notebook.html.erb; a note needs
+      somewhere to land when dragged into an empty folder. %>
+  <ul class="list-unstyled ms-4 mt-1 mb-0" style="min-height: 0.5rem;"
+      data-organize-target="noteList" data-folder-id="<%= folder.id %>">
+    <% folder.notes.each do |note| %>
+      <%= render "home/organize_note", note: note %>
+    <% end %>
+  </ul>
+</li>

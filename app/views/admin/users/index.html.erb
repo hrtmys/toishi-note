@@ -1,0 +1,34 @@
+<div class="container py-5" style="max-width: 40rem;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 fw-bold mb-0"><%= t("admin.users.title") %></h1>
+    <%= button_to t("home.sign_out"), session_path, method: :delete, class: "btn btn-sm btn-outline-secondary" %>
+  </div>
+
+  <% if flash[:notice] %>
+    <div class="alert alert-success small"><%= flash[:notice] %></div>
+  <% end %>
+
+  <div class="card shadow-sm mb-4">
+    <ul class="list-group list-group-flush">
+      <% @users.each do |user| %>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <%= user.email_address %>
+            <span class="badge <%= user.admin? ? 'text-bg-secondary' : 'text-bg-light' %> ms-1"><%= user.role %></span>
+          </div>
+          <div class="d-flex gap-2">
+            <%= button_to t("admin.users.create_reset_link"), password_reset_link_admin_user_path(user), class: "btn btn-sm btn-outline-secondary", form: { data: { turbo: false } } %>
+            <% unless user == Current.user %>
+              <% notebook_count = user.notebooks.count %>
+              <% warning = t("admin.users.remove_confirm", email: user.email_address) %>
+              <% warning += t("admin.users.remove_confirm_notebooks", notebooks: t("admin.users.notebook_count", count: notebook_count)) if notebook_count.positive? %>
+              <%= button_to t("admin.users.remove"), admin_user_path(user), method: :delete, class: "btn btn-sm btn-outline-danger", form: { data: { turbo_confirm: warning } } %>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <%= link_to t("admin.users.invite"), new_admin_user_path, class: "btn btn-primary" %>
+</div>

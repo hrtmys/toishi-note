@@ -1,0 +1,17 @@
+<% total = note.todo_items.count
+   percentage = note.todo_completion_percentage %>
+<div id="todo_progress_<%= note.id %>" class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-1">
+    <small class="text-muted fw-bold"><%= t("home.todo.progress") %></small>
+    <small class="text-muted fw-bold"><%= note.todo_items_completed_count %> / <%= total %></small>
+  </div>
+  <div class="progress" style="height: 10px; background-color: #e9ecef;">
+    <div class="progress-bar bg-success <%= 'progress-bar-striped progress-bar-animated' if percentage > 0 && percentage < 100 %> <%= 'progress-complete' if percentage == 100 && total > 0 %>" 
+         role="progressbar" 
+         style="width: <%= percentage %>%; transition: width 0.5s ease-in-out;" 
+         aria-valuenow="<%= percentage %>" 
+         aria-valuemin="0" 
+         aria-valuemax="100">
+    </div>
+  </div>
+</div>

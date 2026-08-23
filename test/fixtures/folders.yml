@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  name: Folder One
+  notebook: one
+  position: 1
+
+two:
+  name: Folder Two
+  notebook: two
+  position: 1

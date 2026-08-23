@@ -1,0 +1,25 @@
+<li class="mb-1" id="organize_note_<%= note.id %>" data-note-id="<%= note.id %>">
+  <div class="d-flex align-items-center p-2 bg-white rounded shadow-sm border">
+    <i class="bi bi-grip-vertical me-2 text-muted organize-drag-handle" style="cursor: grab;"></i>
+    <i class="bi <%= note_icon_class(note) %> me-2 opacity-75"></i>
+    <span class="text-truncate flex-grow-1"><%= note.title %></span>
+
+    <div class="d-flex shrink-0 ms-2">
+      <%# note[title] scopes this under :note so notes_controller.rb's
+          existing note_params.require(:note) picks it up — organize_context_fields
+          stays unscoped regardless, on purpose (see home_helper.rb). %>
+      <%= form_with scope: :note, url: note_path(note), method: :patch,
+          data: { controller: "prompt-form", prompt_message: t("home.notes.rename_prompt"), action: "submit->prompt-form#submit" }, class: "d-inline" do |f| %>
+        <%= f.hidden_field :title, value: note.title, data: { prompt_form_target: "input" } %>
+        <%= organize_context_fields %>
+        <button type="submit" class="btn btn-sm py-0 px-1 border-0" title="<%= t("home.common.rename") %>"><i class="bi bi-pencil"></i></button>
+      <% end %>
+
+      <%= form_with url: note_path(note), method: :delete,
+          data: { turbo_confirm: t("home.notes.delete_confirm") }, class: "d-inline" do %>
+        <%= organize_context_fields %>
+        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="<%= t("home.common.delete") %>"><i class="bi bi-x-lg"></i></button>
+      <% end %>
+    </div>
+  </div>
+</li>

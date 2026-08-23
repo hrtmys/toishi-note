@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+  <head>
+    <title><%= content_for(:title) || "Toishi Note" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Toishi Note">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%# UI copy that a Stimulus controller needs at runtime (a toast
+        message, a client-side validation error) — not note content, never
+        the request/response strings Rails already renders server-side.
+        See app/javascript/lib/translations.js. %>
+    <meta name="translations" content="<%= t("js").to_json %>">
+
+    <%= yield :head %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <%# :app bulk-includes every plain .css file under app/assets/**/*.css
+        (Propshaft's stylesheet_link_tag override) — this is how
+        app/assets/stylesheets/katex/katex.min.css (vendored, not
+        CDN-loaded — see docs/engineering/asset-strategy.md) reaches the
+        page with no separate tag needed. KaTeX, Mermaid, and
+        highlight.js are all loaded as npm imports from
+        lib/markdown_renderer.js instead of CDN <script> tags: nothing
+        in this app's runtime path is fetched from a third party. %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+
+    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+  </head>
+
+  <body data-controller="navigation">
+    <%= yield %>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;" data-controller="toast">
+      <div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" data-toast-target="toast" data-action="toast:show@window->toast#show">
+        <div class="d-flex">
+          <div class="toast-body" data-toast-target="body"></div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

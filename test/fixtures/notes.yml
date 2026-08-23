@@ -1,0 +1,17 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  title: Note One
+  note_type: md
+  content: MyText
+  is_pinned: false
+  folder: one
+  notebook: one
+
+two:
+  title: Note Two
+  note_type: md
+  content: MyText
+  is_pinned: false
+  folder: two
+  notebook: two

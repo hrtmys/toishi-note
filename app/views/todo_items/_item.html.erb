@@ -1,0 +1,21 @@
+<div id="todo_item_<%= item.id %>" class="hover-container d-flex align-items-center py-2 border-bottom">
+  
+  <%= form_with url: note_todo_item_path(item.note, item), method: :patch, class: "m-0 me-3" do |f| %>
+    <%= f.check_box :is_checked,
+        checked: item.is_checked,
+        class: "form-check-input fs-5",
+        data: { controller: "submit-on-change", action: "change->submit-on-change#submit" } %>
+  <% end %>
+
+  <span class="flex-grow-1 <%= 'text-decoration-line-through text-muted' if item.is_checked %>">
+    <%= item.content %>
+  </span>
+
+  <% if item.due_date %>
+    <span class="badge <%= item.overdue? ? 'text-bg-danger' : 'text-bg-secondary' %> me-2">
+      <%= item.due_date.strftime("%-m/%-d") %>
+    </span>
+  <% end %>
+
+  <%= button_to "×", note_todo_item_path(item.note, item), method: :delete, class: "hover-target btn btn-sm btn-outline-danger py-0 px-2 border-0" %>
+</div>

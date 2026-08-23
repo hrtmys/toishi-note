@@ -1,0 +1,193 @@
+#!/usr/bin/env ruby
+require "fileutils"
+require "time"
+
+# The single entry point for "is this branch good to merge" — runs every
+# check this project's PRs are expected to pass, once, and reports the
+# result in a handful of lines instead of the raw output of five separate
+# tools. See docs/engineering/verification.md for why this exists and how
+# an AI agent (or a human) should read its output.
+#
+# Each step's full, unfiltered output still goes to disk (tmp/ci_logs/) —
+# nothing about this script makes a failure harder to diagnose, it just
+# means "no news is good news" for everything that passed, so a
+# 250-test run that's all green costs one line instead of thousands.
+APP_ROOT = File.expand_path("..", __dir__)
+
+Step = Struct.new(:name, :label, :blocking, :command, :summarize, keyword_init: true)
+Result = Struct.new(:step, :status, :summary, :seconds, :log_path, :failure_detail, keyword_init: true)
+
+MODE = ARGV.first || "full"
+unless %w[full quick].include?(MODE)
+  warn "usage: bin/ci [full|quick]"
+  warn "  full  (default) — everything, including system tests. Required before merging."
+  warn "  quick            — skips test:system and yarn audit, for fast local iteration only."
+  exit 1
+end
+
+def minitest_summary(log)
+  # Minitest's own final line, e.g. "247 runs, 634 assertions, 0 failures, 0 errors, 0 skips".
+  log[/^\d+ runs?,.*$/] || "no summary line found — see log"
+end
+
+def minitest_failures(log)
+  # Just the failing/erroring test names (Minitest always prints one
+  # right after "Failure:"/"Error:"), not their backtraces — enough to
+  # know what to go read, without spending the backtrace's tokens on
+  # every failure every time.
+  log.scan(/^(?:Failure|Error):\n(.+)$/).flatten.map(&:strip).uniq
+end
+
+STEPS = [
+  Step.new(
+    name: "assets_build",
+    label: "yarn build",
+    blocking: true,
+    command: "yarn build",
+    summarize: ->(log) { log.include?("Done in") ? "built" : "see log" }
+  ),
+  Step.new(
+    name: "rails_test",
+    label: "rails test",
+    blocking: true,
+    command: "bin/rails test",
+    summarize: ->(log) { minitest_summary(log) }
+  ),
+  Step.new(
+    name: "rails_test_system",
+    label: "rails test:system",
+    blocking: true,
+    command: "bin/rails test:system",
+    summarize: ->(log) { minitest_summary(log) }
+  ),
+  Step.new(
+    name: "rubocop",
+    label: "rubocop",
+    blocking: true,
+    command: "bin/rubocop",
+    summarize: ->(log) { log[/^\d+ files? inspected,.*$/] || "see log" }
+  ),
+  Step.new(
+    name: "brakeman",
+    label: "brakeman",
+    blocking: true,
+    # Not bin/brakeman: its CLI runs a self-update version check over the
+    # network on every invocation, and that check failing (a tooling
+    # flake, unrelated to any app code — see docs/engineering/
+    # verification.md) takes the whole scan down with it. Calling the
+    # gem's own Ruby API directly skips that check entirely.
+    command: <<~RUBY,
+      require "brakeman"
+      tracker = Brakeman.run(app_path: ".", print_report: false)
+      warnings = tracker.filtered_warnings
+      puts "Warnings: \#{warnings.length}"
+      warnings.each { |w| puts "  \#{w.warning_type}: \#{w.message} (\#{w.file})" }
+      exit(warnings.empty? ? 0 : 1)
+    RUBY
+    summarize: ->(log) { log[/^Warnings: \d+$/] || "see log" }
+  ),
+  Step.new(
+    name: "bundler_audit",
+    label: "bundler-audit",
+    blocking: false, # advisories can be pre-existing upstream issues outside this branch's control
+    command: "bin/bundler-audit check",
+    summarize: ->(log) {
+      # Gemfile.lock lists one entry per platform for a gem like sqlite3,
+      # so the same advisory (same GHSA id) can print several times in a
+      # row for what is really one issue — count distinct GHSA ids, not
+      # "Name:" lines, or "1 known advisory affecting 6 platform builds"
+      # reads as "6 advisories" and looks like it got worse for no reason.
+      ids = log.scan(/^GHSA: (\S+)/).flatten.uniq
+      ids.empty? ? "no known vulnerabilities" : "#{ids.size} advisor#{ids.size == 1 ? "y" : "ies"} (#{ids.join(", ")}) — bin/bundler-audit check for details"
+    }
+  ),
+  Step.new(
+    name: "yarn_audit",
+    label: "yarn audit",
+    blocking: false,
+    command: "yarn audit",
+    summarize: ->(log) { log[/^\d+ vulnerabilit(?:y|ies) found.*$/] || "0 vulnerabilities found" }
+  ),
+].freeze
+
+def run_step(step, log_dir)
+  log_path = File.join(log_dir, "#{step.name}.log")
+  start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+  if step.command.include?("\n")
+    # Multi-line commands are Ruby snippets, run in-process via `ruby -e`
+    # so they share bundler's already-resolved gem set instead of paying
+    # for a second `bundle exec` boot.
+    output = IO.popen([ "ruby", "-e", step.command ], chdir: APP_ROOT, err: [ :child, :out ], &:read)
+  else
+    output = IO.popen(step.command, chdir: APP_ROOT, err: [ :child, :out ], &:read)
+  end
+  succeeded = $?.success?
+  elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+
+  File.write(log_path, output)
+
+  status = if succeeded
+    :ok
+  elsif step.blocking
+    :fail
+  else
+    :warn
+  end
+
+  Result.new(
+    step: step,
+    status: status,
+    summary: step.summarize.call(output),
+    seconds: elapsed,
+    log_path: log_path,
+    failure_detail: (minitest_failures(output) if status == :fail && step.name.start_with?("rails_test"))
+  )
+end
+
+FileUtils.mkdir_p(File.join(APP_ROOT, "tmp/ci_logs"))
+# Keep the last 5 runs on disk and no more — logs exist so a failure can
+# be read back, not to accumulate forever.
+old_dirs = Dir.glob(File.join(APP_ROOT, "tmp/ci_logs/*")).sort
+old_dirs[0..-5].each { |dir| FileUtils.rm_rf(dir) } if old_dirs.size >= 5
+
+timestamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
+log_dir = File.join(APP_ROOT, "tmp/ci_logs", timestamp)
+FileUtils.mkdir_p(log_dir)
+
+steps_to_run = MODE == "quick" ? STEPS.reject { |s| %w[rails_test_system yarn_audit].include?(s.name) } : STEPS
+
+results = steps_to_run.map { |step| run_step(step, log_dir) }
+
+ICONS = { ok: "✅", warn: "⚠️ ", fail: "❌" }.freeze
+
+puts "CI (#{MODE}) — #{Time.now.utc.strftime("%Y-%m-%d %H:%M UTC")}"
+results.each do |r|
+  printf("%s %-20s %-55s (%.1fs)\n", ICONS.fetch(r.status), r.step.label, r.summary, r.seconds)
+end
+
+failed = results.select { |r| r.status == :fail }
+warned = results.select { |r| r.status == :warn }
+
+if failed.any?
+  puts
+  puts "FAILED: #{failed.map { |r| r.step.label }.join(", ")}"
+  failed.each do |r|
+    puts
+    puts "-- #{r.step.label} (full log: #{r.log_path.sub("#{APP_ROOT}/", "")}) --"
+    if r.failure_detail&.any?
+      r.failure_detail.each { |name| puts "  #{name}" }
+    else
+      # No structured failure list available (e.g. rubocop, brakeman,
+      # yarn build) — the last few lines of the log are usually the
+      # actual error, not just noise.
+      puts File.read(r.log_path).lines.last(15).join
+    end
+  end
+  puts
+  puts "RESULT: FAIL — see logs above before merging."
+  exit 1
+end
+
+puts
+puts "RESULT: PASS#{MODE == "quick" ? " (quick — run `bin/ci` before merging)" : ""}#{warned.any? ? ", with advisories to review (#{warned.map { |r| r.step.label }.join(", ")})" : ""}"

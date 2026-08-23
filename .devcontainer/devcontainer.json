@@ -1,0 +1,33 @@
+{
+  "name": "Toishi Note",
+  "image": "mcr.microsoft.com/devcontainers/ruby:4",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/node:2.0.0": {
+      "version": "lts"
+    }
+  },
+  "forwardPorts": [3000],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-lsp",
+        "kaiwood.endwise",
+        "KoichiSasada.rdbg",
+        "anthropic.claude-code"
+      ]
+    }
+  },
+  // Persist Claude Code's auth/session across container rebuilds so nobody
+  // has to log back in every time. CLAUDE_CONFIG_DIR must point at the same
+  // path as the mount: Claude Code writes the OAuth account into
+  // .claude.json under that directory too, so mounting ~/.claude alone is
+  // not enough. See docs/engineering/dev-environment.md for the reasoning.
+  "mounts": [
+    "source=claude-code-config-${devcontainerId},target=/home/vscode/.claude,type=volume"
+  ],
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}

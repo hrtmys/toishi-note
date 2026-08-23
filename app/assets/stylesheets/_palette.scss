@@ -1,0 +1,10 @@
+// The Ctrl+P command palette (home/_palette.html.erb, palette_controller.js).
+
+.palette-result {
+  cursor: pointer;
+}
+
+.palette-result:hover,
+.palette-result.palette-result-selected {
+  background-color: #f1f3f5;
+}

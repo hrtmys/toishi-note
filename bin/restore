@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Restores a snapshot made by bin/backup back into storage/.
+#
+# Usage: bin/restore BACKUP_DIR
+#
+# ⚠️ Stop the app first (docker compose stop, or equivalent) — restoring
+# into a live storage/ directory while Puma/Solid Queue hold the SQLite
+# files open produces exactly the kind of inconsistency bin/backup's use
+# of `sqlite3 .backup` (instead of `cp`) exists to avoid. This script
+# doesn't stop the app for you: in a real incident you may be restoring
+# onto a fresh host where nothing is running yet, and forcing a stop here
+# would be the wrong assumption to bake in.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+SOURCE="${1:-}"
+if [ -z "$SOURCE" ] || [ ! -d "$SOURCE" ]; then
+  echo "Usage: bin/restore BACKUP_DIR" >&2
+  echo "  (a directory created by bin/backup, e.g. backups/20260816T042900Z)" >&2
+  exit 1
+fi
+
+if [ ! -d "$SOURCE/blobs" ]; then
+  echo "$SOURCE doesn't look like a bin/backup snapshot (no blobs/ subdirectory)." >&2
+  exit 1
+fi
+
+for db in "$SOURCE"/*.sqlite3; do
+  [ -e "$db" ] || continue
+  result=$(sqlite3 "$db" "PRAGMA integrity_check;")
+  if [ "$result" != "ok" ]; then
+    echo "INTEGRITY CHECK FAILED for $(basename "$db") — refusing to restore a corrupt backup: $result" >&2
+    exit 1
+  fi
+done
+
+echo "About to overwrite storage/ with the contents of $SOURCE."
+echo "Make sure the app is stopped first — see the warning at the top of this script."
+read -r -p "Continue? [y/N] " confirm
+if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+  echo "Aborted."
+  exit 1
+fi
+
+mkdir -p storage
+for db in "$SOURCE"/*.sqlite3; do
+  [ -e "$db" ] || continue
+  cp "$db" "storage/$(basename "$db")"
+  # A stale write-ahead log from before the restore must not survive
+  # alongside the newly-restored main file — it would replay old,
+  # possibly-conflicting writes back on top of the restored data the
+  # next time SQLite opens it.
+  rm -f "storage/$(basename "$db")-wal" "storage/$(basename "$db")-shm" "storage/$(basename "$db")-journal"
+done
+
+rsync -a --delete "$SOURCE/blobs/" storage/ --exclude='*.sqlite3' --exclude='*.sqlite3-wal' --exclude='*.sqlite3-shm' --exclude='*.sqlite3-journal'
+
+echo "Restore complete from $SOURCE. Start the app and verify before deleting anything."
