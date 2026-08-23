@@ -2,9 +2,9 @@
 
 All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project doesn't yet follow Semantic Versioning strictly (pre-1.0 — see `docs/product/roadmap.md`'s versioning table for what each stage means).
 
-## [Unreleased]
+## [0.1.0] — 2026-08-24
 
-The v0.1.0 public beta — everything below shipped in the run-up to the first release strangers are invited to run.
+The public beta — everything below shipped in the run-up to the first release strangers are invited to run.
 
 ### Added
 - Ctrl/Cmd+P command palette: jump to any note by title, most-recently-viewed first, with the second-most-recent entry preselected so Ctrl+P → Enter alternates between the last two notes.
@@ -32,4 +32,4 @@ The v0.1.0 public beta — everything below shipped in the run-up to the first r
 - `db/seeds.rb` rewritten from Japanese demo business data into a locale-aware welcome/tutorial notebook.
 - `docs/engineering/deployment.md` rewritten as a generic self-hosting guide; maintainer-specific VPS topology moved out of the public repo entirely.
 
-[Unreleased]: https://github.com/hrtmys/toishi-note/commits/main
+[0.1.0]: https://github.com/hrtmys/toishi-note/releases/tag/v0.1.0

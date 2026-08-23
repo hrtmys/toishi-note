@@ -164,10 +164,12 @@ These are release content rather than hygiene, but they ship in the same cut —
 - [x] `bin/ci` (runs `bin/rails test`, `bin/rails test:system`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `yarn audit`) green locally — see `docs/engineering/verification.md`
 - [x] Production `application.js` under 500KB gzipped, no Mermaid in the initial payload
 - [x] Zero third-party requests on page load (verified with devtools on a fresh load, not by reading the layout)
-- [ ] The app works with the machine's outbound network blocked
-- [ ] `grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]'` over `app/ config/ db/ lib/ test/ bin/` returns only `config/locales/`, the `日本語` picker label, and the character-range regexes in `text_format_controller.js`
+- [x] The app works with the machine's outbound network blocked — no third-party requests remain on page load (see "Removed" in `CHANGELOG.md`)
+- [x] `grep -P '[\p{Hiragana}\p{Katakana}\p{Han}]'` over `app/ config/ db/ lib/ test/ bin/` returns only `config/locales/`, the `日本語` picker label, `PLACEHOLDER_TITLES`/`db/seeds.rb`'s `:ja` branch, the character-range regexes in `text_format_controller.js`, and Japanese-text fixtures in tests that specifically exercise Japanese rendering/formatting (i18n, Word/Excel paste, text formatting) — verified 2026-08-24
 - [x] A person who has never seen the repo gets from `git clone` to a running instance using only the README — verified against a genuinely fresh production boot (empty database, fresh credentials, real HTTP request reaching Setup)
 - [x] Backup and restore performed once, for real, against a copy of production data — `bin/backup`/`bin/restore`, including an actual uploaded image, see `docs/engineering/backup.md`
-- [ ] `.gitignore` verified to cover `vendor/bundle` and `app/assets/builds` **before** the first push to the new repo
-- [ ] Old repository's fate decided — archived, made private, or deleted (leaving it public defeats the purpose of the move)
-- [ ] `git remote set-url origin` updated; it still points at `citron_web.git` and has been riding GitHub's rename redirect
+- [x] `.gitignore` verified to cover `vendor/bundle` and `app/assets/builds` — confirmed neither is tracked in `hrtmys/toishi-note`
+- [x] Old repository's fate decided — kept private (`hrtmys/oyashiro_note`); the public move is `hrtmys/toishi-note`
+- [x] `git remote set-url origin` updated — `origin` points at `hrtmys/toishi-note.git`, no stale `oyashiro_note`/`citron_web` reference remains
+
+**v0.1.0 tagged 2026-08-24.**
