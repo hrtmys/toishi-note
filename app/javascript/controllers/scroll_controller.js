@@ -29,18 +29,24 @@ export default class extends Controller {
   }
 
   restoreOrScrollToActive() {
+    // The saved scrollTop wins first — every click here is a full page
+    // navigation that rebuilds this element from scratch, and snapping
+    // straight to the active row on every one of them is what made the
+    // list feel like it reset to the top on every click. Restoring the
+    // prior position, then nudging the active row into view only if it
+    // isn't already visible, keeps browsing position stable while still
+    // guaranteeing the current selection is never scrolled out of reach.
+    const value = localStorage.getItem(this.storageKey())
+    if (value !== null) {
+      this.element.scrollTop = parseInt(value, 10)
+    }
+
     // .bg-secondary is the one class every active row (notebook, folder,
     // or note) gets in home/_sidebar.html.erb — a single selector works
     // for all three lists this controller is mounted on.
     const active = this.element.querySelector(".bg-secondary")
     if (active) {
       active.scrollIntoView({ block: "nearest" })
-      return
-    }
-
-    const value = localStorage.getItem(this.storageKey())
-    if (value !== null) {
-      this.element.scrollTop = parseInt(value, 10)
     }
   }
 

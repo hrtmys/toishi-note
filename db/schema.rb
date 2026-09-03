@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_15_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -110,6 +110,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_120000) do
     t.boolean "editor_fab_enabled", default: false, null: false
     t.string "email_address", null: false
     t.boolean "keep_original_images", default: false, null: false
+    t.integer "last_folder_id"
+    t.integer "last_notebook_id"
     t.string "locale"
     t.string "password_digest", null: false
     t.datetime "registered_at", null: false
@@ -118,6 +120,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_15_120000) do
     t.boolean "trusted_header_owner", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["last_folder_id"], name: "index_users_on_last_folder_id"
+    t.index ["last_notebook_id"], name: "index_users_on_last_notebook_id"
     t.index ["role"], name: "index_users_on_role"
     t.index ["trusted_header_owner"], name: "index_users_on_trusted_header_owner", unique: true, where: "trusted_header_owner"
   end

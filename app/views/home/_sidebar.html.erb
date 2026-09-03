@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    <div class="d-flex flex-column shrink-0" style="max-height: 110px;">
+    <div class="d-flex flex-column shrink-0" style="max-height: 28vh;">
       <div class="d-flex justify-content-between align-items-center mb-2 shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.notebooks.heading") %></p>
         <%= form_with url: notebooks_path, data: { controller: "prompt-form", prompt_message: t("home.notebooks.new_prompt"), action: "submit->prompt-form#submit" } do |f| %>
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <div class="d-flex flex-column border-top border-secondary pt-3 mt-1 shrink-0" style="max-height: 145px;">
+    <div class="d-flex flex-column border-top border-secondary pt-3 mt-1 shrink-0" style="max-height: 32vh;">
       <div class="d-flex justify-content-between align-items-center mb-2 shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.folders.heading") %></p>
         <% if current_notebook %>
