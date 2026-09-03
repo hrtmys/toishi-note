@@ -72,4 +72,41 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil note.reload.last_viewed_at
   end
+
+  test "visiting a notebook and folder remembers them as the user's last position" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id)
+
+    users(:one).reload
+    assert_equal notebook.id, users(:one).last_notebook_id
+    assert_equal folder.id, users(:one).last_folder_id
+  end
+
+  test "a later visit with no params falls back to the remembered notebook and folder" do
+    users(:one).notebooks.create!(name: "First Notebook")
+    remembered_notebook = users(:one).notebooks.create!(name: "Remembered Notebook")
+    remembered_folder = remembered_notebook.folders.create!(name: "Remembered Folder")
+    users(:one).update_columns(last_notebook_id: remembered_notebook.id, last_folder_id: remembered_folder.id)
+
+    get root_url
+
+    assert_response :success
+    assert_select "li.bg-secondary", text: /#{Regexp.escape(remembered_folder.name)}/
+  end
+
+  test "a remembered folder belonging to a different notebook is ignored" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    other_notebook = users(:one).notebooks.create!(name: "Other Notebook")
+    other_folder = other_notebook.folders.create!(name: "Other Folder")
+    own_folder = notebook.folders.create!(name: "Own Folder")
+    users(:one).update_columns(last_notebook_id: notebook.id, last_folder_id: other_folder.id)
+
+    get root_url(notebook_id: notebook.id)
+
+    assert_response :success
+    users(:one).reload
+    assert_equal own_folder.id, users(:one).last_folder_id
+  end
 end
