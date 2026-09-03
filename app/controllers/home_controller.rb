@@ -10,19 +10,30 @@ class HomeController < ApplicationController
 
     @notebooks = Current.user.notebooks
 
-    # Use the notebook_id URL param if given, otherwise fall back to the first notebook.
-    @current_notebook = @notebooks.find_by(id: params[:notebook_id]) || @notebooks.first
+    # Resolution order: the URL param, then wherever the user last left
+    # off, then the first notebook. #find_by against @notebooks/@folders
+    # (both Current.user-scoped) also means a stale last_folder_id from a
+    # notebook other than @current_notebook is silently ignored rather
+    # than leaking a folder that doesn't belong under it.
+    @current_notebook = @notebooks.find_by(id: params[:notebook_id]) ||
+                         @notebooks.find_by(id: Current.user.last_notebook_id) ||
+                         @notebooks.first
 
     if @current_notebook
       @folders = @current_notebook.folders
-      @current_folder = @folders.find_by(id: params[:folder_id]) || @folders.first
+      @current_folder = @folders.find_by(id: params[:folder_id]) ||
+                         @folders.find_by(id: Current.user.last_folder_id) ||
+                         @folders.first
       # Pinned-first, newest-updated-first — the default a fresh page load
       # starts from; the sidebar's sort toggle re-sorts client-side.
       @notes = @current_folder ? @current_folder.notes.order(is_pinned: :desc, updated_at: :desc) : []
     else
       @folders = []
+      @current_folder = nil
       @notes = []
     end
+
+    remember_last_position
 
     @current_note = Current.user.notes.find_by(id: params[:note_id])
 
@@ -36,4 +47,14 @@ class HomeController < ApplicationController
     # declares a default order scope that a plain #order would only append to.
     @palette_notes = Current.user.notes.includes(:notebook, :folder).reorder(last_viewed_at: :desc).limit(10)
   end
+
+  private
+    # update_columns, not #update: this is view history, not a user edit,
+    # and it must never run a validation/callback pass on every page load.
+    def remember_last_position
+      return if Current.user.last_notebook_id == @current_notebook&.id &&
+                Current.user.last_folder_id == @current_folder&.id
+
+      Current.user.update_columns(last_notebook_id: @current_notebook&.id, last_folder_id: @current_folder&.id)
+    end
 end
