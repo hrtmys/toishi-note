@@ -13,6 +13,13 @@ class User < ApplicationRecord
   has_many :notes, through: :notebooks
   has_many :todo_items, through: :notes
 
+  # Where the user left off — HomeController falls back to these when a
+  # visit carries no notebook_id/folder_id param, so a fresh session (a
+  # cleared cache, a new device, the server restarting) resumes where the
+  # sidebar was instead of always landing on the first notebook/folder.
+  belongs_to :last_notebook, class_name: "Notebook", optional: true
+  belongs_to :last_folder, class_name: "Folder", optional: true
+
   # member: a normal note-taking account. admin: manages logins (inviting
   # teammates, issuing reset links) and doesn't use the notebook UI at all.
   enum :role, { member: 0, admin: 1 }, default: :member
