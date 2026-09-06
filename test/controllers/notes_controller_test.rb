@@ -95,6 +95,35 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_not note.reload.title_customized?
   end
 
+  test "re-submitting the current auto-generated title does not mark it customized" do
+    note = @folder.notes.create!(notebook: @notebook, title: "", note_type: "md", content: "Auto line")
+    assert_equal "Auto line", note.title
+    assert_not note.title_customized?
+
+    # Echoes the value the turbo_stream title rewrite already shows — not a
+    # human decision, so auto-titling must stay eligible.
+    patch note_url(note), params: { note: { title: "Auto line" } }, as: :turbo_stream
+    assert_response :success
+    assert_not note.reload.title_customized?
+
+    patch note_url(note), params: { note: { content: "Changed first line" } }, as: :turbo_stream
+    assert_equal "Changed first line", note.reload.title
+  end
+
+  test "blanking the title clears title_customized so later content re-titles the note" do
+    assert @note.title_customized?
+
+    patch note_url(@note), params: { note: { title: "" } }, as: :turbo_stream
+    assert_response :success
+    @note.reload
+    assert_not @note.title_customized?
+    assert_equal Note.default_title_for("md"), @note.title
+
+    patch note_url(@note), params: { note: { content: "New first line" } }, as: :turbo_stream
+    assert_equal "New first line", @note.reload.title
+    assert_not @note.reload.title_customized?
+  end
+
   test "blanking the title falls back to the default placeholder instead of failing" do
     patch note_url(@note), params: { note: { title: "" } }, as: :turbo_stream
     assert_response :success

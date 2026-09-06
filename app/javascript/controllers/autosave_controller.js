@@ -5,9 +5,30 @@ export default class extends Controller {
 
   connect() {
     this.timeout = null
+    // True between IME compositionstart/compositionend. While set, input
+    // events carry unconfirmed text — saving it would persist a
+    // half-converted fragment (and auto-title from it).
+    this.composing = false
   }
 
-  save() {
+  // Paired with compositionend below; both the title input and the content
+  // textarea wire these via data-action (see notes/_title_input.html.erb
+  // and notes/_md_editor.html.erb).
+  compositionstart() {
+    this.composing = true
+    clearTimeout(this.timeout)
+  }
+
+  compositionend() {
+    this.composing = false
+    this.save()
+  }
+
+  save(event) {
+    // Input events fired mid-composition (Chrome fires one per keystroke
+    // before the conversion is confirmed) must not start the debounce.
+    if (this.composing || event?.isComposing) return
+
     clearTimeout(this.timeout)
 
     this.timeout = setTimeout(() => {
