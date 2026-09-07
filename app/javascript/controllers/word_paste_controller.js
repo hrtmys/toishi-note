@@ -19,7 +19,11 @@ export default class extends Controller {
     if (!markdown) return
 
     event.preventDefault()
-    event.stopImmediatePropagation()
+    // A Word selection can carry an embedded picture alongside the HTML.
+    // Let image-upload's handler run too so the picture is uploaded
+    // instead of silently dropped; with no image aboard there is nothing
+    // left for it to do, so stop the event there.
+    if (!hasImageItem(event)) event.stopImmediatePropagation()
     this.insertAtCursor(markdown)
     window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("converted_to_markdown") } }))
   }
@@ -32,4 +36,10 @@ export default class extends Controller {
     textarea.setRangeText(text, start, end, "end")
     textarea.dispatchEvent(new Event("input", { bubbles: true }))
   }
+}
+
+// Mirrors image-upload's trigger: a clipboard item whose type starts
+// with "image/" means a picture came along with the HTML paste.
+function hasImageItem(event) {
+  return Array.from(event.clipboardData?.items || []).some((item) => item.type.startsWith("image/"))
 }
