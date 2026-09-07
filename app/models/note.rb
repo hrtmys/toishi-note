@@ -19,6 +19,12 @@ class Note < ApplicationRecord
   # ArgumentError guard, so this catches it with a normal validation error.
   validates :note_type, presence: true
 
+  # The palette's and the home page's shared "resting state": the 10 most
+  # recently viewed notes, most recent first. reorder (not order) is
+  # needed because notebooks already declares a default order scope that
+  # a plain #order would only append to.
+  scope :recently_viewed, -> { includes(:notebook, :folder).reorder(last_viewed_at: :desc).limit(10) }
+
   before_validation :auto_set_title
 
   def self.default_title_for(note_type)

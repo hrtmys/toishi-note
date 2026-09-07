@@ -4,7 +4,7 @@
     <i class="bi bi-folder me-2"></i>
     <span class="text-truncate flex-grow-1"><%= folder.name %></span>
 
-    <div class="d-flex shrink-0 ms-2">
+    <div class="d-flex flex-shrink-0 ms-2">
       <%= form_with url: notebook_folder_path(folder.notebook, folder), method: :patch,
           data: { controller: "prompt-form", prompt_message: t("home.folders.rename_prompt"), action: "submit->prompt-form#submit" }, class: "d-inline" do |f| %>
         <%= f.hidden_field :name, value: folder.name, data: { prompt_form_target: "input" } %>

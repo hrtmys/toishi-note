@@ -1,7 +1,7 @@
 <!-- A normal sidebar on desktop, an off-canvas slide-in on narrower/mobile viewports. -->
 <div class="offcanvas-lg offcanvas-start col-lg-3 col-xl-2 bg-dark text-white p-0 h-100 d-flex flex-column" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel" data-controller="offcanvas">
   <div class="p-3 d-flex flex-column h-100">
-    <div class="d-flex justify-content-between align-items-center mb-3 shrink-0">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-shrink-0">
       <%= link_to "Toishi Note", root_path(organize: true, notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
           class: "fw-bold text-light m-0 text-decoration-none h5 mb-0", id: "sidebarMenuLabel",
           title: t("home.header.organize"), data: { action: "click->offcanvas#close" } %>
@@ -16,8 +16,8 @@
       </div>
     </div>
 
-    <div class="d-flex flex-column shrink-0" style="max-height: 28vh;">
-      <div class="d-flex justify-content-between align-items-center mb-2 shrink-0">
+    <div class="d-flex flex-column flex-shrink-0" style="max-height: 28vh;">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.notebooks.heading") %></p>
         <%= form_with url: notebooks_path, data: { controller: "prompt-form", prompt_message: t("home.notebooks.new_prompt"), action: "submit->prompt-form#submit" } do |f| %>
           <%= f.hidden_field :name, data: { prompt_form_target: "input" } %>
@@ -30,7 +30,7 @@
             <li class="hover-container d-flex justify-content-between align-items-center rounded p-1 mb-1 <%= 'bg-secondary text-white' if notebook == current_notebook %>">
               <%= link_to notebook.name, root_path(notebook_id: notebook.id), class: "text-decoration-none text-truncate flex-grow-1 px-1", style: "color: #e0e0e0;" %>
 
-              <div class="d-flex shrink-0">
+              <div class="d-flex flex-shrink-0">
                 <%= link_to export_notebook_path(notebook), class: "hover-target-icon btn btn-sm py-0 px-1 border-0 ms-1", style: "color: #e0e0e0;", title: t("home.notebooks.export") do %>
                   <i class="bi bi-download"></i>
                 <% end %>
@@ -50,8 +50,8 @@
       </div>
     </div>
 
-    <div class="d-flex flex-column border-top border-secondary pt-3 mt-1 shrink-0" style="max-height: 32vh;">
-      <div class="d-flex justify-content-between align-items-center mb-2 shrink-0">
+    <div class="d-flex flex-column border-top border-secondary pt-3 mt-1 flex-shrink-0" style="max-height: 32vh;">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.folders.heading") %></p>
         <% if current_notebook %>
           <%= form_with url: notebook_folders_path(current_notebook), data: { controller: "prompt-form", prompt_message: t("home.folders.new_prompt"), action: "submit->prompt-form#submit" } do |f| %>
@@ -66,7 +66,7 @@
             <li class="hover-container d-flex justify-content-between align-items-center rounded p-1 mb-1 <%= 'bg-secondary text-white' if folder == current_folder %>">
               <%= link_to folder.name, root_path(notebook_id: current_notebook.id, folder_id: folder.id), class: "text-decoration-none text-truncate flex-grow-1 px-1", style: "color: #e0e0e0;" %>
 
-              <div class="d-flex shrink-0">
+              <div class="d-flex flex-shrink-0">
                 <%= form_with url: notebook_folder_path(folder.notebook, folder), method: :patch, data: { controller: "prompt-form", prompt_message: t("home.folders.rename_prompt"), action: "submit->prompt-form#submit" }, class: "hover-target-icon ms-1" do |f| %>
                   <%= f.hidden_field :name, value: folder.name, data: { prompt_form_target: "input" } %>
                   <button type="submit" class="btn btn-sm py-0 px-1 border-0" style="color: #e0e0e0;" title="<%= t("home.common.rename") %>"><i class="bi bi-pencil"></i></button>
@@ -83,12 +83,12 @@
     </div>
 
     <div class="d-flex flex-column border-top border-secondary pt-3 mt-1 flex-grow-1" style="min-height: 0;">
-      <div class="d-flex justify-content-between align-items-center mb-2 shrink-0">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.files.heading") %></p>
       </div>
 
       <% if current_folder %>
-          <div class="d-flex gap-2 mb-2 shrink-0">
+          <div class="d-flex gap-2 mb-2 flex-shrink-0">
             <%= button_to notes_path, params: { folder_id: current_folder.id, note_type: "md" }, class: "btn btn-sm btn-secondary py-1 px-2", title: t("home.files.new_md") do %>
               <i class="bi bi-filetype-md"></i>
             <% end %>
@@ -103,7 +103,7 @@
 
       <div class="d-flex flex-column flex-grow-1" data-controller="note-sort" style="min-height: 0;">
         <!-- Client-side only, not persisted — see ux-roadmap.md.old's "Note list sorting". -->
-        <div class="d-flex gap-1 mb-2 shrink-0">
+        <div class="d-flex gap-1 mb-2 flex-shrink-0">
           <%# The U/C/A-Z labels themselves stay locale-invariant — compact,
               icon-like abbreviations rather than translatable prose — only
               their tooltips are. %>
@@ -136,7 +136,7 @@
                   <span id="note_<%= note.id %>_title"><%= note.title %></span>
 
                 <% end %>
-                <div class="d-flex shrink-0 align-items-center">
+                <div class="d-flex flex-shrink-0 align-items-center">
                   <button type="button" class="hover-target-icon btn btn-sm py-0 px-1 border-0 <%= 'pin-active' if note.is_pinned? %>"
                       style="color: #e0e0e0;" title="<%= t("home.notes.pin") %>" data-note-id="<%= note.id %>" data-action="click->note-sort#togglePin">
                     <i class="bi <%= note.is_pinned? ? 'bi-pin-fill' : 'bi-pin' %>"></i>
@@ -144,7 +144,7 @@
                   <%= link_to export_note_path(note), class: "hover-target-icon btn btn-sm py-0 px-1 border-0", style: "color: #e0e0e0;", title: t("home.notes.export") do %>
                     <i class="bi bi-download"></i>
                   <% end %>
-                  <%= button_to note_path(note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm") }, class: "hover-target-icon btn btn-outline-danger py-0 px-2 shrink-0", title: t("home.common.delete"), form: { class: "d-inline" } do %>
+                  <%= button_to note_path(note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm") }, class: "hover-target-icon btn btn-outline-danger py-0 px-2 flex-shrink-0", title: t("home.common.delete"), form: { class: "d-inline" } do %>
                     <i class="bi bi-x-lg"></i>
                   <% end %>
                 </div>

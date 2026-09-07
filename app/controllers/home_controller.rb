@@ -43,9 +43,8 @@ class HomeController < ApplicationController
     @current_note&.update_column(:last_viewed_at, Time.current)
 
     # Feeds the Ctrl+P palette's initial state so opening it costs no
-    # round trip. reorder (not order) is needed because notebooks already
-    # declares a default order scope that a plain #order would only append to.
-    @palette_notes = Current.user.notes.includes(:notebook, :folder).reorder(last_viewed_at: :desc).limit(10)
+    # round trip.
+    @palette_notes = Current.user.notes.recently_viewed
   end
 
   private

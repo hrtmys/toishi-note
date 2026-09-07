@@ -4,7 +4,7 @@
     <i class="bi <%= note_icon_class(note) %> me-2 opacity-75"></i>
     <span class="text-truncate flex-grow-1"><%= note.title %></span>
 
-    <div class="d-flex shrink-0 ms-2">
+    <div class="d-flex flex-shrink-0 ms-2">
       <%# note[title] scopes this under :note so notes_controller.rb's
           existing note_params.require(:note) picks it up — organize_context_fields
           stays unscoped regardless, on purpose (see home_helper.rb). %>

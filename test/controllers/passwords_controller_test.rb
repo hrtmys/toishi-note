@@ -47,6 +47,22 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_notice "reset link is invalid"
   end
 
+  test "edit with a syntactically valid password reset token whose user no longer exists redirects with the same flash, not a 404" do
+    user = User.create!(email_address: "soon-to-be-deleted@example.com", password: "password")
+    token = user.password_reset_token
+    user.destroy!
+
+    # A well-signed, unexpired token whose underlying record is gone raises
+    # ActiveRecord::RecordNotFound from find_by_password_reset_token!, not
+    # MessageVerifier::InvalidSignature — this must be rescued too, instead
+    # of falling through to a generic 404.
+    get edit_password_path(token)
+    assert_redirected_to new_password_path
+
+    follow_redirect!
+    assert_notice "reset link is invalid"
+  end
+
   test "update" do
     assert_changes -> { @user.reload.password_digest } do
       put password_path(@user.password_reset_token), params: { password: "new", password_confirmation: "new" }
