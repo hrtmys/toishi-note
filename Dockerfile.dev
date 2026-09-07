@@ -1,0 +1,67 @@
+# Development and CI image: Ruby + Node + a browser for system tests, all in one place.
+# Mirrors what .github/workflows/ci.yml installs piecemeal into GitHub-hosted runners, so
+# a green `bin/d bin/ci` locally means the same thing CI's green check does.
+#
+# Everything actually runs via bin/d, which bind-mounts the repo and runs as the host
+# uid/gid — see bin/d for why. Don't `docker run` this image by hand.
+
+ARG RUBY_VERSION=4.0.4
+FROM docker.io/library/ruby:${RUBY_VERSION}-slim
+
+# libvips42t64: image_processing/ruby-vips (Gemfile) load it via FFI at runtime, not at
+#   `bundle install` time — its absence doesn't show up until the app actually boots.
+# chromium/chromium-driver: bin/rails test:system (test/application_system_test_case.rb)
+#   drives headless Chrome. chromium-driver puts chromedriver on PATH, which Selenium's
+#   Selenium Manager picks up automatically — no extra Capybara config needed.
+# fonts-noto-cjk: the base image has zero CJK glyphs. Without this, headless Chromium
+#   (system tests, screenshots) renders every Japanese character as a tofu box.
+# build-essential/libyaml-dev/pkg-config/python-is-python3: needed to build native gems
+#   (matches the production Dockerfile's build stage).
+# node-gyp: mirrors what .github/workflows/ci.yml installs, so this image and CI match.
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      curl git build-essential libvips42t64 libyaml-dev pkg-config python-is-python3 \
+      sqlite3 chromium chromium-driver node-gyp fonts-noto-cjk unzip && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+ENV CHROME_BIN=/usr/bin/chromium
+
+# Node, via the same node-build path the production Dockerfile uses (see Dockerfile) —
+# one install method for both images instead of nodenv/nvm/apt's older Node.
+ARG NODE_VERSION=24.16.0
+ARG YARN_VERSION=1.22.22
+ENV PATH=/usr/local/node/bin:$PATH
+RUN curl -sL https://github.com/nodenv/node-build/archive/master.tar.gz | tar xz -C /tmp/ && \
+    /tmp/node-build-master/bin/node-build "${NODE_VERSION}" /usr/local/node && \
+    npm install -g yarn@$YARN_VERSION && \
+    rm -rf /tmp/node-build-master
+
+# foreman: bin/dev (Procfile.dev) needs it. Installed here so first-run doesn't shell out
+# to `gem install` (and fail — vendor/bundle/GEM_HOME is bind-mounted read/write, but this
+# is a system gem, not a dependency, so it belongs in the image).
+RUN gem install foreman --no-document
+
+# yuru7 fonts: not bundled into the app itself (see docs/engineering/dev-environment.md —
+# the app degrades gracefully to the next name in its CJK font stack when these are
+# absent), but installed here so this image's headless Chromium (system tests,
+# screenshots) renders what the project's stylesheet actually asks for first. Baked into
+# the image at build time rather than fetched on every container start.
+RUN install_yuru7_font() { \
+      dest_name="$1"; zip_url="$2"; shift 2; \
+      dest="/usr/local/share/fonts/$dest_name"; tmp="/tmp/${dest_name}-install"; \
+      mkdir -p "$dest" "$tmp"; \
+      curl -sL -o "$tmp/font.zip" "$zip_url"; \
+      unzip -o -q "$tmp/font.zip" -d "$tmp/extracted"; \
+      for pattern in "$@"; do find "$tmp/extracted" -name "$pattern" -exec cp {} "$dest/" \; ; done; \
+      rm -rf "$tmp"; \
+    }; \
+    install_yuru7_font "bizin-gothic" \
+      "https://github.com/yuru7/bizin-gothic/releases/download/v0.0.4/BizinGothic_v0.0.4.zip" \
+      "BizinGothic-Regular.ttf" "BizinGothic-Bold.ttf" && \
+    install_yuru7_font "udev-gothic" \
+      "https://github.com/yuru7/udev-gothic/releases/download/v2.2.0/UDEVGothic_v2.2.0.zip" \
+      "UDEVGothic-Regular.ttf" "UDEVGothic-Bold.ttf" && \
+    install_yuru7_font "hackgen" \
+      "https://github.com/yuru7/HackGen/releases/download/v2.10.0/HackGen_v2.10.0.zip" \
+      "HackGen-Regular.ttf" "HackGen-Bold.ttf" && \
+    fc-cache -f /usr/local/share/fonts >/dev/null

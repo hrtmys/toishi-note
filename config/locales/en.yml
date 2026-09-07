@@ -256,6 +256,7 @@ en:
     word_copy:
       success_title: "Copied"
       error_title: "Rich text copy failed"
+      copy_failed: "Couldn't copy for Word — the browser blocked clipboard access."
     bulk_import:
       invalid_json: "That isn't valid JSON."
       must_be_array: "The JSON must be an array of tasks."

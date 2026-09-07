@@ -124,6 +124,36 @@ class NoteTest < ActiveSupport::TestCase
     assert_equal "Added after switching locale", note.title
   end
 
+  test "blanking the title clears title_customized so auto-titling resumes from content" do
+    note = @folder.notes.create!(
+      notebook: @notebook,
+      title: "Custom Title",
+      note_type: "md",
+      content: "First line\nBody text"
+    )
+    assert note.title_customized?
+
+    note.update!(title: "")
+
+    assert_not note.title_customized?
+    assert_equal "First line", note.title
+  end
+
+  test "blanking the title with no content revives auto-titling and falls back to the placeholder" do
+    note = @folder.notes.create!(
+      notebook: @notebook,
+      title: "Custom Title",
+      note_type: "md",
+      content: ""
+    )
+    assert note.title_customized?
+
+    note.update!(title: "")
+
+    assert_not note.title_customized?
+    assert_equal Note.default_title_for("md"), note.title
+  end
+
   test "truncates an auto-derived title to 30 characters" do
     long_line = "あ" * 50
     note = @folder.notes.create!(

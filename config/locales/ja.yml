@@ -228,6 +228,7 @@ ja:
     word_copy:
       success_title: "コピーしました"
       error_title: "リッチテキストコピーに失敗しました"
+      copy_failed: "Word用にコピーできませんでした — ブラウザがクリップボードをブロックしました。"
     bulk_import:
       invalid_json: "有効なJSONではありません。"
       must_be_array: "JSONはタスクの配列である必要があります。"

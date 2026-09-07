@@ -71,8 +71,12 @@ export function buildWordClipboard(markdown) {
   }
 }
 
+export function richClipboardSupported() {
+  return Boolean(navigator.clipboard?.write) && typeof ClipboardItem !== "undefined"
+}
+
 export async function copyAsWordRichText(markdown) {
-  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+  if (!richClipboardSupported()) {
     throw new Error("Rich text clipboard is not supported by this browser")
   }
 

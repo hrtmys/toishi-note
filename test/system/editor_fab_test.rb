@@ -56,6 +56,24 @@ class EditorFabTest < ApplicationSystemTestCase
     assert_selector ".toast.show", text: I18n.t("js.copied")
   end
 
+  test "a clipboard failure shows an error toast instead of failing silently" do
+    users(:one).update!(editor_fab_enabled: true)
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    # Simulate a permission-denied clipboard — unsupported browsers and
+    # text/html write limits land in the same catch path.
+    page.driver.browser.execute_script(<<~JS)
+      Object.defineProperty(navigator, "clipboard", {
+        value: { write: () => Promise.reject(new Error("denied")) },
+        configurable: true,
+      })
+    JS
+
+    find(".editor-fab-button").click
+    click_on I18n.t("editor.fab.copy_for_word")
+    assert_selector ".toast.show", text: I18n.t("js.word_copy.copy_failed")
+  end
+
   test "hovering the FAB button keeps its icon visible, rather than white-on-white" do
     users(:one).update!(editor_fab_enabled: true)
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)

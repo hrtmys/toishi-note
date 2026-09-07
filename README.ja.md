@@ -50,13 +50,14 @@ docker compose up -d
 
 開発環境では、送信されるメール（パスワードリセットなど）はどこにも実際には届きません。代わりに `/letter_opener` で確認できます。
 
-## コントリビューター向けクイックスタート（devcontainer）
+## コントリビューター向けクイックスタート（Docker）
 
-開発環境を最速で整える方法は、同梱の [devcontainer](.devcontainer/devcontainer.json) を使うことです — Ruby、Node、このアプリに必要なシステムパッケージが一通りセットアップされます（内容と理由は [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) 参照）。
+開発環境を最速で整える方法は [`bin/d`](bin/d) を使うことです — [Dockerfile.dev](Dockerfile.dev) から Ruby+Node+Chromium のイメージをビルドし（このファイルが変わるたびに自動で再ビルドされます）、リポジトリをbind-mountした状態で任意のコマンドをその中で実行します（内容と理由は [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) 参照）。エディタとの連携は不要で、素の`docker`だけで動きます。
 
-1. このリポジトリを VS Code（または [Dev Containers](https://containers.dev/) 対応の任意のエディタ）で開き、コンテナ内で再度開く。
-2. `bin/setup` で依存関係のインストールとデータベースの準備。
-3. `bin/dev` でアプリを起動し、`http://localhost:3000` にアクセス。
+1. `bin/d bin/setup` で依存関係のインストールとデータベースの準備。
+2. `bin/d bin/dev` でアプリを起動し、`http://localhost:3000` にアクセス。
+
+アプリに対して普段行う操作は同じラッパー経由です: `bin/d bin/rails console`、`bin/d bin/rails test`、`bin/d bundle install` など。
 
 ### 手動セットアップ
 
@@ -71,11 +72,13 @@ bin/dev
 ## テストの実行
 
 ```sh
-bin/ci             # CI が実行する全項目を1コマンドで、簡潔な出力で — docs/engineering/verification.md 参照
-bin/ci quick       # システムテストを省略した高速版（ローカルでの反復作業向け）
+bin/d bin/ci             # CI が実行する全項目を1コマンドで、簡潔な出力で — docs/engineering/verification.md 参照
+bin/d bin/ci quick       # システムテストを省略した高速版（ローカルでの反復作業向け）
 ```
 
-または個別に: `bin/rails test`、`bin/rails test:system`、`bin/rubocop`、`bin/brakeman`、`bin/bundler-audit`、`yarn audit`。これらすべてはプルリクエストごとに [CI](.github/workflows/ci.yml) で実行されます。
+または個別に: `bin/rails test`、`bin/rails test:system`、`bin/rubocop`、`bin/brakeman`、`bin/bundler-audit`、`yarn audit`（`bin/d`を使っている場合はそれぞれも`bin/d`経由で）。これらすべてはプルリクエストごとに [CI](.github/workflows/ci.yml) で実行されます。
+
+コア数の多いホストだと、Chromeの並列起動しすぎで`test:system`がまれにCapybaraのタイムアウトを起こすことがあります — `PARALLEL_WORKERS=1 bin/d bin/ci`（または`bin/d bin/rails test:system`）で直列実行を強制できます。理由は [dev-environment.md](docs/engineering/dev-environment.md) 参照。
 
 ## コントリビュート
 
