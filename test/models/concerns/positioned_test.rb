@@ -38,4 +38,18 @@ class PositionedTest < ActiveSupport::TestCase
     assert_equal 1, a.reload.position, "the in-scope record should be untouched by a rejected call"
     assert_equal 1, foreign_folder.reload.position, "a foreign record must never be written to, even if it's included in the (invalid) request"
   end
+
+  test "reposition! raises, inside its own transaction, if a sibling is destroyed after the caller's own id-set check" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    a = notebook.folders.create!(name: "A")
+    b = notebook.folders.create!(name: "B")
+    ids = notebook.folders.ids # a caller might validate against this and then race a concurrent destroy
+
+    b.destroy!
+
+    assert_raises(ActiveRecord::RecordNotFound) do
+      Positioned.reposition!(notebook.folders, ids)
+    end
+    assert_equal 1, a.reload.position, "the surviving record must be untouched when the re-checked id set no longer matches"
+  end
 end
