@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -45,7 +45,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
     t.integer "notebook_id", null: false
     t.integer "position", null: false
     t.datetime "updated_at", null: false
-    t.index ["notebook_id"], name: "index_folders_on_notebook_id"
+    t.index ["notebook_id", "position"], name: "index_folders_on_notebook_id_and_position", unique: true
   end
 
   create_table "notebooks", force: :cascade do |t|
@@ -54,7 +54,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
     t.integer "position", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
-    t.index ["user_id"], name: "index_notebooks_on_user_id"
+    t.index ["user_id", "position"], name: "index_notebooks_on_user_id_and_position", unique: true
   end
 
   create_table "notes", force: :cascade do |t|
@@ -81,7 +81,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
     t.integer "position", null: false
     t.string "source"
     t.datetime "updated_at", null: false
-    t.index ["note_id"], name: "index_scrap_items_on_note_id"
+    t.index ["note_id", "position"], name: "index_scrap_items_on_note_id_and_position", unique: true
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -101,7 +101,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_03_120000) do
     t.integer "note_id", null: false
     t.integer "position", null: false
     t.datetime "updated_at", null: false
-    t.index ["note_id"], name: "index_todo_items_on_note_id"
+    t.index ["note_id", "position"], name: "index_todo_items_on_note_id_and_position", unique: true
   end
 
   create_table "users", force: :cascade do |t|

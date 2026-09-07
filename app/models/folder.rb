@@ -14,9 +14,16 @@ class Folder < ApplicationRecord
   # notebooks. notes' notebook_id is a separate, denormalized FK, so it
   # must be cascaded explicitly here.
   def move_to!(notebook)
-    return if notebook_id == notebook.id
-
     transaction do
+      # lock! reloads with a row lock, so this serializes against any other
+      # request (e.g. NotesController#create) that locks this same folder
+      # row before reading/writing anything derived from its notebook_id.
+      # (See app/models/concerns/positioned.rb for why `.lock`/`lock!`
+      # genuinely serializes here even though SQLite drops the `FOR
+      # UPDATE` SQL itself.)
+      lock!
+      return if notebook_id == notebook.id
+
       update!(notebook: notebook)
       notes.update_all(notebook_id: notebook.id)
     end

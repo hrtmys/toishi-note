@@ -1,16 +1,27 @@
 class NotesController < ApplicationController
   def create
-    folder = Current.user.folders.find(params[:folder_id])
     note_type = params.permit(:note_type)[:note_type].presence || "md"
     return head :unprocessable_entity unless Note.note_types.key?(note_type)
 
-    note = folder.notes.create!(
-      notebook: folder.notebook,
-      title: Note.default_title_for(note_type),
-      note_type: note_type,
-      content: ""
-    )
-    redirect_to root_path(notebook_id: folder.notebook.id, folder_id: folder.id, note_id: note.id)
+    note = nil
+    ActiveRecord::Base.transaction do
+      # Lock the folder row before reading its notebook_id, so a concurrent
+      # Folder#move_to! either fully completes before this read or fully
+      # waits until after — either way the new note gets a consistent
+      # notebook_id instead of possibly reading a stale one mid-move. (See
+      # app/models/concerns/positioned.rb for why `.lock` genuinely
+      # serializes here even though SQLite drops the `FOR UPDATE` SQL
+      # itself.)
+      folder = Current.user.folders.lock.find(params[:folder_id])
+
+      note = folder.notes.create!(
+        notebook: folder.notebook,
+        title: Note.default_title_for(note_type),
+        note_type: note_type,
+        content: ""
+      )
+    end
+    redirect_to root_path(notebook_id: note.notebook_id, folder_id: note.folder_id, note_id: note.id)
   end
 
   def update
