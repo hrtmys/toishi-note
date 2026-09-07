@@ -12,7 +12,7 @@ class NotebookExporter
 
   def to_zip
     buffer = Zip::OutputStream.write_buffer do |zip|
-      @notebook.folders.includes(:notes).each do |folder|
+      @notebook.folders.includes(notes: [ :todo_items, :scrap_items ]).each do |folder|
         entry_names_in_folder = Set.new
 
         folder.notes.each do |note|

@@ -109,4 +109,36 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     users(:one).reload
     assert_equal own_folder.id, users(:one).last_folder_id
   end
+
+  # The sidebar's per-folder rename/delete forms call folder.notebook for
+  # their URLs. Without includes(:notebook) on @folders, that's one query
+  # per folder row (an N+1). Count queries against the notebooks table
+  # directly, so the assertion holds regardless of how many folders exist.
+  test "rendering the sidebar does not issue one notebooks query per folder (no N+1)" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    3.times { |i| notebook.folders.create!(name: "Folder #{i}") }
+
+    notebook_queries = 0
+    callback = lambda do |_name, _start, _finish, _id, payload|
+      sql = payload[:sql]
+      notebook_queries += 1 if sql.match?(/\bnotebooks\b/) && sql.match?(/\bSELECT\b/i) && !payload[:cached]
+    end
+
+    # Rails' per-request query cache would otherwise cache repeat identical
+    # SELECT ... WHERE id = ? calls (same notebook, same bind value) and
+    # mask an N+1 that would still cost real queries whenever folders
+    # belong to different notebooks. Disable it so the count reflects
+    # actual per-call queries, not what happens to get deduped this run.
+    ActiveRecord::Base.uncached do
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        get root_url(notebook_id: notebook.id)
+      end
+    end
+
+    assert_response :success
+    # One preload query for the notebooks association, not one per folder —
+    # with 3 folders, an N+1 would issue at least 3 extra SELECTs.
+    assert_operator notebook_queries, :<=, 2,
+      "expected @folders to be eager-loaded with :notebook (<= 2 notebooks SELECTs), got #{notebook_queries}"
+  end
 end

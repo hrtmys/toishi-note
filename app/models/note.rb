@@ -31,18 +31,39 @@ class Note < ApplicationRecord
     I18n.t("notes.default_title.#{note_type}", default: I18n.t("notes.default_title.md"))
   end
 
+  # Ranks +scope+ (an already Current.user-scoped relation) against a
+  # search +query+ for the command palette: exact-prefix title matches
+  # first, then everything else, each group most-recently-viewed first.
+  # A blank query falls back to the palette's normal resting state — the
+  # 10 most recently viewed notes.
+  def self.search_ranked(scope, query)
+    return scope.recently_viewed if query.blank?
+
+    like = "%#{sanitize_sql_like(query)}%"
+    # Capped at 50 candidates before the Ruby-side sort — this app's
+    # audience is too small for that to matter, and it keeps the
+    # exact-prefix-first ranking simple without raw SQL.
+    candidates = scope.where("title LIKE ? ESCAPE '\\'", like).limit(50).to_a
+
+    prefix_matches, other_matches = candidates.partition { |note| note.title.downcase.start_with?(query.downcase) }
+    by_recency = ->(note) { note.last_viewed_at || Time.at(0) }
+
+    (prefix_matches.sort_by(&by_recency).reverse + other_matches.sort_by(&by_recency).reverse).first(10)
+  end
+
   def todo_items_total_count
-    todo_items.count
+    todo_items_counts_by_checked.values.sum
   end
 
   def todo_items_completed_count
-    todo_items.where(is_checked: true).count
+    todo_items_counts_by_checked[true] || 0
   end
 
   def todo_completion_percentage
-    return 0 if todo_items_total_count.zero?
+    total = todo_items_total_count
+    return 0 if total.zero?
 
-    (todo_items_completed_count.to_f / todo_items_total_count * 100).round
+    (todo_items_completed_count.to_f / total * 100).round
   end
 
   # Converts this note to its exported Markdown form. TODO/Scrap are
@@ -78,6 +99,13 @@ class Note < ApplicationRecord
   end
 
   private
+
+  # Single grouped-COUNT query, memoized per note instance, so a render
+  # that asks for both the total and the completed count (e.g. the
+  # todo-progress partial) issues one query instead of two or three.
+  def todo_items_counts_by_checked
+    @todo_items_counts_by_checked ||= todo_items.group(:is_checked).count
+  end
 
   def export_display_name
     title
