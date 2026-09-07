@@ -19,7 +19,7 @@ Every file starts with YAML frontmatter (`title` / `description` / `status` / `u
   - [roadmap.md](product/roadmap.md) — what ships from the v0.1.0 public beta through v2.0, and why each feature was accepted, rescoped, or dropped
   - [ux-roadmap.md.old](product/ux-roadmap.md.old) — archived. Superseded by the above for *what ships when*, but still the record of *why* for the persona, the auth design, and several features that took more than one attempt to get right.
 - **`engineering/`** — dev environment and coding rules, for contributors.
-  - [dev-environment.md](engineering/dev-environment.md) — devcontainer design decisions
+  - [dev-environment.md](engineering/dev-environment.md) — `bin/d`/`Dockerfile.dev` design decisions
   - [deployment.md](engineering/deployment.md) — self-hosting via Docker Compose: required configuration, reverse-proxy pattern, redeploying
   - [backup.md](engineering/backup.md) — backing up and restoring `storage/`, tested end to end, not just documented
   - [coding-style.md](engineering/coding-style.md) — Ruby/Rails coding conventions

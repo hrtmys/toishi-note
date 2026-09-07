@@ -19,7 +19,19 @@ class NotesController < ApplicationController
     # An explicit title marks the note as no longer eligible for
     # auto-titling. Content-only saves never carry :title.
     update_params = note_params
-    update_params = update_params.merge(title_customized: true) if update_params.key?(:title)
+    if update_params.key?(:title)
+      submitted = update_params[:title].to_s
+      if submitted.blank?
+        # Clearing the title hands control back to auto-titling instead of
+        # locking in a blank.
+        update_params = update_params.merge(title_customized: false)
+      elsif submitted != @note.title || @note.title_customized?
+        # A genuinely new title is the human taking over. Re-submitting the
+        # current auto-generated value (e.g. a save racing the turbo_stream
+        # title rewrite) is not, so the flag is left alone.
+        update_params = update_params.merge(title_customized: true)
+      end
+    end
 
     if @note.update(update_params)
       # Told on every response so the client knows the version its next

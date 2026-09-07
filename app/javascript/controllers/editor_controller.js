@@ -13,17 +13,18 @@ export default class extends Controller {
     // exists (now the Compare modal) — fall back to split for old values.
     if (this.mode === "diff" || this.mode === "compare") this.mode = "split"
     this.applyMode()
-    this.updatePreview()
     this.setupPreviewScrollStability()
+    this.renderPreviewNow()
   }
 
   disconnect() {
+    clearTimeout(this.previewTimer)
     this.teardownPreviewScrollStability()
   }
 
   showEdit() { this.mode = "edit"; this.applyMode(); }
-  showSplit() { this.mode = "split"; this.applyMode(); this.updatePreview(); }
-  showPreview() { this.mode = "preview"; this.applyMode(); this.updatePreview(); }
+  showSplit() { this.mode = "split"; this.applyMode(); this.renderPreviewNow(); }
+  showPreview() { this.mode = "preview"; this.applyMode(); this.renderPreviewNow(); }
 
   applyMode() {
     // Persist the chosen mode across reloads.
@@ -54,8 +55,26 @@ export default class extends Controller {
     if (state === "full") element.classList.add("w-100")
   }
 
+  // Every keystroke re-renders the whole preview including Mermaid/KaTeX,
+  // so coalesce bursts into one trailing render. Mode switches bypass the
+  // timer via renderPreviewNow so they stay instant. Autosave has its own
+  // separate (longer) debounce; this one only governs preview painting.
   updatePreview() {
-    if (this.mode === "edit") return;
+    if (this.mode === "edit") return
+
+    // Stamp when the textarea's value last changed via user input. The
+    // scroll handler below uses this to tell a real deliberate scroll
+    // apart from the browser's own caret-follow autoscroll.
+    this._lastInputAt = Date.now()
+
+    clearTimeout(this.previewTimer)
+    this.previewTimer = setTimeout(() => this.renderPreviewNow(), 200)
+  }
+
+  renderPreviewNow() {
+    if (this.mode === "edit") return
+
+    clearTimeout(this.previewTimer)
 
     // Every keystroke replaces preview innerHTML wholesale, destroying the
     // node the browser's scroll anchoring would hold on to — scrollTop stays
@@ -83,8 +102,23 @@ export default class extends Controller {
     this._restoreUntil = 0
     this._applyingScroll = false
     this._lastAppliedScrollTop = null
+    this._lastInputAt = 0
 
-    this._onTextareaScroll = () => this.syncPreviewToEditor()
+    this._onTextareaScroll = () => {
+      // A `scroll` event on the textarea fires identically whether the user
+      // deliberately scrolled it (wheel/trackpad/scrollbar-drag/PageDown) or
+      // the browser auto-scrolled it to keep the caret visible while typing
+      // (completely normal behavior — real typing triggers it too, not just
+      // Capybara's fill_in). Caret-follow autoscroll happens synchronously
+      // as a direct consequence of the value changing, so it always lands
+      // within a few ms of the `input` event that caused it; a genuine
+      // user-driven scroll has no such correlation. Use that timing gap to
+      // ignore caret-follow scrolls without disabling deliberate-scroll
+      // follow (including a programmatic `scrollTop` assignment, which
+      // isn't preceded by an `input` event at all).
+      if (Date.now() - this._lastInputAt < 100) return
+      this.syncPreviewToEditor()
+    }
     this._onPreviewScroll = () => {
       if (this._applyingScroll) return
       // A programmatic restore lands exactly on the value it applied —

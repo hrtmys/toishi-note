@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Runs a command inside the dev image (Ruby + Node + Chromium). This host has neither
+# Ruby nor Node installed on purpose — see ~/.claude/CLAUDE.md's Node/npm policy for
+# why Node in particular never runs bare on the host.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+image="${TOISHI_NOTE_DEV_IMAGE:-toishi-note-dev:latest}"
+
+# All gitignored, so a fresh clone has none of them and bundler/yarn/HOME would
+# otherwise point outside the container.
+mkdir -p "$root/tmp/dockerhome" "$root/vendor/bundle" "$root/node_modules"
+
+# Rebuild when Dockerfile.dev's contents change; a stale image silently keeps missing
+# a package someone just added. Stamped on the image: a cached build never advances
+# .Created, so an mtime check would rebuild on every invocation instead.
+want="$(sha256sum "$root/Dockerfile.dev" | cut -d' ' -f1)"
+built="$(docker image inspect -f '{{index .Config.Labels "toishi-note.dockerfile"}}' "$image" 2>/dev/null || true)"
+if [ "$want" != "$built" ]; then
+  echo "Building $image..." >&2
+  docker build --label "toishi-note.dockerfile=$want" -f "$root/Dockerfile.dev" -t "$image" "$root" >&2
+fi
+
+tty_flags=()
+[ -t 0 ] && tty_flags=(-it)
+
+# Anything TOISHI_NOTE_* is meant for the app, so hand it through rather than losing
+# it at the boundary.
+passthrough=()
+while IFS='=' read -r name _; do
+  case "$name" in
+    TOISHI_NOTE_DEV_IMAGE|TOISHI_NOTE_PORT) ;;
+    TOISHI_NOTE_*) passthrough+=(-e "$name") ;;
+    RAILS_MASTER_KEY|SECRET_KEY_BASE|SECRET_KEY_BASE_DUMMY|PARALLEL_WORKERS|CI) passthrough+=(-e "$name") ;;
+  esac
+done < <(env)
+
+# Publishing the port always would block every other command, so only serving commands get it.
+port_flags=()
+case "${*}" in
+  *server*|*dev*|*puma*)
+    # A killed container leaves a pid file whose number means nothing on the host.
+    rm -f "$root/tmp/pids/server.pid"
+    port="${TOISHI_NOTE_PORT:-3000}"
+    port_flags=(-p "$port:3000")
+    if holder="$(docker ps --filter "publish=$port" --format '{{.Names}}' | head -1)" && [ -n "$holder" ]; then
+      echo "Port $port is already taken by container '$holder'." >&2
+      echo "Stop it with: docker kill $holder    (or set TOISHI_NOTE_PORT=3001)" >&2
+      exit 1
+    fi
+    ;;
+esac
+
+exec docker run --rm "${tty_flags[@]}" \
+  -u "$(id -u):$(id -g)" \
+  -v "$root":/rails \
+  -w /rails \
+  -e HOME=/rails/tmp/dockerhome \
+  -e BUNDLE_PATH=/rails/vendor/bundle \
+  -e BUNDLE_APP_CONFIG=/rails/.bundle \
+  -e RUBYOPT=-rbundler/setup \
+  -e PATH=/rails/node_modules/.bin:/rails/bin:/usr/local/node/bin:/usr/local/bundle/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  -e RAILS_ENV="${RAILS_ENV:-development}" \
+  "${passthrough[@]}" \
+  --shm-size=1g \
+  "${port_flags[@]}" \
+  "$image" "$@"

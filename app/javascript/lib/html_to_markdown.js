@@ -19,7 +19,16 @@ export function convertHtmlToMarkdown(html) {
 // A bare clipboard wrapper with no real formatting isn't worth
 // converting — a cheap pre-check so callers can skip it for plain text.
 export function looksLikeRichContent(html) {
-  return /<(table|b|strong|i|em|ul|ol|h[1-6]|blockquote|code|a[\s>])/i.test(html)
+  if (/<(table|b|strong|i|em|u[\s>/]|s[\s>/]|strike|sub|sup|ul|ol|h[1-6]|blockquote|pre|code|font|a[\s>])/i.test(html)) return true
+
+  // Word paragraph copies often carry none of those tags — just
+  // MsoNormal paragraphs, mso-* inline styles, or o:p markers.
+  if (/\bmso[\s-]|MsoNormal|<o:p[\s>/]|urn:schemas-microsoft-com|<\/?w:/i.test(html)) return true
+
+  // A lone formatted paragraph or span (style/class attributes from Word
+  // or Docs) is still a conversion candidate. A bare <span>plain</span>
+  // stays out so plain-text pastes fall through untouched.
+  return /<(p|div|span)\s[^>]*\b(style|class)\s*=/i.test(html)
 }
 
 // Distinguishes an Excel/Sheets range (a <table>) from plain Word rich
