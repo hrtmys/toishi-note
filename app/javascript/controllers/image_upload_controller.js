@@ -55,7 +55,16 @@ export default class extends Controller {
       .then(({ markdown }) => this.replaceText(textarea, placeholder, markdown))
       .catch((error) => {
         console.error("Image upload failed", error)
-        this.replaceText(textarea, placeholder, `![${t("image_upload.failed", { filename: file.name })}]()`)
+
+        // Earlier versions left a `![Failed to upload x]()` marker typed
+        // into the textarea. Autosave (500ms debounce) would happily
+        // persist that as if it were real note content, and nothing ever
+        // removed it again unless the user noticed and deleted it by
+        // hand — a permanent "upload failed" message baked into the note.
+        // Removing the placeholder outright means there's nothing left to
+        // accidentally keep; the toast is the only trace of the failure.
+        this.replaceText(textarea, placeholder, "")
+        window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("image_upload.failed", { filename: file.name }) } }))
       })
   }
 

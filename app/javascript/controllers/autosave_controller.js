@@ -72,6 +72,7 @@ export default class extends Controller {
           // retrying; note_conflict_controller.js shows the user a real
           // choice, and this field's pending edit stays as typed.
           this.element.dispatchEvent(new CustomEvent("note:conflict", { bubbles: true }))
+          this.notifySettled(false)
           return null
         }
 
@@ -80,6 +81,7 @@ export default class extends Controller {
           // turbo-stream body — rendering it as one would throw an obscure
           // JS error instead of telling the user anything useful.
           this.notifySaveFailed()
+          this.notifySettled(false)
           return null
         }
 
@@ -88,6 +90,7 @@ export default class extends Controller {
       .then(html => {
         if (html) {
           window.Turbo.renderStreamMessage(html)
+          this.notifySettled(true)
         }
       })
       .catch(error => {
@@ -95,12 +98,22 @@ export default class extends Controller {
         // any response came back.
         console.error("Failed to autosave", error)
         this.notifySaveFailed()
+        this.notifySettled(false)
       })
     }, 500)
   }
 
   notifySaveFailed() {
     window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("autosave.save_failed") } }))
+  }
+
+  // Fired after every save attempt resolves, success or failure — the one
+  // hook a caller needs to know a particular save actually landed rather
+  // than just having been *triggered*. note_conflict_controller.js's
+  // "Keep mine" uses this to know when it's actually safe to hide the
+  // conflict banner, instead of hiding it the instant the retry starts.
+  notifySettled(ok) {
+    this.element.dispatchEvent(new CustomEvent("autosave:settled", { bubbles: true, detail: { ok } }))
   }
 
   lockVersionElement() {

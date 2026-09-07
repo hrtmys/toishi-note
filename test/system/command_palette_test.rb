@@ -97,6 +97,54 @@ class CommandPaletteTest < ApplicationSystemTestCase
     assert_current_path root_path(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
   end
 
+  # Audit finding ux-ui #12: while a search request was in flight, stale
+  # results stayed on screen with no indication a new search was even
+  # happening, and results had no role/aria-selected for keyboard/screen
+  # reader users.
+  test "typing marks the results frame aria-busy while the search is in flight, and clears it after" do
+    create_note("Ruby notes")
+    visit_note(create_note("Something else"))
+
+    press_ctrl_p
+
+    # Slow the search fetch down so aria-busy is observable mid-flight,
+    # rather than racing a fetch that resolves before we can assert on it.
+    page.execute_script(<<~JS)
+      const realFetch = window.fetch.bind(window)
+      window.fetch = (url, ...rest) => new Promise((resolve) => {
+        setTimeout(() => resolve(realFetch(url, ...rest)), 300)
+      })
+    JS
+
+    find("[data-palette-target='input']").fill_in with: "Ruby"
+
+    assert_selector "turbo-frame#palette_results[aria-busy='true']"
+    assert_no_selector "turbo-frame#palette_results[aria-busy]"
+  end
+
+  test "results are exposed as a listbox with selectable options for keyboard/screen-reader users" do
+    note_a = create_note("Note A", last_viewed_at: 2.days.ago)
+    note_b = create_note("Note B", last_viewed_at: 1.day.ago)
+    visit_note(note_b)
+
+    press_ctrl_p
+
+    assert_selector "ul[role='listbox']#palette-listbox"
+    within "#palette-listbox" do
+      assert_selector "li[role='option']", minimum: 2
+      # note_a (index 1, one hop back) starts preselected on the blank-query
+      # MRU list — its aria-selected must say so, and no other option's should.
+      assert_selector "li[role='option'][aria-selected='true']", text: note_a.title, count: 1
+      assert_selector "li[role='option'][aria-selected='false']", text: note_b.title
+    end
+
+    find("[data-palette-target='input']").send_keys(:down)
+
+    within "#palette-listbox" do
+      assert_selector "li[role='option'][aria-selected='true']", text: note_b.title, count: 1
+    end
+  end
+
   private
 
     def press_ctrl_p

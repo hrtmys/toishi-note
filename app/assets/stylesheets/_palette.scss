@@ -8,3 +8,11 @@
 .palette-result.palette-result-selected {
   background-color: #f1f3f5;
 }
+
+// While a search request is in flight, fade the (possibly stale) results
+// rather than leaving them looking indistinguishable from a fresh answer —
+// paired with aria-busy so screen readers get the same "still working" cue.
+turbo-frame#palette_results[aria-busy="true"] {
+  opacity: 0.5;
+  transition: opacity 0.1s ease-in;
+}

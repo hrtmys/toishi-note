@@ -59,9 +59,41 @@ class NoteConflictTest < ApplicationSystemTestCase
       fill_in "note[content]", with: "Device B's now-conflicting edit"
       assert_selector "[data-note-conflict-target='banner']", visible: true
 
-      click_on I18n.t("notes.conflict.reload")
+      accept_confirm(I18n.t("notes.conflict.reload_confirm")) do
+        click_on I18n.t("notes.conflict.reload")
+      end
 
       assert_selector "textarea[name='note[content]']", text: "Server truth after device A"
+    end
+  end
+
+  # Audit finding ux-ui #11(b): Reload used to discard the local unsaved
+  # edit with no confirmation at all — one misclick and it's gone.
+  test "clicking Reload asks for confirmation, and cancelling keeps the local edit on screen" do
+    sign_in_as(users(:one))
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    using_session("device_b") do
+      page.driver.browser.manage.window.resize_to(1400, 1000)
+      sign_in_as(users(:one))
+      visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+    end
+
+    fill_in "note[content]", with: "Device A's content"
+    wait_for_content("Device A's content")
+
+    using_session("device_b") do
+      fill_in "note[content]", with: "Device B's edit, not yet discarded"
+      assert_selector "[data-note-conflict-target='banner']", visible: true
+
+      dismiss_confirm(I18n.t("notes.conflict.reload_confirm")) do
+        click_on I18n.t("notes.conflict.reload")
+      end
+
+      # Cancelling the confirmation must be a complete no-op: the banner
+      # is still up, and the locally-typed edit was never thrown away.
+      assert_selector "[data-note-conflict-target='banner']", visible: true
+      assert_selector "textarea[name='note[content]']", text: "Device B's edit, not yet discarded"
     end
   end
 
@@ -89,6 +121,45 @@ class NoteConflictTest < ApplicationSystemTestCase
 
     wait_for_content("Device B's edit, kept deliberately")
     assert_equal "Device B's edit, kept deliberately", @note.reload.content
+  end
+
+  # Audit finding ux-ui #11(a): Keep mine used to hide the banner the
+  # instant it was clicked, before its resubmission actually landed — a
+  # failed resubmission then left no banner and no error, just silence.
+  test "Keep mine keeps the banner open and shows a toast if the resubmission actually fails" do
+    sign_in_as(users(:one))
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    using_session("device_b") do
+      page.driver.browser.manage.window.resize_to(1400, 1000)
+      sign_in_as(users(:one))
+      visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+    end
+
+    fill_in "note[content]", with: "Device A's edit"
+    wait_for_content("Device A's edit")
+
+    using_session("device_b") do
+      fill_in "note[content]", with: "Device B's edit, resubmit will fail"
+      assert_selector "[data-note-conflict-target='banner']", visible: true
+
+      # Force every fetch from here on to fail, simulating the network
+      # dropping out right as the resubmission goes out.
+      page.execute_script(<<~JS)
+        window.fetch = () => Promise.reject(new TypeError("Failed to fetch"))
+      JS
+
+      click_on I18n.t("notes.conflict.keep_mine")
+
+      assert_selector ".toast.show", text: I18n.t("js.autosave.save_failed")
+      # The critical assertion: the banner must still be visible — a
+      # failed "Keep mine" must never look like a silent success.
+      assert_selector "[data-note-conflict-target='banner']", visible: true
+    end
+
+    # And the content actually on the server is still device A's — the
+    # failed resubmit never got there.
+    assert_equal "Device A's edit", @note.reload.content
   end
 
   private

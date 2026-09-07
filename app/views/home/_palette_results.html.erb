@@ -1,4 +1,4 @@
-<ul class="list-unstyled mb-0 custom-scrollbar-light overflow-y-auto" style="max-height: 60vh;" data-palette-target="list">
+<ul class="list-unstyled mb-0 custom-scrollbar-light overflow-y-auto" style="max-height: 60vh;" role="listbox" id="palette-listbox" data-palette-target="list">
   <% if notes.empty? %>
     <li class="p-3 text-muted small">
       <%= query.present? ? t("palette.no_results") : t("palette.empty") %>
@@ -13,6 +13,8 @@
     <% preselected_index = query.blank? && notes.size > 1 ? 1 : 0 %>
     <% notes.each_with_index do |note, index| %>
       <li class="palette-result px-3 py-2 border-bottom <%= "palette-result-selected" if index == preselected_index %>"
+          role="option"
+          aria-selected="<%= index == preselected_index %>"
           data-palette-target="item"
           data-action="click->palette#select"
           data-url="<%= root_path(notebook_id: note.notebook_id, folder_id: note.folder_id, note_id: note.id) %>">

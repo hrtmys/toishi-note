@@ -57,11 +57,15 @@ ja:
       new_prompt: "フォルダ名を入力してください"
       rename_prompt: "新しいフォルダ名を入力してください"
       delete_confirm: "このフォルダを削除しますか？"
+      empty: "まだフォルダがありません。上の+から作成してください。"
+      no_notebook_selected: "フォルダを表示するにはノートブックを選択してください。"
     files:
       heading: "FILES"
       new_md: "新規Markdownノート"
       new_todo: "新規TODO"
       new_scrap: "新規Scrap"
+      empty: "まだノートがありません。上のボタンから作成してください。"
+      no_folder_selected: "まずフォルダを選択するか作成してください。"
     # The buttons themselves stay U/C/A-Z regardless of locale — compact,
     # icon-like abbreviations rather than translatable prose — but their
     # tooltips are real Japanese here.
@@ -169,6 +173,7 @@ ja:
     conflict:
       message: "このノートは別のデバイスで更新されました。"
       reload: "再読み込み"
+      reload_confirm: "未保存の変更を破棄して、別のデバイスの内容を読み込みますか？"
       keep_mine: "この内容を保持"
   compare:
     modal_title: "比較"

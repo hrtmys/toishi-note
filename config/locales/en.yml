@@ -81,11 +81,15 @@ en:
       new_prompt: "Enter a folder name"
       rename_prompt: "Enter a new folder name"
       delete_confirm: "Delete this folder?"
+      empty: "No folders yet. Use + above to create one."
+      no_notebook_selected: "Select a notebook to see its folders."
     files:
       heading: "FILES"
       new_md: "New Markdown note"
       new_todo: "New TODO"
       new_scrap: "New Scrap"
+      empty: "No notes yet. Use a button above to create one."
+      no_folder_selected: "Select or create a folder first."
     sort:
       updated: "Updated"
       created: "Created"
@@ -189,6 +193,7 @@ en:
     conflict:
       message: "This note changed on another device."
       reload: "Reload"
+      reload_confirm: "Discard your unsaved changes and load the version from the other device?"
       keep_mine: "Keep mine"
   # Backs the "paste two texts, see a word-level diff" panel — shared as-is
   # between the md editor's Compare tab and the standalone tool under
