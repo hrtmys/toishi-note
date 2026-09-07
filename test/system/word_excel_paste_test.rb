@@ -214,9 +214,18 @@ class WordExcelPasteTest < ApplicationSystemTestCase
 
     assert_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
 
+    # The sample image is tiny enough that upload can finish before this
+    # runs, so the "Uploading…" placeholder is a transient state that may
+    # have already come and gone — asserting on it as a one-shot read is
+    # racy. Wait for the actual outcome (the uploaded blob link) instead,
+    # same as ImageAttachmentsTest does for the equivalent drop case.
+    Timeout.timeout(Capybara.default_max_wait_time) do
+      sleep 0.1 until evaluate_textarea_value.match?(%r{!\[\]\(/rails/active_storage/blobs/})
+    end
+
     value = evaluate_textarea_value
     assert_match(/\*\*Bold text\*\*/, value)
-    assert_includes value, I18n.t("js.image_upload.uploading", filename: "image.png")
+    assert_match(%r{!\[\]\(/rails/active_storage/blobs/}, value)
   end
 
   test "pasting an Excel range, by default, pastes the rendered image — it does not auto-convert to a table" do
