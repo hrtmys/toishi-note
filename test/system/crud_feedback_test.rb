@@ -30,6 +30,10 @@ class CrudFeedbackTest < ApplicationSystemTestCase
     visit root_url(notebook_id: notebook.id, folder_id: folder.id)
 
     within "#folders-list" do
+      # Sidebar rename/delete buttons are hover-revealed (hover-target-icon
+      # is zero-width until its row is hovered) — without this, click_on
+      # finds no visible button. Same pattern as note_sort_test.rb.
+      find("li", text: "Old Folder Name").hover
       accept_prompt(with: "New Folder Name") { click_on I18n.t("home.common.rename") }
     end
 
@@ -40,16 +44,21 @@ class CrudFeedbackTest < ApplicationSystemTestCase
   test "deleting a note shows a success toast" do
     notebook = users(:one).notebooks.create!(name: "Notebook")
     folder = notebook.folders.create!(name: "Folder")
-    note = folder.notes.create!(title: "Note To Delete", note_type: "md", notebook: notebook)
+    # Named to avoid containing "Delete": click_on matches links by
+    # substring, so a "Note To Delete" title link would also match (and win
+    # while the real hover-revealed button is still hidden).
+    note = folder.notes.create!(title: "Temporary Note", note_type: "md", notebook: notebook)
 
     visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
 
     within "#notes-list" do
+      # Hover-revealed button — see the folder-rename test above.
+      find("li", text: "Temporary Note").hover
       accept_confirm { click_on I18n.t("home.common.delete") }
     end
 
     assert_selector ".toast.show", text: I18n.t("home.notes.flash.deleted")
-    assert_no_text "Note To Delete"
+    assert_no_text "Temporary Note"
   end
 
   test "renaming a notebook to a blank name shows a failure toast and leaves the name unchanged" do
@@ -60,11 +69,14 @@ class CrudFeedbackTest < ApplicationSystemTestCase
     # prompt_form_controller.js refuses to submit a blank prompt value
     # client-side, so a blank rename can't be produced via the real
     # prompt() dialog — bypass it and submit the underlying form directly,
-    # the same way a stripped-down or non-JS client could.
+    # the same way a stripped-down or non-JS client could. Native submit
+    # (not requestSubmit): requestSubmit fires the submit event, which
+    # prompt-form handles by opening a window.prompt that Selenium then
+    # trips over as an unexpected alert.
     page.execute_script(<<~JS, notebook_path(notebook))
       const form = document.querySelector(`form[action="${arguments[0]}"]`)
       form.querySelector('input[name="name"]').value = ""
-      form.requestSubmit()
+      HTMLFormElement.prototype.submit.call(form)
     JS
 
     assert_selector ".toast.show", text: I18n.t("home.notebooks.flash.rename_failed")
