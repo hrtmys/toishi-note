@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { t } from "../lib/translations"
 
 export default class extends Controller {
   static values = { url: String }
@@ -74,6 +75,14 @@ export default class extends Controller {
           return null
         }
 
+        if (!response.ok) {
+          // A non-2xx, non-409 response (422, 500, ...) isn't a valid
+          // turbo-stream body — rendering it as one would throw an obscure
+          // JS error instead of telling the user anything useful.
+          this.notifySaveFailed()
+          return null
+        }
+
         return response.text()
       })
       .then(html => {
@@ -81,7 +90,17 @@ export default class extends Controller {
           window.Turbo.renderStreamMessage(html)
         }
       })
+      .catch(error => {
+        // Network failure, CORS, etc. — the fetch itself rejected before
+        // any response came back.
+        console.error("Failed to autosave", error)
+        this.notifySaveFailed()
+      })
     }, 500)
+  }
+
+  notifySaveFailed() {
+    window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("autosave.save_failed") } }))
   }
 
   lockVersionElement() {

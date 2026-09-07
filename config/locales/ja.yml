@@ -222,13 +222,18 @@ ja:
     image_upload:
       uploading: "%{filename} をアップロード中…"
       failed: "%{filename} のアップロードに失敗しました"
+    autosave:
+      save_failed: "変更を保存できませんでした — 通信状況を確認してください。"
     scrap:
       show_more: *scrap_show_more
       show_less: *scrap_show_less
+      source_save_failed: "出典を保存できませんでした — 通信状況を確認してください。"
     word_copy:
       success_title: "コピーしました"
       error_title: "リッチテキストコピーに失敗しました"
       copy_failed: "Word用にコピーできませんでした — ブラウザがクリップボードをブロックしました。"
+    settings:
+      save_failed: "設定を保存できませんでした — 通信状況を確認してください。"
     bulk_import:
       invalid_json: "有効なJSONではありません。"
       must_be_array: "JSONはタスクの配列である必要があります。"
