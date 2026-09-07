@@ -4,15 +4,15 @@ Thanks for considering a contribution.
 
 ## Getting set up
 
-The [devcontainer](.devcontainer/devcontainer.json) is the easiest path — see the [README](README.md#quickstart-devcontainer) for the quickstart, and [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) if you want to know why it's configured the way it is.
+[`bin/d`](bin/d) is the easiest path — see the [README](README.md#contributor-quickstart-docker) for the quickstart, and [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) if you want to know why the image is configured the way it is.
 
 ## Before opening a PR
 
 ```sh
-bin/rails test
-bin/rails test:system
-bin/rubocop -A
-bin/brakeman
+bin/d bin/rails test
+bin/d bin/rails test:system
+bin/d bin/rubocop -A
+bin/d bin/brakeman
 ```
 
 All of these run in CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)); running them locally first saves a round trip.
@@ -33,7 +33,7 @@ Currently listed are three yuru7 fonts (Bizin Gothic, UDEV Gothic, HackGen) tune
 
 1. **Check its license first.** It has to be redistributable-by-name at minimum (SIL OFL and MIT both qualify); if you're unsure, say so in the issue/PR rather than guessing.
 2. Add the exact font-family name to `$cjk-monospace-stack` (or a new stack, if it's for a script this one doesn't serve).
-3. If it's free to fetch from an upstream release, add it to `install_yuru7_font` (or an equivalent block) in [`.devcontainer/post-create.sh`](.devcontainer/post-create.sh) so contributors' screenshots and system tests actually render it, and mention it in [`docs/engineering/dev-environment.md`](docs/engineering/dev-environment.md).
+3. If it's free to fetch from an upstream release, add it to `install_yuru7_font` (or an equivalent block) in [`Dockerfile.dev`](Dockerfile.dev) so contributors' screenshots and system tests actually render it, and mention it in [`docs/engineering/dev-environment.md`](docs/engineering/dev-environment.md).
 4. Open an issue or PR — either is fine for something this small.
 
 ## Product direction
