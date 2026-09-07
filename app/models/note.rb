@@ -84,6 +84,11 @@ class Note < ApplicationRecord
   end
 
   def auto_set_title
+    # Clearing the title hands control back to auto-titling, so a blanked
+    # title re-derives from content (or the placeholder) on this and later
+    # saves instead of staying locked as customized.
+    self.title_customized = false if title.blank?
+
     # title_customized replaces an old placeholder-text comparison that
     # misfired on a locale switch. Gated to !persisted? so a later save
     # never re-runs this against the current locale's placeholder.
