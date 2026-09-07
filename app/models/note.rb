@@ -31,7 +31,7 @@ class Note < ApplicationRecord
     I18n.t("notes.default_title.#{note_type}", default: I18n.t("notes.default_title.md"))
   end
 
-  # Ranks +scope+ (an already Current.user-scoped relation) against a
+<  # Ranks +scope+ (an already Current.user-scoped relation) against a
   # search +query+ for the command palette: exact-prefix title matches
   # first, then everything else, each group most-recently-viewed first.
   # A blank query falls back to the palette's normal resting state — the
@@ -49,6 +49,21 @@ class Note < ApplicationRecord
     by_recency = ->(note) { note.last_viewed_at || Time.at(0) }
 
     (prefix_matches.sort_by(&by_recency).reverse + other_matches.sort_by(&by_recency).reverse).first(10)
+  end
+
+  # Shared "brand new note living in this folder" factory — both a fresh
+  # note (NotesController#create, empty content) and a promoted scrap
+  # (ScrapItemsController#promote, content: the scrap's own content) need
+  # the exact same title/note_type/notebook wiring, just different
+  # note_type/content inputs.
+  def self.create_in_folder!(folder:, notebook:, note_type:, content:)
+    folder.notes.create!(
+      notebook: notebook,
+      title: default_title_for(note_type),
+      note_type: note_type,
+      content: content
+    )
+  end
   end
 
   def todo_items_total_count

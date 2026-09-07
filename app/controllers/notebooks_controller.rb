@@ -1,18 +1,29 @@
 class NotebooksController < ApplicationController
   def create
-    notebook = Current.user.notebooks.create!(notebook_params)
-    redirect_to organize_or(root_path(notebook_id: notebook.id))
+    notebook = Current.user.notebooks.build(notebook_params)
+    if notebook.save
+      flash[:toast] = t("home.notebooks.flash.created")
+      redirect_to organize_or(root_path(notebook_id: notebook.id))
+    else
+      flash[:toast] = t("home.notebooks.flash.create_failed")
+      redirect_to organize_or(root_path)
+    end
   end
 
   def update
     notebook = Current.user.notebooks.find(params[:id])
-    notebook.update!(notebook_params)
+    if notebook.update(notebook_params)
+      flash[:toast] = t("home.notebooks.flash.renamed")
+    else
+      flash[:toast] = t("home.notebooks.flash.rename_failed")
+    end
     redirect_to organize_or(root_path(notebook_id: notebook.id))
   end
 
   def destroy
     notebook = Current.user.notebooks.find(params[:id])
     notebook.destroy!
+    flash[:toast] = t("home.notebooks.flash.deleted")
     redirect_to organize_or(root_path)
   end
 

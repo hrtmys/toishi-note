@@ -37,6 +37,19 @@
   <body data-controller="navigation">
     <%= yield %>
 
+    <%# Server-side confirmation for a redirect-driven action (notebook/
+        folder/note create, rename, delete — see NotebooksController,
+        FoldersController, NotesController) rides across the redirect as
+        flash[:toast], then this bridges it into the same toast the rest
+        of the app already uses for JS-driven confirmations (see
+        app/javascript/controllers/toast_controller.js). Deliberately a
+        separate flash key from :notice/:alert, which sessions/passwords
+        views already render inline themselves — using :toast here avoids
+        double-displaying those. %>
+    <% if flash[:toast].present? %>
+      <div data-controller="flash-toast" data-flash-toast-message-value="<%= flash[:toast] %>"></div>
+    <% end %>
+
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;" data-controller="toast">
       <div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" data-toast-target="toast" data-action="toast:show@window->toast#show">
         <div class="d-flex">

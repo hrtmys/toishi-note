@@ -14,13 +14,9 @@ class NotesController < ApplicationController
       # itself.)
       folder = Current.user.folders.lock.find(params[:folder_id])
 
-      note = folder.notes.create!(
-        notebook: folder.notebook,
-        title: Note.default_title_for(note_type),
-        note_type: note_type,
-        content: ""
-      )
+      note = Note.create_in_folder!(folder: folder, notebook: folder.notebook, note_type: note_type, content: "")
     end
+    flash[:toast] = t("home.notes.flash.created")
     redirect_to root_path(notebook_id: note.notebook_id, folder_id: note.folder_id, note_id: note.id)
   end
 
@@ -73,10 +69,22 @@ class NotesController < ApplicationController
         format.json { head :ok }
         # A plain form submission — the Organize view's rename control,
         # which has no existing HTML-redirect path to reuse.
-        format.html { redirect_to organize_or(root_path(notebook_id: @note.notebook_id, folder_id: @note.folder_id, note_id: @note.id)) }
+        format.html do
+          flash[:toast] = t("home.notes.flash.renamed")
+          redirect_to organize_or(root_path(notebook_id: @note.notebook_id, folder_id: @note.folder_id, note_id: @note.id))
+        end
       end
     else
-      head :unprocessable_entity
+      respond_to do |format|
+        # Same Organize rename control as above — on failure (e.g. a blank
+        # title), send it back with a toast instead of a bare 422 that
+        # Turbo has nothing to render.
+        format.html do
+          flash[:toast] = t("home.notes.flash.rename_failed")
+          redirect_to organize_or(root_path(notebook_id: @note.notebook_id, folder_id: @note.folder_id, note_id: @note.id))
+        end
+        format.any { head :unprocessable_entity }
+      end
     end
   rescue ActiveRecord::StaleObjectError
     # Rails already maps this exception to 409 by default; this rescue
@@ -91,6 +99,7 @@ class NotesController < ApplicationController
     folder_id = note.folder_id
     notebook_id = note.notebook_id
     note.destroy!
+    flash[:toast] = t("home.notes.flash.deleted")
     redirect_to organize_or(root_path(notebook_id: notebook_id, folder_id: folder_id)) # back to the parent folder after deleting
   end
 
