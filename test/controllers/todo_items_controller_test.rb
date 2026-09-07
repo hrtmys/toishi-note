@@ -106,6 +106,15 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "bulk_create rejects an entries array over the cap instead of importing any of it" do
+    entries = Array.new(TodoItemsController::MAX_BULK_ENTRIES + 1) { |i| "Task #{i}" }
+
+    assert_no_difference("TodoItem.count") do
+      post bulk_create_note_todo_items_url(@note), params: { entries: entries.to_json }, as: :turbo_stream
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "bulk_create only ever targets the current user's note" do
     other_note = notes(:two) # belongs to users(:two), not the signed-in users(:one)
 

@@ -50,6 +50,32 @@ class NoteImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "rejects a non-image file that spoofs an image content type instead of 500ing" do
+    file = fixture_file_upload("sample_image.png", "image/png")
+    # Overwrite the fixture's actual bytes so Vips can't decode it, while
+    # keeping the declared content-type as image/png (a spoofed upload).
+    File.write(file.tempfile.path, "this is definitely not an image")
+
+    assert_no_difference("@note.images.count") do
+      post note_images_url(@note), params: { image: file }
+    end
+    assert_response :unprocessable_entity
+  end
+
+  test "rejects an upload over the size cap" do
+    oversized = Tempfile.new([ "oversized", ".png" ])
+    oversized.write("a" * (NoteImagesController::MAX_UPLOAD_SIZE + 1))
+    oversized.rewind
+    file = Rack::Test::UploadedFile.new(oversized.path, "image/png", original_filename: "oversized.png")
+
+    assert_no_difference("@note.images.count") do
+      post note_images_url(@note), params: { image: file }
+    end
+    assert_response :unprocessable_entity
+  ensure
+    oversized&.close!
+  end
+
   test "only ever attaches to the current user's own note" do
     other_note = notes(:two) # belongs to users(:two)
     file = fixture_file_upload("sample_image.png", "image/png")

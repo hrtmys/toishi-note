@@ -41,11 +41,19 @@ class TodoItemsController < ApplicationController
     ]
   end
 
+  # A pasted JSON array is meant for "a bunch of tasks from a checklist",
+  # not a bulk-loading endpoint — cap it so one request can't create an
+  # unbounded number of rows and tie up the shared DB/Puma workers.
+  MAX_BULK_ENTRIES = 500
+
   # Bulk-imports TODOs from a pasted JSON array (strings, or objects with
   # "content" and an optional checked flag). The browser's live preview is
   # a UX aid only — this re-parses and re-validates independently.
   def bulk_create
-    items = todo_items_from_bulk_json(params[:entries]).select(&:save)
+    entries = parse_bulk_entries(params[:entries])
+    return head :unprocessable_entity if entries.size > MAX_BULK_ENTRIES
+
+    items = entries.filter_map { |entry| build_bulk_todo_item(entry) }.select(&:save)
 
     render turbo_stream: [
       *items.map { |item| turbo_stream.append("todo_list_#{@note.id}", partial: "todo_items/item", locals: { item: item }) },
@@ -63,11 +71,9 @@ class TodoItemsController < ApplicationController
     params.permit(:is_checked)
   end
 
-  def todo_items_from_bulk_json(raw)
+  def parse_bulk_entries(raw)
     parsed = JSON.parse(raw.to_s)
-    return [] unless parsed.is_a?(Array)
-
-    parsed.filter_map { |entry| build_bulk_todo_item(entry) }
+    parsed.is_a?(Array) ? parsed : []
   rescue JSON::ParserError
     []
   end
