@@ -13,12 +13,12 @@ export default class extends Controller {
     // exists (now the Compare modal) — fall back to split for old values.
     if (this.mode === "diff" || this.mode === "compare") this.mode = "split"
     this.applyMode()
-    this.updatePreview()
+    this.renderPreviewNow()
   }
 
   showEdit() { this.mode = "edit"; this.applyMode(); }
-  showSplit() { this.mode = "split"; this.applyMode(); this.updatePreview(); }
-  showPreview() { this.mode = "preview"; this.applyMode(); this.updatePreview(); }
+  showSplit() { this.mode = "split"; this.applyMode(); this.renderPreviewNow(); }
+  showPreview() { this.mode = "preview"; this.applyMode(); this.renderPreviewNow(); }
 
   applyMode() {
     // Persist the chosen mode across reloads.
@@ -49,9 +49,25 @@ export default class extends Controller {
     if (state === "full") element.classList.add("w-100")
   }
 
+  // Every keystroke re-renders the whole preview including Mermaid/KaTeX,
+  // so coalesce bursts into one trailing render. Mode switches bypass the
+  // timer via renderPreviewNow so they stay instant. Autosave has its own
+  // separate (longer) debounce; this one only governs preview painting.
   updatePreview() {
-    if (this.mode === "edit") return;
+    if (this.mode === "edit") return
 
+    clearTimeout(this.previewTimer)
+    this.previewTimer = setTimeout(() => this.renderPreviewNow(), 200)
+  }
+
+  renderPreviewNow() {
+    if (this.mode === "edit") return
+
+    clearTimeout(this.previewTimer)
     renderMarkdownIntoElement(this.previewAreaTarget, this.textareaTarget.value)
+  }
+
+  disconnect() {
+    clearTimeout(this.previewTimer)
   }
 }
