@@ -10,7 +10,7 @@
     <!-- Right column: the note body. -->
     <div class="col-lg-9 col-xl-10 bg-light p-0 h-100 d-flex flex-column">
       <!-- Header shown whenever the sidebar is off-canvas (below lg). -->
-      <div class="d-lg-none bg-dark text-white p-2 d-flex align-items-center shrink-0 shadow-sm">
+      <div class="d-lg-none bg-dark text-white p-2 d-flex align-items-center flex-shrink-0 shadow-sm">
         <button id="sidebarToggleBtn" class="btn btn-outline-light btn-sm me-2 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
           <i class="bi bi-list fs-4"></i>
         </button>
@@ -32,18 +32,18 @@
               data-controller="note-conflict<%= ' editor' if @current_note.note_type == 'md' %>"
               data-note-lock-version="<%= @current_note.lock_version %>">
 
-            <div data-note-conflict-target="banner" class="alert alert-warning d-none d-flex justify-content-between align-items-center mb-2 py-2 shrink-0" role="alert">
+            <div data-note-conflict-target="banner" class="alert alert-warning d-none d-flex justify-content-between align-items-center mb-2 py-2 flex-shrink-0" role="alert">
               <span><%= t("notes.conflict.message") %></span>
-              <div class="d-flex shrink-0 ms-3">
+              <div class="d-flex flex-shrink-0 ms-3">
                 <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-action="click->note-conflict#reload"><%= t("notes.conflict.reload") %></button>
                 <button type="button" class="btn btn-sm btn-primary" data-action="click->note-conflict#keepMine"><%= t("notes.conflict.keep_mine") %></button>
               </div>
             </div>
 
-            <div id="note_editor_header" class="hover-container d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 shrink-0">
+            <div id="note_editor_header" class="hover-container d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 flex-shrink-0">
               <%= render partial: "notes/title_input", locals: { note: @current_note } %>
 
-              <div class="d-flex shrink-0 align-items-center">
+              <div class="d-flex flex-shrink-0 align-items-center">
                 <%= link_to t("home.common.export"), export_note_path(@current_note), class: "hover-target btn btn-outline-secondary ms-3" %>
                 <%# turbo_frame: "_top" is load-bearing, not decorative: this button sits inside
                     turbo_frame_tag "main_editor", so without it the redirect response only

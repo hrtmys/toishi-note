@@ -1,5 +1,5 @@
 <div class="h-100 d-flex flex-column" data-controller="scrap-copy-all">
-  <div class="d-flex justify-content-end mb-2 shrink-0">
+  <div class="d-flex justify-content-end mb-2 flex-shrink-0">
     <button type="button" class="btn btn-outline-secondary btn-sm" data-action="click->scrap-copy-all#copyAll">
       <i class="bi bi-clipboard me-1"></i><%= t("home.scrap.copy_all") %>
     </button>
@@ -11,7 +11,7 @@
     <% end %>
   </div>
 
-  <div class="mt-2 bg-white p-2 rounded shadow-sm border shrink-0">
+  <div class="mt-2 bg-white p-2 rounded shadow-sm border flex-shrink-0">
     <%= form_with url: note_scrap_items_path(note), method: :post,
         data: { controller: "reset-form", action: "turbo:submit-end->reset-form#reset" } do |f| %>
       <%= f.text_area :content,

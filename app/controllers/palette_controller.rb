@@ -17,9 +17,7 @@ class PaletteController < ApplicationController
     # A blank/whitespace-only query is the palette's normal resting
     # state: the 10 most recently viewed notes, most recent first.
     def search(scope, query)
-      # reorder, not order — see the identical comment in
-      # HomeController#index, which computes this same default state.
-      return scope.reorder(last_viewed_at: :desc).limit(10) if query.blank?
+      return scope.recently_viewed if query.blank?
 
       like = "%#{ActiveRecord::Base.sanitize_sql_like(query)}%"
       # Capped at 50 candidates before the Ruby-side sort — this app's

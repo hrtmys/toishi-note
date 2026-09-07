@@ -8,6 +8,9 @@ module Exportable
   # titles in a Japanese-first app.
   def export_basename
     sanitized = export_display_name.to_s.strip.gsub(%r{[/\\:*?"<>|]}, "_")
+    # Collapses runs of 2+ dots (e.g. a name literally "..") so a zip entry
+    # built from this basename can never carry a ".." path segment.
+    sanitized = sanitized.gsub(/\.\.+/, "_")
     sanitized.presence&.truncate(60, omission: "") || "untitled"
   end
 end

@@ -2,6 +2,7 @@ class NotesController < ApplicationController
   def create
     folder = Current.user.folders.find(params[:folder_id])
     note_type = params.permit(:note_type)[:note_type].presence || "md"
+    return head :unprocessable_entity unless Note.note_types.key?(note_type)
 
     note = folder.notes.create!(
       notebook: folder.notebook,

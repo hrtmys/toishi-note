@@ -25,6 +25,13 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "md", Note.last.note_type
   end
 
+  test "an invalid note_type is rejected cleanly instead of raising" do
+    assert_no_difference("Note.count") do
+      post notes_url, params: { folder_id: @folder.id, note_type: "bogus" }
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "should update note" do
     patch note_url(@note), params: { note: { title: "Updated Note" } }, as: :turbo_stream
     assert_response :success

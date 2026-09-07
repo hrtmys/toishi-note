@@ -32,4 +32,14 @@ class ExportableTest < ActiveSupport::TestCase
     long_name = "a" * 100
     assert_equal 60, FakeRecord.new(long_name).export_basename.length
   end
+
+  test "collapses a name of only dots so it can never become a .. path segment" do
+    assert_equal "_", FakeRecord.new("..").export_basename
+    assert_equal "_", FakeRecord.new("...").export_basename
+  end
+
+  test "collapses embedded runs of dots too, e.g. a name like '../etc'" do
+    basename = FakeRecord.new("../etc").export_basename
+    assert_not_includes basename, ".."
+  end
 end
