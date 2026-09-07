@@ -13,6 +13,12 @@ Practical notes carried over from hard-won experience in this repo:
 - A non-zero `bundler-audit`/`yarn audit` result is reported as a non-blocking advisory (⚠️), not a failure — it can be a pre-existing upstream CVE with no fixed release yet. Check whether it also appears on `main` before treating it as this branch's problem (see `docs/engineering/verification.md`).
 - For a genuinely new regression test, do a one-time discrimination check by hand (revert the fix, confirm the test fails, restore it, confirm it passes) — this isn't something `bin/ci` can automate, since it requires knowing which change to revert.
 
+### Verifying several branches at once
+
+When several independent feature branches are in flight together (e.g. multiple subagents each fixing a different issue), **do not** run `bin/d bin/ci` locally in more than one worktree at the same time. The containers contend for CPU, and `bundler-audit`'s `ruby-advisory-db` git clone in particular has been observed to hang for 30+ minutes under concurrent load on this host (confirmed via `docker top` showing the clone itself stuck, not just slow) — every one of several simultaneous runs can end up wedged on that single step, wasting far more wall-clock time than running them one at a time would have.
+
+Push each branch and open its PR, then rely on GitHub Actions (`gh pr checks <PR#>`, or `gh api repos/<owner>/<repo>/actions/jobs/<job-id>/logs --allow-escape-sequences` for a failure's log) for verification — the cloud runners aren't affected by local resource contention and already run each PR's checks in true parallel. Reach for a local `bin/d bin/ci` run only when you need to verify a *combined* result before a final integration merge (e.g. merging several of these branches together first to catch cross-branch interaction issues) — and even then, run it once against the merged result, not once per branch.
+
 ## Working conventions
 
 - Conventional Commits, feature branch per PR, `--no-ff` merges only — see `docs/engineering/git-workflow.md`.
