@@ -109,4 +109,42 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     users(:one).reload
     assert_equal own_folder.id, users(:one).last_folder_id
   end
+
+  # The sidebar's per-folder rename/delete forms call folder.notebook for
+  # their URLs. Without includes(:notebook) on @folders, that's one query
+  # per folder row (an N+1). Count queries against the notebooks table
+  # directly, so the assertion holds regardless of how many folders exist.
+  test "rendering the sidebar does not issue one notebooks query per folder (no N+1)" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    3.times { |i| notebook.folders.create!(name: "Folder #{i}") }
+
+    notebook_preload_queries = 0
+    callback = lambda do |_name, _start, _finish, _id, payload|
+      sql = payload[:sql]
+      # Matches specifically the plain "look this notebook up by id" query
+      # that folder.notebook's association loader (or its preload) issues —
+      # not any query that merely joins through notebooks for unrelated
+      # Current.user-scoping (@notebooks, @current_note, @palette_notes,
+      # etc. all do that and would otherwise inflate this count with
+      # queries this test isn't about).
+      notebook_preload_queries += 1 if sql.match?(/FROM "notebooks" WHERE "notebooks"\."id"/) && !payload[:cached]
+    end
+
+    # Rails' per-request query cache would otherwise cache repeat identical
+    # SELECT ... WHERE id = ? calls (same notebook, same bind value) and
+    # mask an N+1 that would still cost real queries whenever folders
+    # belong to different notebooks. Disable it so the count reflects
+    # actual per-call queries, not what happens to get deduped this run.
+    ActiveRecord::Base.uncached do
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+        get root_url(notebook_id: notebook.id)
+      end
+    end
+
+    assert_response :success
+    # One preload query for the notebooks association, not one per folder —
+    # with 3 folders (all sharing this one notebook), an N+1 would issue 3.
+    assert_operator notebook_preload_queries, :<=, 1,
+      "expected @folders to be eager-loaded with :notebook (<= 1 such query), got #{notebook_preload_queries}"
+  end
 end

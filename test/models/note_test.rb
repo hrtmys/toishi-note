@@ -288,4 +288,41 @@ class NoteTest < ActiveSupport::TestCase
     assert_equal "image/png", image.blob.content_type
     assert_equal "sample_image.png", image.blob.filename.to_s
   end
+
+  test "search_ranked with a blank query returns the recently_viewed resting state" do
+    old_note = @folder.notes.create!(notebook: @notebook, title: "Old", note_type: "md", last_viewed_at: 2.days.ago)
+    recent_note = @folder.notes.create!(notebook: @notebook, title: "Recent", note_type: "md", last_viewed_at: 1.hour.ago)
+
+    results = Note.search_ranked(@folder.notes, "")
+
+    assert_equal [ recent_note, old_note ], results.to_a
+  end
+
+  test "search_ranked ranks an exact-prefix match above a match elsewhere in the title" do
+    contains_match = @folder.notes.create!(notebook: @notebook, title: "Meeting notes about Ruby", note_type: "md", last_viewed_at: 2.days.ago)
+    prefix_match = @folder.notes.create!(notebook: @notebook, title: "Ruby study log", note_type: "md", last_viewed_at: 3.days.ago)
+
+    results = Note.search_ranked(@folder.notes, "Ruby")
+
+    assert_equal [ prefix_match, contains_match ], results
+  end
+
+  test "search_ranked excludes notes that don't match at all" do
+    matching = @folder.notes.create!(notebook: @notebook, title: "Ruby notes", note_type: "md")
+    non_matching = @folder.notes.create!(notebook: @notebook, title: "Something else entirely", note_type: "md")
+
+    results = Note.search_ranked(@folder.notes, "Ruby")
+
+    assert_includes results, matching
+    assert_not_includes results, non_matching
+  end
+
+  test "search_ranked breaks ties within a rank group by most-recently-viewed first" do
+    older = @folder.notes.create!(notebook: @notebook, title: "Ruby one", note_type: "md", last_viewed_at: 2.days.ago)
+    newer = @folder.notes.create!(notebook: @notebook, title: "Ruby two", note_type: "md", last_viewed_at: 1.hour.ago)
+
+    results = Note.search_ranked(@folder.notes, "Ruby")
+
+    assert_equal [ newer, older ], results
+  end
 end

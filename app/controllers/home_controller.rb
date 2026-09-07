@@ -20,7 +20,10 @@ class HomeController < ApplicationController
                          @notebooks.first
 
     if @current_notebook
-      @folders = @current_notebook.folders
+      # includes(:notebook): the sidebar's per-folder rename/delete forms
+      # call folder.notebook for their URLs, which would otherwise be one
+      # query per folder row.
+      @folders = @current_notebook.folders.includes(:notebook)
       @current_folder = @folders.find_by(id: params[:folder_id]) ||
                          @folders.find_by(id: Current.user.last_folder_id) ||
                          @folders.first
