@@ -293,7 +293,7 @@ class NoteTest < ActiveSupport::TestCase
     old_note = @folder.notes.create!(notebook: @notebook, title: "Old", note_type: "md", last_viewed_at: 2.days.ago)
     recent_note = @folder.notes.create!(notebook: @notebook, title: "Recent", note_type: "md", last_viewed_at: 1.hour.ago)
 
-    results = Note.search_ranked(Note.all, "")
+    results = Note.search_ranked(@folder.notes, "")
 
     assert_equal [ recent_note, old_note ], results.to_a
   end
@@ -302,7 +302,7 @@ class NoteTest < ActiveSupport::TestCase
     contains_match = @folder.notes.create!(notebook: @notebook, title: "Meeting notes about Ruby", note_type: "md", last_viewed_at: 2.days.ago)
     prefix_match = @folder.notes.create!(notebook: @notebook, title: "Ruby study log", note_type: "md", last_viewed_at: 3.days.ago)
 
-    results = Note.search_ranked(Note.all, "Ruby")
+    results = Note.search_ranked(@folder.notes, "Ruby")
 
     assert_equal [ prefix_match, contains_match ], results
   end
@@ -311,7 +311,7 @@ class NoteTest < ActiveSupport::TestCase
     matching = @folder.notes.create!(notebook: @notebook, title: "Ruby notes", note_type: "md")
     non_matching = @folder.notes.create!(notebook: @notebook, title: "Something else entirely", note_type: "md")
 
-    results = Note.search_ranked(Note.all, "Ruby")
+    results = Note.search_ranked(@folder.notes, "Ruby")
 
     assert_includes results, matching
     assert_not_includes results, non_matching
@@ -321,7 +321,7 @@ class NoteTest < ActiveSupport::TestCase
     older = @folder.notes.create!(notebook: @notebook, title: "Ruby one", note_type: "md", last_viewed_at: 2.days.ago)
     newer = @folder.notes.create!(notebook: @notebook, title: "Ruby two", note_type: "md", last_viewed_at: 1.hour.ago)
 
-    results = Note.search_ranked(Note.all, "Ruby")
+    results = Note.search_ranked(@folder.notes, "Ruby")
 
     assert_equal [ newer, older ], results
   end

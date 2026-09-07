@@ -118,10 +118,16 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     notebook = users(:one).notebooks.create!(name: "Notebook")
     3.times { |i| notebook.folders.create!(name: "Folder #{i}") }
 
-    notebook_queries = 0
+    notebook_preload_queries = 0
     callback = lambda do |_name, _start, _finish, _id, payload|
       sql = payload[:sql]
-      notebook_queries += 1 if sql.match?(/\bnotebooks\b/) && sql.match?(/\bSELECT\b/i) && !payload[:cached]
+      # Matches specifically the plain "look this notebook up by id" query
+      # that folder.notebook's association loader (or its preload) issues —
+      # not any query that merely joins through notebooks for unrelated
+      # Current.user-scoping (@notebooks, @current_note, @palette_notes,
+      # etc. all do that and would otherwise inflate this count with
+      # queries this test isn't about).
+      notebook_preload_queries += 1 if sql.match?(/FROM "notebooks" WHERE "notebooks"\."id"/) && !payload[:cached]
     end
 
     # Rails' per-request query cache would otherwise cache repeat identical
@@ -137,8 +143,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     # One preload query for the notebooks association, not one per folder —
-    # with 3 folders, an N+1 would issue at least 3 extra SELECTs.
-    assert_operator notebook_queries, :<=, 2,
-      "expected @folders to be eager-loaded with :notebook (<= 2 notebooks SELECTs), got #{notebook_queries}"
+    # with 3 folders (all sharing this one notebook), an N+1 would issue 3.
+    assert_operator notebook_preload_queries, :<=, 1,
+      "expected @folders to be eager-loaded with :notebook (<= 1 such query), got #{notebook_preload_queries}"
   end
 end
