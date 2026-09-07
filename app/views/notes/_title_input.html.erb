@@ -4,6 +4,7 @@
     style="border-radius: 0; outline: none; box-shadow: none;"
     value="<%= note.title %>"
     placeholder="<%= t("notes.title_placeholder") %>"
+    aria-label="<%= t("notes.title_placeholder") %>"
     data-controller="autosave" 
     data-action="input->autosave#save compositionstart->autosave#compositionstart compositionend->autosave#compositionend" 
     data-autosave-url-value="<%= note_path(note) %>"

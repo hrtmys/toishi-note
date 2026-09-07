@@ -16,6 +16,7 @@
               class: "form-control mb-3",
               rows: 6,
               placeholder: '["Buy milk", "Call plumber"]',
+              aria: { label: t("home.todo.bulk_import.entries_label") },
               data: { bulk_todo_import_target: "textarea", action: "input->bulk-todo-import#preview" } %>
 
           <div data-bulk-todo-import-target="error" class="text-danger small mb-2 d-none"></div>

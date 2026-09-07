@@ -103,10 +103,12 @@ en:
       bulk_add: "Bulk add"
       content_placeholder: "Add a task..."
       add_due_date: "Add due date"
+      due_date_label: "Due date"
       progress: "Progress"
       bulk_import:
         title: "Bulk add TODOs"
         description_html: 'Paste a JSON array of tasks — plain strings, or objects like <code>{"content": "Buy milk", "checked": false}</code>.'
+        entries_label: "Tasks JSON"
         cancel: "Cancel"
     scrap:
       copy_all: "Copy all"
@@ -271,3 +273,6 @@ en:
       invalid_json: "That isn't valid JSON."
       must_be_array: "The JSON must be an array of tasks."
       skipped_invalid_task: "Skipped — not a valid task: %{raw}"
+    forms:
+      adding: "Adding…"
+      add_failed: "Couldn't add that — check your connection."

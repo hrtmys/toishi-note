@@ -66,6 +66,27 @@ class Note < ApplicationRecord
     (todo_items_completed_count.to_f / total * 100).round
   end
 
+  # Parses a pasted JSON array of bulk-import entries (strings, or objects
+  # with "content" and an optional checked flag). Parsing is deliberately
+  # kept separate from #build_bulk_todo_items below so a caller can enforce
+  # an entry-count cap against the raw array before it bothers
+  # instantiating a batch of records. Malformed JSON, or JSON that isn't an
+  # array, parses to an empty array rather than raising.
+  def self.parse_bulk_todo_entries(raw_json)
+    parsed = JSON.parse(raw_json.to_s)
+    parsed.is_a?(Array) ? parsed : []
+  rescue JSON::ParserError
+    []
+  end
+
+  # Builds (but does not save) a TodoItem on this note for each valid entry
+  # in +entries+ (as returned by .parse_bulk_todo_entries), silently
+  # skipping malformed or blank ones. The caller decides how to persist
+  # the result — see TodoItemsController#bulk_create.
+  def build_bulk_todo_items(entries)
+    entries.filter_map { |entry| build_bulk_todo_item(entry) }
+  end
+
   # Converts this note to its exported Markdown form. TODO/Scrap are
   # structured data with fixed conversion rules — md notes are already
   # Markdown, so they pass through unchanged.
@@ -115,6 +136,20 @@ class Note < ApplicationRecord
     checkbox = item.is_checked? ? "[x]" : "[ ]"
     due = item.due_date ? " (due: #{item.due_date.iso8601})" : ""
     "- #{checkbox} #{item.content}#{due}"
+  end
+
+  def build_bulk_todo_item(entry)
+    content, checked =
+      case entry
+      when String
+        [ entry, false ]
+      when Hash
+        [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first ]
+      end
+
+    return if content.to_s.strip.blank?
+
+    todo_items.build(content: content.to_s.strip, is_checked: !!checked)
   end
 
   def auto_set_title

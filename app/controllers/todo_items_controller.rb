@@ -9,7 +9,7 @@ class TodoItemsController < ApplicationController
     if @item.save
       render turbo_stream: [
         turbo_stream.append("todo_list_#{@note.id}", partial: "todo_items/item", locals: { item: @item }),
-        turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
+        todo_progress_stream
       ]
     else
       head :unprocessable_entity
@@ -21,7 +21,7 @@ class TodoItemsController < ApplicationController
     if @item.update(todo_item_params)
       streams = [
         turbo_stream.replace("todo_item_#{@item.id}", partial: "todo_items/item", locals: { item: @item }),
-        turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
+        todo_progress_stream
       ]
       # The "All open TODOs" cross-notebook view only lists unchecked
       # items, so checking one off there should remove it, not re-render.
@@ -37,7 +37,7 @@ class TodoItemsController < ApplicationController
     @item.destroy!
     render turbo_stream: [
       turbo_stream.remove("todo_item_#{@item.id}"),
-      turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
+      todo_progress_stream
     ]
   end
 
@@ -50,14 +50,14 @@ class TodoItemsController < ApplicationController
   # "content" and an optional checked flag). The browser's live preview is
   # a UX aid only — this re-parses and re-validates independently.
   def bulk_create
-    entries = parse_bulk_entries(params[:entries])
+    entries = Note.parse_bulk_todo_entries(params[:entries])
     return head :unprocessable_entity if entries.size > MAX_BULK_ENTRIES
 
-    items = entries.filter_map { |entry| build_bulk_todo_item(entry) }.select(&:save)
+    items = @note.build_bulk_todo_items(entries).select(&:save)
 
     render turbo_stream: [
       *items.map { |item| turbo_stream.append("todo_list_#{@note.id}", partial: "todo_items/item", locals: { item: item }) },
-      turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
+      todo_progress_stream
     ]
   end
 
@@ -71,24 +71,9 @@ class TodoItemsController < ApplicationController
     params.permit(:is_checked)
   end
 
-  def parse_bulk_entries(raw)
-    parsed = JSON.parse(raw.to_s)
-    parsed.is_a?(Array) ? parsed : []
-  rescue JSON::ParserError
-    []
-  end
-
-  def build_bulk_todo_item(entry)
-    content, checked =
-      case entry
-      when String
-        [ entry, false ]
-      when Hash
-        [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first ]
-      end
-
-    return if content.to_s.strip.blank?
-
-    @note.todo_items.build(content: content.to_s.strip, is_checked: !!checked)
+  # Shared across create/update/destroy/bulk_create — every action that
+  # mutates a note's todo_items needs the progress bar re-rendered.
+  def todo_progress_stream
+    turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
   end
 end
