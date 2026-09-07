@@ -250,13 +250,18 @@ en:
     image_upload:
       uploading: "Uploading %{filename}…"
       failed: "Failed to upload %{filename}"
+    autosave:
+      save_failed: "Couldn't save your changes — check your connection."
     scrap:
       show_more: *scrap_show_more
       show_less: *scrap_show_less
+      source_save_failed: "Couldn't save the source — check your connection."
     word_copy:
       success_title: "Copied"
       error_title: "Rich text copy failed"
       copy_failed: "Couldn't copy for Word — the browser blocked clipboard access."
+    settings:
+      save_failed: "Couldn't save your settings — check your connection."
     bulk_import:
       invalid_json: "That isn't valid JSON."
       must_be_array: "The JSON must be an array of tasks."

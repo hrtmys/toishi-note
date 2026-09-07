@@ -42,6 +42,9 @@ export default class extends Controller {
         ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       },
       body: JSON.stringify({ source: event.target.value }),
-    }).catch((error) => console.error("Failed to save the scrap source", error))
+    }).catch((error) => {
+      console.error("Failed to save the scrap source", error)
+      window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("scrap.source_save_failed") } }))
+    })
   }
 }

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { t } from "../lib/translations"
 
 // Settings toggles fade the corresponding UI in/out immediately (no
 // reload), then persist the choice in the background.
@@ -70,6 +71,9 @@ export default class extends Controller {
         ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       },
       body: JSON.stringify({ [field]: value }),
-    }).catch((error) => console.error("Failed to save settings", error))
+    }).catch((error) => {
+      console.error("Failed to save settings", error)
+      window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("settings.save_failed") } }))
+    })
   }
 }
