@@ -90,8 +90,13 @@ export default class extends Controller {
       .then(html => {
         if (html) {
           window.Turbo.renderStreamMessage(html)
-          this.notifySettled(true)
         }
+        // A 2xx with an empty body (e.g. NotesController#update answering
+        // `head :ok` when a resubmitted value changed nothing visible) is
+        // still a landed save — it must settle too. Gating this on `html`
+        // left note_conflict_controller.js's keepMine waiting forever on an
+        // unchanged field's resubmission, so the banner never hid.
+        this.notifySettled(true)
       })
       .catch(error => {
         // Network failure, CORS, etc. — the fetch itself rejected before

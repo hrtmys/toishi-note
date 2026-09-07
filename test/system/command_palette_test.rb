@@ -138,9 +138,11 @@ class CommandPaletteTest < ApplicationSystemTestCase
       assert_selector "li[role='option'][aria-selected='false']", text: note_b.title
     end
 
-    find("[data-palette-target='input']").send_keys(:down)
+    find("[data-palette-target='input']").send_keys(:up)
 
     within "#palette-listbox" do
+      # Up from the preselected index-1 item wraps to index 0 (note_b, the
+      # most recently viewed) — Down would move to index 2 instead.
       assert_selector "li[role='option'][aria-selected='true']", text: note_b.title, count: 1
     end
   end

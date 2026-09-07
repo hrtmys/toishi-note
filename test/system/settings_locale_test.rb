@@ -19,6 +19,10 @@ class SettingsLocaleTest < ApplicationSystemTestCase
 
     find("button[title='Settings']").click
     within "#settingsModal" do
+      # The locale radios live in the Language tab-pane, which is hidden
+      # until its tab is clicked (the Editor pane renders active) — without
+      # this, choose finds no *visible* radio button.
+      click_on "Language"
       choose "localeJa"
     end
 
@@ -35,6 +39,9 @@ class SettingsLocaleTest < ApplicationSystemTestCase
 
     find("button[title='Settings']").click
     within "#settingsModal" do
+      # See above: the locale radios are in the hidden-until-clicked
+      # Language tab-pane.
+      click_on "Language"
       choose "localeJa"
     end
 
