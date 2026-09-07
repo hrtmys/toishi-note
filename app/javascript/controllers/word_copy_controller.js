@@ -1,14 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
-import { copyAsWordRichText } from "../lib/word_clipboard"
+import { copyAsWordRichText, richClipboardSupported } from "../lib/word_clipboard"
 import { t } from "../lib/translations"
 
 export default class extends Controller {
   static targets = ["button", "icon"]
 
+  connect() {
+    // Rich-text clipboard is Chromium-only; without it the copy can only
+    // fail, so disable the button up front instead of on click.
+    this.unsupported = !richClipboardSupported()
+    if (this.unsupported && this.hasButtonTarget) {
+      this.buttonTarget.disabled = true
+      this.buttonTarget.classList.add("disabled")
+      this.buttonTarget.title = t("word_copy.error_title")
+    }
+  }
+
   async copy() {
     const markdown = this.element.closest("[data-controller~='editor']")?.querySelector("textarea[name='note[content]']")?.value
 
-    if (markdown == null) {
+    if (markdown == null || this.unsupported) {
       this.showError()
       return
     }
@@ -39,6 +50,7 @@ export default class extends Controller {
   }
 
   showError() {
+    window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("word_copy.copy_failed") } }))
     this.flashIcon("bi-exclamation-triangle", t("word_copy.error_title"))
   }
 

@@ -50,13 +50,14 @@ Either way, once signed in:
 
 In development, sent mail (password resets, etc.) doesn't go anywhere real — browse it at `/letter_opener` instead.
 
-## Contributor quickstart (devcontainer)
+## Contributor quickstart (Docker)
 
-The fastest way to get a working development environment is the included [devcontainer](.devcontainer/devcontainer.json) — it sets up Ruby, Node, and the system packages the app needs (see [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) for what's in it and why).
+The fastest way to get a working development environment is [`bin/d`](bin/d) — it builds a Ruby+Node+Chromium image from [Dockerfile.dev](Dockerfile.dev) (rebuilding automatically whenever that file changes) and runs any command inside it, bind-mounting the repo (see [docs/engineering/dev-environment.md](docs/engineering/dev-environment.md) for what's in the image and why). No editor integration required — plain `docker`.
 
-1. Open this repository in VS Code (or any [Dev Containers](https://containers.dev/)-compatible editor) and reopen in container.
-2. `bin/setup` to install dependencies and prepare the database.
-3. `bin/dev` to start the app, then visit `http://localhost:3000`.
+1. `bin/d bin/setup` to install dependencies and prepare the database.
+2. `bin/d bin/dev` to start the app, then visit `http://localhost:3000`.
+
+Anything else you'd normally run against the app goes through the same wrapper: `bin/d bin/rails console`, `bin/d bin/rails test`, `bin/d bundle install`, and so on.
 
 ### Manual setup
 
@@ -71,11 +72,13 @@ bin/dev
 ## Running tests
 
 ```sh
-bin/ci             # everything CI runs, in one command with compact output — see docs/engineering/verification.md
-bin/ci quick       # skips system tests, for fast local iteration
+bin/d bin/ci             # everything CI runs, in one command with compact output — see docs/engineering/verification.md
+bin/d bin/ci quick       # skips system tests, for fast local iteration
 ```
 
-Or individually: `bin/rails test`, `bin/rails test:system`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `yarn audit`. All of the above run in [CI](.github/workflows/ci.yml) on every pull request.
+Or individually: `bin/rails test`, `bin/rails test:system`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, `yarn audit` (each still through `bin/d` if you're using it). All of the above run in [CI](.github/workflows/ci.yml) on every pull request.
+
+On a many-core host, `test:system` may throw sporadic Capybara timeouts from too many parallel Chrome instances at once — `PARALLEL_WORKERS=1 bin/d bin/ci` (or `bin/d bin/rails test:system`) forces it sequential. See [dev-environment.md](docs/engineering/dev-environment.md) for why.
 
 ## Contributing
 

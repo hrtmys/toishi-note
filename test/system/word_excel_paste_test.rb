@@ -176,6 +176,58 @@ class WordExcelPasteTest < ApplicationSystemTestCase
     assert_no_match(/Font Definitions|mso-|WordSection1|<!--/, value)
   end
 
+  test "pasting an unformatted Word paragraph (MsoNormal/o:p, no bold or table tags) still converts" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    # A bare paragraph copy from Word carries no <b>/<i>/<table> — only
+    # the MsoNormal class and the o:p marker — which used to fall through.
+    prevented = dispatch_paste(
+      "<p class=MsoNormal>Just a plain paragraph.<o:p></o:p></p>",
+      plain_text: "Just a plain paragraph."
+    )
+
+    assert prevented
+    assert_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
+
+    value = evaluate_textarea_value
+    assert_includes value, "Just a plain paragraph."
+    assert_no_match(/MsoNormal|o:p/, value)
+  end
+
+  test "pasting a styled span with no block tags converts instead of passing through" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    prevented = dispatch_paste(
+      '<span style="font-family:Arial">Decorated span text</span>',
+      plain_text: "Decorated span text"
+    )
+
+    assert prevented
+    assert_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
+    assert_includes evaluate_textarea_value, "Decorated span text"
+  end
+
+  test "pasting Word HTML that carries an embedded picture converts the text and still uploads the image" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    dispatch_paste_with_image(WORD_HTML, plain_text: "Bold text and normal text.", image_base64: SAMPLE_PNG_BASE64)
+
+    assert_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
+
+    # The sample image is tiny enough that upload can finish before this
+    # runs, so the "Uploading…" placeholder is a transient state that may
+    # have already come and gone — asserting on it as a one-shot read is
+    # racy. Wait for the actual outcome (the uploaded blob link) instead,
+    # same as ImageAttachmentsTest does for the equivalent drop case.
+    Timeout.timeout(Capybara.default_max_wait_time) do
+      sleep 0.1 until evaluate_textarea_value.match?(%r{!\[\]\(/rails/active_storage/blobs/})
+    end
+
+    value = evaluate_textarea_value
+    assert_match(/\*\*Bold text\*\*/, value)
+    assert_match(%r{!\[\]\(/rails/active_storage/blobs/}, value)
+  end
+
   test "pasting an Excel range, by default, pastes the rendered image — it does not auto-convert to a table" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 
