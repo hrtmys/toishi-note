@@ -62,7 +62,7 @@ export default class extends Controller {
         this.patch(`/notebooks/${sourceNotebookId}/folders/${folderId}/move`, {
           target_notebook_id: targetNotebookId,
           folder_ids: folderIds
-        })
+        }, t("organize.folder_moved"))
       }
     })
   }
@@ -83,12 +83,17 @@ export default class extends Controller {
         const noteId = event.item.dataset.noteId
         const targetFolderId = event.to.dataset.folderId
 
-        this.patch(`/notes/${noteId}/move`, { target_folder_id: targetFolderId })
+        this.patch(`/notes/${noteId}/move`, { target_folder_id: targetFolderId }, t("organize.note_moved"))
       }
     })
   }
 
-  patch(url, body) {
+  // successMessage is omitted for the plain reorder endpoints (notebook
+  // reorder within the top-level list) — those aren't one of the CRUD
+  // operations that need a confirmation, just a drag landing where it
+  // visually already looks like it landed. Folder/note move (a genuine
+  // reparent) pass one.
+  patch(url, body, successMessage = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
 
     fetch(url, {
@@ -100,7 +105,11 @@ export default class extends Controller {
       },
       body: JSON.stringify(body)
     }).then((response) => {
-      if (!response.ok) this.handleFailure()
+      if (!response.ok) return this.handleFailure()
+
+      if (successMessage) {
+        window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: successMessage } }))
+      }
     }).catch(() => this.handleFailure())
   }
 

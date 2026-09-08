@@ -76,6 +76,12 @@ en:
       rename_prompt: "Enter a new notebook name"
       export: "Export (.zip)"
       delete_confirm: "Delete this notebook?"
+      flash:
+        created: "Notebook created."
+        create_failed: "Couldn't create the notebook."
+        renamed: "Notebook renamed."
+        rename_failed: "Couldn't rename the notebook."
+        deleted: "Notebook deleted."
     folders:
       heading: "FOLDERS"
       new_prompt: "Enter a folder name"
@@ -83,6 +89,12 @@ en:
       delete_confirm: "Delete this folder?"
       empty: "No folders yet. Use + above to create one."
       no_notebook_selected: "Select a notebook to see its folders."
+      flash:
+        created: "Folder created."
+        create_failed: "Couldn't create the folder."
+        renamed: "Folder renamed."
+        rename_failed: "Couldn't rename the folder."
+        deleted: "Folder deleted."
     files:
       heading: "FILES"
       new_md: "New Markdown note"
@@ -99,6 +111,11 @@ en:
       export: "Export (.md)"
       delete_confirm: "Delete this note?"
       rename_prompt: "Enter a new title"
+      flash:
+        created: "Note created."
+        renamed: "Note renamed."
+        rename_failed: "Couldn't rename the note."
+        deleted: "Note deleted."
     todo:
       bulk_add: "Bulk add"
       content_placeholder: "Add a task..."
@@ -254,6 +271,8 @@ en:
       no_pending_table: "No pasted table to convert yet — paste an Excel/Sheets range first."
     organize:
       move_failed: "Couldn't save that move — the page will reload to show the real state."
+      folder_moved: "Folder moved."
+      note_moved: "Note moved."
     image_upload:
       uploading: "Uploading %{filename}…"
       failed: "Failed to upload %{filename}"

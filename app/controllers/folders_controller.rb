@@ -2,19 +2,30 @@ class FoldersController < ApplicationController
   before_action :set_notebook
 
   def create
-    folder = @notebook.folders.create!(folder_params)
-    redirect_to organize_or(root_path(notebook_id: @notebook.id, folder_id: folder.id))
+    folder = @notebook.folders.build(folder_params)
+    if folder.save
+      flash[:toast] = t("home.folders.flash.created")
+      redirect_to organize_or(root_path(notebook_id: @notebook.id, folder_id: folder.id))
+    else
+      flash[:toast] = t("home.folders.flash.create_failed")
+      redirect_to organize_or(root_path(notebook_id: @notebook.id))
+    end
   end
 
   def update
     folder = @notebook.folders.find(params[:id])
-    folder.update!(folder_params)
+    if folder.update(folder_params)
+      flash[:toast] = t("home.folders.flash.renamed")
+    else
+      flash[:toast] = t("home.folders.flash.rename_failed")
+    end
     redirect_to organize_or(root_path(notebook_id: @notebook.id, folder_id: folder.id))
   end
 
   def destroy
     folder = @notebook.folders.find(params[:id])
     folder.destroy!
+    flash[:toast] = t("home.folders.flash.deleted")
     redirect_to organize_or(root_path(notebook_id: @notebook.id))
   end
 

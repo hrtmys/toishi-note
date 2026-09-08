@@ -46,12 +46,7 @@ class ScrapItemsController < ApplicationController
       @item = @note.scrap_items.lock.find(params[:id])
       folder = @note.folder
 
-      new_note = folder.notes.create!(
-        notebook: @note.notebook,
-        title: Note.default_title_for("md"),
-        note_type: "md",
-        content: @item.content
-      )
+      new_note = Note.create_in_folder!(folder: folder, notebook: @note.notebook, note_type: "md", content: @item.content)
       @item.destroy!
     end
 

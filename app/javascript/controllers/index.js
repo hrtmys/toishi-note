@@ -39,6 +39,9 @@ application.register("bulk-todo-import", BulkTodoImportController)
 import ToastController from "./toast_controller"
 application.register("toast", ToastController)
 
+import FlashToastController from "./flash_toast_controller"
+application.register("flash-toast", FlashToastController)
+
 import SettingsController from "./settings_controller"
 application.register("settings", SettingsController)
 

@@ -52,6 +52,12 @@ ja:
       rename_prompt: "新しいノートブック名を入力してください"
       export: "エクスポート (.zip)"
       delete_confirm: "このノートブックを削除しますか？"
+      flash:
+        created: "ノートブックを作成しました。"
+        create_failed: "ノートブックを作成できませんでした。"
+        renamed: "ノートブック名を変更しました。"
+        rename_failed: "ノートブック名を変更できませんでした。"
+        deleted: "ノートブックを削除しました。"
     folders:
       heading: "FOLDERS"
       new_prompt: "フォルダ名を入力してください"
@@ -59,6 +65,12 @@ ja:
       delete_confirm: "このフォルダを削除しますか？"
       empty: "まだフォルダがありません。上の+から作成してください。"
       no_notebook_selected: "フォルダを表示するにはノートブックを選択してください。"
+      flash:
+        created: "フォルダを作成しました。"
+        create_failed: "フォルダを作成できませんでした。"
+        renamed: "フォルダ名を変更しました。"
+        rename_failed: "フォルダ名を変更できませんでした。"
+        deleted: "フォルダを削除しました。"
     files:
       heading: "FILES"
       new_md: "新規Markdownノート"
@@ -78,6 +90,11 @@ ja:
       export: "エクスポート (.md)"
       delete_confirm: "このノートを削除しますか？"
       rename_prompt: "新しいタイトルを入力"
+      flash:
+        created: "ノートを作成しました。"
+        renamed: "ノート名を変更しました。"
+        rename_failed: "ノート名を変更できませんでした。"
+        deleted: "ノートを削除しました。"
     todo:
       bulk_add: "一括追加"
       content_placeholder: "タスクを追加..."
@@ -226,6 +243,8 @@ ja:
       no_pending_table: "変換できる表がまだありません。先にExcel/Sheetsの範囲を貼り付けてください。"
     organize:
       move_failed: "移動を保存できませんでした — 実際の状態を表示するためページを再読み込みします。"
+      folder_moved: "フォルダを移動しました。"
+      note_moved: "ノートを移動しました。"
     image_upload:
       uploading: "%{filename} をアップロード中…"
       failed: "%{filename} のアップロードに失敗しました"

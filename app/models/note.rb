@@ -51,6 +51,20 @@ class Note < ApplicationRecord
     (prefix_matches.sort_by(&by_recency).reverse + other_matches.sort_by(&by_recency).reverse).first(10)
   end
 
+  # Shared "brand new note living in this folder" factory — both a fresh
+  # note (NotesController#create, empty content) and a promoted scrap
+  # (ScrapItemsController#promote, content: the scrap's own content) need
+  # the exact same title/note_type/notebook wiring, just different
+  # note_type/content inputs.
+  def self.create_in_folder!(folder:, notebook:, note_type:, content:)
+    folder.notes.create!(
+      notebook: notebook,
+      title: default_title_for(note_type),
+      note_type: note_type,
+      content: content
+    )
+  end
+
   def todo_items_total_count
     todo_items_counts_by_checked.values.sum
   end
