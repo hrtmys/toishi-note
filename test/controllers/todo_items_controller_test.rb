@@ -66,15 +66,6 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Buy milk", "Call plumber" ], @note.todo_items.order(:position).last(2).map(&:content)
   end
 
-  test "bulk_create honors a checked flag on object entries" do
-    post bulk_create_note_todo_items_url(@note), params: {
-      entries: '[{"content": "Already done", "checked": true}, {"content": "Not yet"}]'
-    }, as: :turbo_stream
-
-    assert @note.todo_items.find_by!(content: "Already done").is_checked
-    assert_not @note.todo_items.find_by!(content: "Not yet").is_checked
-  end
-
   test "bulk_create appends after the existing items instead of resetting position" do
     post bulk_create_note_todo_items_url(@note), params: { entries: '["New task"]' }, as: :turbo_stream
 
@@ -82,26 +73,9 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_operator new_item.position, :>, @item.position
   end
 
-  test "bulk_create skips malformed entries but still imports the valid ones alongside them" do
-    assert_difference("TodoItem.count", 2) do
-      post bulk_create_note_todo_items_url(@note), params: {
-        entries: '["Valid one", null, 42, {"no_content": true}, "", "  ", "Valid two"]'
-      }, as: :turbo_stream
-    end
-    assert_response :success
-    assert_equal [ "Valid one", "Valid two" ], @note.todo_items.order(:position).last(2).map(&:content)
-  end
-
   test "bulk_create imports nothing from invalid JSON, without raising" do
     assert_no_difference("TodoItem.count") do
       post bulk_create_note_todo_items_url(@note), params: { entries: "not json at all" }, as: :turbo_stream
-    end
-    assert_response :success
-  end
-
-  test "bulk_create imports nothing when the JSON isn't an array" do
-    assert_no_difference("TodoItem.count") do
-      post bulk_create_note_todo_items_url(@note), params: { entries: '{"content": "Not an array"}' }, as: :turbo_stream
     end
     assert_response :success
   end

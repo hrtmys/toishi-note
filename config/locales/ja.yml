@@ -82,10 +82,12 @@ ja:
       bulk_add: "一括追加"
       content_placeholder: "タスクを追加..."
       add_due_date: "期限を追加"
+      due_date_label: "期限"
       progress: "Progress"
       bulk_import:
         title: "TODOを一括追加"
         description_html: 'タスクのJSON配列を貼り付けてください — 文字列だけでも、<code>{"content": "牛乳を買う", "checked": false}</code> のようなオブジェクトでも構いません。'
+        entries_label: "タスクのJSON"
         cancel: "キャンセル"
     scrap:
       copy_all: "すべてコピー"
@@ -243,3 +245,6 @@ ja:
       invalid_json: "有効なJSONではありません。"
       must_be_array: "JSONはタスクの配列である必要があります。"
       skipped_invalid_task: "スキップ — 有効なタスクではありません: %{raw}"
+    forms:
+      adding: "追加中…"
+      add_failed: "追加できませんでした — 通信状況を確認してください。"

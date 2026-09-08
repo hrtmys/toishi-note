@@ -275,6 +275,48 @@ class NoteTest < ActiveSupport::TestCase
     assert_equal "sample_image.webp", image.blob.filename.to_s
   end
 
+  test "parse_bulk_todo_entries parses a JSON array of plain strings" do
+    entries = Note.parse_bulk_todo_entries('["Buy milk", "Call plumber"]')
+    assert_equal [ "Buy milk", "Call plumber" ], entries
+  end
+
+  test "parse_bulk_todo_entries returns an empty array for invalid JSON" do
+    assert_equal [], Note.parse_bulk_todo_entries("not json at all")
+  end
+
+  test "parse_bulk_todo_entries returns an empty array when the JSON isn't an array" do
+    assert_equal [], Note.parse_bulk_todo_entries('{"content": "Not an array"}')
+  end
+
+  test "build_bulk_todo_items builds an unsaved TodoItem per plain-string entry" do
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items([ "Buy milk", "Call plumber" ])
+
+    assert_equal [ "Buy milk", "Call plumber" ], items.map(&:content)
+    assert items.all?(&:new_record?)
+  end
+
+  test "build_bulk_todo_items honors a checked flag on object entries" do
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items([
+      { "content" => "Already done", "checked" => true },
+      { "content" => "Not yet" }
+    ])
+
+    assert items[0].is_checked
+    assert_not items[1].is_checked
+  end
+
+  test "build_bulk_todo_items skips malformed or blank entries" do
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items([ "Valid one", nil, 42, { "no_content" => true }, "", "  ", "Valid two" ])
+
+    assert_equal [ "Valid one", "Valid two" ], items.map(&:content)
+  end
+
   test "attach_uploaded_image keeps the original when compress is false" do
     note = @folder.notes.create!(notebook: @notebook, title: "MD", note_type: "md")
     upload = ActionDispatch::Http::UploadedFile.new(
