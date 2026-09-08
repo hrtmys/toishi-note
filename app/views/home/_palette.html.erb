@@ -11,10 +11,11 @@
       <div class="modal-body p-0">
         <input type="text" class="form-control form-control-lg border-0 shadow-none rounded-0"
             placeholder="<%= t("palette.search_placeholder") %>" autocomplete="off"
+            role="combobox" aria-expanded="true" aria-controls="palette-listbox" aria-autocomplete="list"
             data-palette-target="input"
             data-action="input->palette#search keydown->palette#keydown">
         <hr class="m-0">
-        <%= turbo_frame_tag "palette_results" do %>
+        <%= turbo_frame_tag "palette_results", data: { palette_target: "results" } do %>
           <%= render "home/palette_results", notes: notes, query: "" %>
         <% end %>
       </div>

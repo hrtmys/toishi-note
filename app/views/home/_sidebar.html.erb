@@ -61,6 +61,11 @@
         <% end %>
       </div>
       <div id="folders-list" data-scroll-id="folders" data-controller="scroll" class="overflow-y-auto overflow-x-hidden custom-scrollbar-dark flex-grow-1" style="min-height: 0;">
+        <% if current_notebook.nil? %>
+          <p class="text-secondary small mb-0"><%= t("home.folders.no_notebook_selected") %></p>
+        <% elsif folders.empty? %>
+          <p class="text-secondary small mb-0"><%= t("home.folders.empty") %></p>
+        <% else %>
         <ul class="list-unstyled mb-0 pe-2">
           <% folders.each do |folder| %>
             <li class="hover-container d-flex justify-content-between align-items-center rounded p-1 mb-1 <%= 'bg-secondary text-white' if folder == current_folder %>">
@@ -79,6 +84,7 @@
             </li>
           <% end %>
         </ul>
+        <% end %>
       </div>
     </div>
 
@@ -99,6 +105,8 @@
               <i class="bi bi-pin-angle"></i>
             <% end %>
           </div>
+      <% else %>
+          <p class="text-secondary small mb-2 flex-shrink-0"><%= t("home.files.no_folder_selected") %></p>
       <% end %>
 
       <div class="d-flex flex-column flex-grow-1" data-controller="note-sort" style="min-height: 0;">
@@ -119,6 +127,9 @@
         </div>
 
         <div id="notes-list" data-scroll-id="notes" data-controller="scroll" class="overflow-y-auto overflow-x-hidden custom-scrollbar-dark flex-grow-1" style="min-height: 0;">
+          <% if notes.empty? %>
+            <p class="text-secondary small mb-0"><%= t("home.files.empty") %></p>
+          <% else %>
           <ul class="list-unstyled mb-0 pe-2" data-note-sort-target="list">
             <% notes.each do |note| %>
               <li class="hover-container d-flex justify-content-between align-items-center border-bottom border-secondary hover-bg-secondary <%= 'bg-secondary text-white' if note == current_note %>"
@@ -151,6 +162,7 @@
               </li>
             <% end %>
           </ul>
+          <% end %>
         </div>
       </div>
     </div>

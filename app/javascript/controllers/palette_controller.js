@@ -5,7 +5,7 @@ import * as bootstrap from "bootstrap"
 // HomeController#index already renders recently-viewed notes into the
 // results turbo-frame, so open() only shows the modal and focuses the input.
 export default class extends Controller {
-  static targets = ["input", "item"]
+  static targets = ["input", "item", "results"]
   static values = { url: String }
 
   connect() {
@@ -17,10 +17,17 @@ export default class extends Controller {
     // trade VS Code and similar editors make.
     this.globalKeydownHandler = this.globalKeydown.bind(this)
     window.addEventListener("keydown", this.globalKeydownHandler)
+
+    // Turbo fires this on the frame once its new content has actually
+    // rendered — the one reliable place to clear the "searching" state,
+    // regardless of how long the fetch that started it took.
+    this.frameLoadHandler = this.clearLoading.bind(this)
+    this.resultsTarget.addEventListener("turbo:frame-load", this.frameLoadHandler)
   }
 
   disconnect() {
     window.removeEventListener("keydown", this.globalKeydownHandler)
+    this.resultsTarget.removeEventListener("turbo:frame-load", this.frameLoadHandler)
   }
 
   globalKeydown(event) {
@@ -50,11 +57,18 @@ export default class extends Controller {
 
     const query = this.inputTarget.value
     this.searchTimeout = setTimeout(() => {
-      const frame = this.element.querySelector("turbo-frame#palette_results")
+      // Old results otherwise stay on screen, indistinguishable from a
+      // fresh answer, for however long this fetch takes.
+      this.resultsTarget.setAttribute("aria-busy", "true")
+
       const url = new URL(this.urlValue, window.location.origin)
       url.searchParams.set("q", query)
-      frame.src = url.toString()
+      this.resultsTarget.src = url.toString()
     }, 150)
+  }
+
+  clearLoading() {
+    this.resultsTarget.removeAttribute("aria-busy")
   }
 
   keydown(event) {
@@ -104,9 +118,22 @@ export default class extends Controller {
     let index = items.findIndex(item => item.classList.contains("palette-result-selected"))
     if (index === -1) index = 0
 
-    items[index].classList.remove("palette-result-selected")
+    this.markUnselected(items[index])
     index = (index + delta + items.length) % items.length
-    items[index].classList.add("palette-result-selected")
+    this.markSelected(items[index])
     items[index].scrollIntoView({ block: "nearest" })
+  }
+
+  // Keeps aria-selected in sync with the same class the visible highlight
+  // and Enter/click already key off of — role="option" items need it for
+  // a screen reader to announce which result is current.
+  markSelected(item) {
+    item.classList.add("palette-result-selected")
+    item.setAttribute("aria-selected", "true")
+  }
+
+  markUnselected(item) {
+    item.classList.remove("palette-result-selected")
+    item.setAttribute("aria-selected", "false")
   }
 }

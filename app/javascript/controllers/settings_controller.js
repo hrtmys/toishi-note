@@ -53,11 +53,22 @@ export default class extends Controller {
 
   // The one setting that's *not* fade-in-place: already-rendered text
   // can't be live-translated, so a reload applies it. Waits for the save
-  // to land first, or an immediate reload would cancel the request.
+  // to land first, or an immediate reload would cancel the request — and
+  // only actually reloads once save() reports it landed. Reloading
+  // unconditionally used to show the toast (from save()'s own failure
+  // handling) *and then* reload anyway, re-displaying the old locale as
+  // if nothing had gone wrong — confusing next to a toast that just said
+  // the save failed.
   changeLocale(event) {
-    this.save("locale", event.target.value).finally(() => window.location.reload())
+    this.save("locale", event.target.value).then((ok) => {
+      if (ok) window.location.reload()
+    })
   }
 
+  // Resolves to whether the save actually succeeded — never rejects, so
+  // callers that don't care about the outcome (every toggle above) can
+  // keep firing it without a dangling unhandled-rejection, while
+  // changeLocale can still branch on the real result.
   save(field, value) {
     // Forgery protection (and this meta tag) is off in test — guard
     // rather than let a null dereference break the fetch below.
@@ -71,9 +82,15 @@ export default class extends Controller {
         ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       },
       body: JSON.stringify({ [field]: value }),
-    }).catch((error) => {
-      console.error("Failed to save settings", error)
-      window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("settings.save_failed") } }))
     })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Save failed: ${response.status}`)
+        return true
+      })
+      .catch((error) => {
+        console.error("Failed to save settings", error)
+        window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("settings.save_failed") } }))
+        return false
+      })
   }
 }

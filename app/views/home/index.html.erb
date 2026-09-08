@@ -30,13 +30,14 @@
               see autosave_controller.js. %>
           <div class="p-4 d-flex flex-column h-100"
               data-controller="note-conflict<%= ' editor' if @current_note.note_type == 'md' %>"
-              data-note-lock-version="<%= @current_note.lock_version %>">
+              data-note-lock-version="<%= @current_note.lock_version %>"
+              data-note-conflict-reload-confirm-value="<%= t("notes.conflict.reload_confirm") %>">
 
             <div data-note-conflict-target="banner" class="alert alert-warning d-none d-flex justify-content-between align-items-center mb-2 py-2 flex-shrink-0" role="alert">
               <span><%= t("notes.conflict.message") %></span>
               <div class="d-flex flex-shrink-0 ms-3">
                 <button type="button" class="btn btn-sm btn-outline-secondary me-2" data-action="click->note-conflict#reload"><%= t("notes.conflict.reload") %></button>
-                <button type="button" class="btn btn-sm btn-primary" data-action="click->note-conflict#keepMine"><%= t("notes.conflict.keep_mine") %></button>
+                <button type="button" class="btn btn-sm btn-primary" data-note-conflict-target="keepMineButton" data-action="click->note-conflict#keepMine"><%= t("notes.conflict.keep_mine") %></button>
               </div>
             </div>
 
