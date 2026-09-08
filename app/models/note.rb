@@ -31,7 +31,7 @@ class Note < ApplicationRecord
     I18n.t("notes.default_title.#{note_type}", default: I18n.t("notes.default_title.md"))
   end
 
-<  # Ranks +scope+ (an already Current.user-scoped relation) against a
+  # Ranks +scope+ (an already Current.user-scoped relation) against a
   # search +query+ for the command palette: exact-prefix title matches
   # first, then everything else, each group most-recently-viewed first.
   # A blank query falls back to the palette's normal resting state — the
