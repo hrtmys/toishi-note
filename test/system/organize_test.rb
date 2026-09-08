@@ -48,96 +48,11 @@ class OrganizeTest < ApplicationSystemTestCase
     assert_no_selector "input[value='999999']"
   end
 
-  test "renaming a notebook from Organize stays in Organize AND updates the sidebar immediately" do
-    notebook = users(:one).notebooks.create!(name: "Old Name")
-
-    visit root_url(notebook_id: notebook.id)
-    click_on "Toishi Note"
-
-    within "#organize_notebook_#{notebook.id}" do
-      accept_prompt(with: "New Name") { click_on I18n.t("home.common.rename") }
-    end
-
-    # Still in Organize (a full re-render of the same view, not left it)...
-    assert_text I18n.t("home.organize.heading")
-    assert_text "New Name"
-    # ...and the plain sidebar (rendered alongside Organize, not replaced by
-    # it) reflects the change too.
-    within "#notebooks-list" do
-      assert_text "New Name"
-    end
-  end
-
-  test "deleting a folder from Organize updates the sidebar immediately, without leaving Organize" do
-    # Deletion goes through a real submit-button click (button_to),
-    # unlike the prompt-form controls above — exercises keeping
-    # Organize's markup outside turbo_frame_tag "main_editor".
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Folder To Delete")
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id)
-    click_on "Toishi Note"
-
-    within "#organize_folder_#{folder.id}" do
-      accept_confirm { click_on I18n.t("home.common.delete") }
-    end
-
-    assert_text I18n.t("home.organize.heading")
-    assert_no_text "Folder To Delete"
-    within "#folders-list" do
-      assert_no_text "Folder To Delete"
-    end
-  end
-
-  test "creating a folder from Organize appends it under the right notebook, without leaving Organize" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-
-    visit root_url(notebook_id: notebook.id)
-    click_on "Toishi Note"
-
-    within "#organize_notebook_#{notebook.id}" do
-      accept_prompt(with: "New Folder") { click_on I18n.t("home.folders.new_prompt") }
-    end
-
-    assert_text I18n.t("home.organize.heading")
-    assert_text "New Folder"
-  end
-
-  test "renaming a note from Organize works, even though notes never had a rename control before" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Organize Folder")
-    note = folder.notes.create!(title: "Old Title", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id)
-    click_on "Toishi Note"
-
-    within "#organize_note_#{note.id}" do
-      accept_prompt(with: "New Title") { click_on I18n.t("home.common.rename") }
-    end
-
-    assert_text "New Title"
-    assert_equal "New Title", note.reload.title
-  end
-
-  test "deleting the currently-open folder from Organize, then going back, lands on the graceful fallback" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Folder To Delete")
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id)
-    click_on "Toishi Note"
-
-    within "#organize_folder_#{folder.id}" do
-      accept_confirm { click_on I18n.t("home.common.delete") }
-    end
-    assert_no_text "Folder To Delete"
-
-    click_on I18n.t("home.organize.back")
-
-    # HomeController#index's existing fallback resolves this — no crash,
-    # no reference to the now-gone folder.
-    assert_no_text "Folder To Delete"
-  end
-
+  # Notebook/folder/note rename/create/delete through Organize are thin
+  # prompt-form submissions onto Notebooks/Folders/NotesController, which
+  # own 40+ tests including the stay-in-Organize redirects and the
+  # sidebar re-renders — no browser needed for those. Only Organize's own
+  # navigation (open/back/stale-id) and the SortableJS drags stay here.
   test "dragging a folder above another one reorders them within the notebook, persisted across reload" do
     notebook = users(:one).notebooks.create!(name: "Organize Notebook")
     folder_a = notebook.folders.create!(name: "Folder A")

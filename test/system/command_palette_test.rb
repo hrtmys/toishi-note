@@ -47,6 +47,12 @@ class CommandPaletteTest < ApplicationSystemTestCase
     visit_note(matching)
 
     press_ctrl_p
+    # The modal's shown handler clears the input and focuses it — typing
+    # before it runs loses the query on slow runners (the input visibly
+    # ends up empty). Waiting for focus synchronizes with that handler,
+    # the same way the open-focus test already does.
+    assert_selector "#paletteModal.show"
+    assert_selector "[data-palette-target='input']:focus"
     find("[data-palette-target='input']").fill_in with: "Ruby"
 
     within "#paletteModal" do

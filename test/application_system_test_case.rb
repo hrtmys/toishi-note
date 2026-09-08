@@ -5,6 +5,14 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     driver_options.add_argument("--no-sandbox")
     driver_options.add_argument("--disable-dev-shm-usage")
     driver_options.add_argument("--disable-gpu")
+    # Bootstrap's Modal#hide is a silent no-op while a show transition is
+    # still in flight (`_isTransitioning` guard). On slow CI runners that
+    # race is hit deterministically: submitEnd/Escape demonstrably ran (the
+    # form was reset, the search filtered) yet `.show` never cleared.
+    # Forcing reduced-motion makes Bootstrap emit `transition: none`, so
+    # show/hide settle immediately and tests exercise our code, not CSS
+    # timing. Test environment only — production keeps its animations.
+    driver_options.add_argument("--force-prefers-reduced-motion")
   end
 
   # Shared CI runners are slower/noisier than a devcontainer: a click

@@ -10,21 +10,10 @@ class ExportTest < ApplicationSystemTestCase
     @note = @folder.notes.create!(title: "Sample Note", content: "# Hi", note_type: "md", notebook: @notebook)
   end
 
-  test "the note editor's Export link points at the note's export endpoint" do
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
-
-    export_link = find_link(I18n.t("home.common.export"), visible: :all)
-    assert_equal export_note_url(@note), export_link[:href]
-  end
-
-  test "the notebook row's export icon points at the notebook's export endpoint" do
-    visit root_url(notebook_id: @notebook.id)
-
-    notebook_row = find("#notebooks-list li", text: @notebook.name)
-    export_link = notebook_row.find("a[title='#{I18n.t("home.notebooks.export")}']", visible: :all)
-    assert_equal export_notebook_url(@notebook), export_link[:href]
-  end
-
+  # The two export-link hrefs are static markup, covered by
+  # HomeControllerTest ("the editor export link and the sidebar notebook
+  # export icon...") via assert_select — no browser needed. Only the
+  # actual download behavior stays here.
   test "clicking Export downloads without navigating away from the editor" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 

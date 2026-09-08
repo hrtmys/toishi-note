@@ -37,6 +37,10 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     get admin_users_path
 
     assert_response :success
+    # The Remove button's confirm names the teammate's notebook count, so a
+    # misclick can't silently nuke data — locked here so no system test
+    # has to be. Scoped by email: users(:one) owns exactly notebooks(:one).
+    assert_select "form[data-turbo-confirm*='Remove one@example.com'][data-turbo-confirm*='permanently deletes 1 notebook']", count: 1
   end
 
   test "an admin invites a teammate without ever choosing their password" do
@@ -53,6 +57,9 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     # The shown link's token actually resolves to the invited user, so they
     # (and only they, holding the link) can set their own password with it.
     assert_equal invited, User.find_by_password_reset_token!(token_shown_in_response)
+    # The one-time link is a readonly input, not plain text — copyable in
+    # one click. Locked here so the system test doesn't have to be.
+    assert_select "input[readonly][value*='/passwords/']"
   end
 
   test "inviting a teammate doesn't touch the admin's own session" do
@@ -81,6 +88,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal users(:one), User.find_by_password_reset_token!(token_shown_in_response)
+    assert_select "input[readonly][value*='/passwords/']"
   end
 
   test "an admin removes a teammate" do

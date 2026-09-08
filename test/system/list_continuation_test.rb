@@ -61,24 +61,36 @@ class ListContinuationTest < ApplicationSystemTestCase
     assert_equal "just some text\nmore text", textarea.value
   end
 
-  test "list continuation preserves the native undo stack" do
+  test "list continuation inserts via execCommand so the browser's native undo stack survives" do
     note = create_note
 
     visit_note(note)
     textarea = find("textarea[name='note[content]']")
     textarea.click
     textarea.send_keys("- first")
+
+    # Assigning textarea.value would wipe the browser's undo stack; the
+    # controller must use document.execCommand("insertText") instead. A
+    # real Ctrl+Z assertion used to live here, but Chrome's undo
+    # coalescing granularity is a browser internal — newer versions merge
+    # the whole typed line into one undo step, so it failed
+    # deterministically with no app change. Spying on execCommand locks
+    # the behavior we own (the insertion path) without depending on the
+    # browser's undo grouping.
+    page.execute_script(<<~JS)
+      window.__execCommandCalls = []
+      const original = document.execCommand.bind(document)
+      document.execCommand = function(...args) {
+        window.__execCommandCalls.push([ args[0], args[2] ])
+        return original(...args)
+      }
+    JS
+
     textarea.send_keys(:enter)
     textarea.send_keys("second")
 
     assert_equal "- first\n- second", textarea.value
-
-    # execCommand("insertText") keeps every keystroke on the browser's
-    # real undo stack. A single Ctrl+Z should undo the last insertion.
-    textarea.send_keys([ :control, "z" ])
-
-    assert_not_equal "", textarea.value
-    assert textarea.value.start_with?("- first\n- ")
+    assert_equal [ [ "insertText", "\n- " ] ], page.evaluate_script("window.__execCommandCalls")
   end
 
   test "pressing Enter mid Japanese-IME composition does not trigger marker continuation or removal" do

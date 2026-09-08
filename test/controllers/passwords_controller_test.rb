@@ -6,6 +6,10 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   test "new" do
     get new_password_path
     assert_response :success
+    # The username-based reset flow (covered below via POST) once regressed
+    # to an HTML5 email_field that blocked "@"-less input client-side — lock
+    # the plain text field here so the system test doesn't have to.
+    assert_select "input[type='text'][name='email_address']"
   end
 
   test "create" do
