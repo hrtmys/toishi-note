@@ -64,7 +64,6 @@ class Note < ApplicationRecord
       content: content
     )
   end
-  end
 
   def todo_items_total_count
     todo_items_counts_by_checked.values.sum
