@@ -92,8 +92,11 @@ class NoteConflictTest < ApplicationSystemTestCase
 
       # Cancelling the confirmation must be a complete no-op: the banner
       # is still up, and the locally-typed edit was never thrown away.
+      # assert_field (not assert_selector ... text:): with no reload, the
+      # typed edit lives only in the field's value — the textarea's text
+      # content is still whatever the server rendered at page-load time.
       assert_selector "[data-note-conflict-target='banner']", visible: true
-      assert_selector "textarea[name='note[content]']", text: "Device B's edit, not yet discarded"
+      assert_field "note[content]", with: "Device B's edit, not yet discarded"
     end
   end
 
