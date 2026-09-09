@@ -365,7 +365,7 @@ class WordExcelPasteTest < ApplicationSystemTestCase
     JS
 
     uploading_marker = I18n.t("js.image_upload.uploading", filename: "photo.png")
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until evaluate_textarea_value.include?(uploading_marker) }
+    wait_until("image upload placeholder never appeared") { evaluate_textarea_value.include?(uploading_marker) }
   end
 
   test "plain-text paste with no real formatting is left alone" do

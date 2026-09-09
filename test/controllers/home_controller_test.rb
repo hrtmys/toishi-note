@@ -161,4 +161,66 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", export_note_path(note), text: I18n.t("home.common.export")
     assert_select "#notebooks-list a[title=?][href=?]", I18n.t("home.notebooks.export"), export_notebook_path(notebook)
   end
+
+  test "organize renders the full tree instead of the note editor" do
+    # Entering Organize is a plain logo link, so a GET plus static
+    # assertions covers it with no browser.
+    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
+    folder = notebook.folders.create!(name: "Organize Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Organize Note", note_type: "md")
+
+    get root_url(organize: true, notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+
+    assert_response :success
+    assert_select "h2", text: I18n.t("home.organize.heading")
+    assert_select "#organize-notebooks-tree", text: /Organize Notebook/
+    assert_select "#organize-notebooks-tree", text: /Organize Folder/
+    assert_select "#organize-notebooks-tree", text: /Organize Note/
+    assert_select "textarea[name='note[content]']", count: 0
+  end
+
+  test "organize back link returns to exactly the note that was open" do
+    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
+    folder = notebook.folders.create!(name: "Organize Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Organize Note", note_type: "md")
+
+    get root_url(organize: true, notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+
+    assert_response :success
+    assert_select "a[href=?]", root_path(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id),
+      text: I18n.t("home.organize.back")
+  end
+
+  test "organize with a note_id that no longer exists still renders, and backs out cleanly" do
+    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
+    folder = notebook.folders.create!(name: "Organize Folder")
+
+    get root_url(organize: true, notebook_id: notebook.id, folder_id: folder.id, note_id: 999_999)
+
+    assert_response :success
+    assert_select "h2", text: I18n.t("home.organize.heading")
+    assert_select "a[href=?]", root_path(notebook_id: notebook.id, folder_id: folder.id),
+      text: I18n.t("home.organize.back")
+  end
+
+  test "the sidebar and md editor toolbar render in the signed-in user's locale" do
+    # Locale-driven copy is server-rendered — assert_select covers it.
+    # Only the Language-switch flow and the Stimulus toast need a browser.
+    users(:one).update!(locale: "ja")
+    notebook = users(:one).notebooks.create!(name: "Test Notebook")
+    folder = notebook.folders.create!(name: "Test Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Note", content: "Hello", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+
+    assert_response :success
+    assert_select "html[lang=ja]"
+    assert_select "button[title=?]", I18n.t("home.header.settings", locale: :ja)
+    assert_select "*", text: I18n.t("home.notebooks.heading", locale: :ja)
+    assert_select "*", text: I18n.t("home.folders.heading", locale: :ja)
+    assert_select "*", text: I18n.t("home.files.heading", locale: :ja)
+    assert_select "button[title=?]", I18n.t("editor.modes.edit_only", locale: :ja)
+    assert_select "textarea[placeholder=?]", I18n.t("editor.content_placeholder", locale: :ja)
+    assert_select "button[title=?]", I18n.t("editor.fab.button_title", locale: :ja)
+  end
 end

@@ -28,50 +28,8 @@ class OrganizeTest < ApplicationSystemTestCase
     end
   end
 
-  test "clicking the logo opens Organize, showing the full notebook/folder/note tree" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Organize Folder")
-    note = folder.notes.create!(title: "Organize Note", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-    click_on "Toishi Note"
-
-    assert_text I18n.t("home.organize.heading")
-    assert_text notebook.name
-    assert_text folder.name
-    assert_text note.title
-    # The note editor itself is gone — Organize replaces it, not overlays it.
-    assert_no_selector "textarea[name='note[content]']"
-  end
-
-  test "the back link returns to exactly the note/folder/notebook that was open before" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Organize Folder")
-    note = folder.notes.create!(title: "Organize Note", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-    click_on "Toishi Note"
-    click_on I18n.t("home.organize.back")
-
-    assert_selector "input[value='#{note.title}']"
-  end
-
-  test "entering Organize with a note_id that no longer exists falls back gracefully, same as the plain editor does" do
-    notebook = users(:one).notebooks.create!(name: "Organize Notebook")
-    folder = notebook.folders.create!(name: "Organize Folder")
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, organize: true, note_id: 999_999)
-
-    assert_text I18n.t("home.organize.heading")
-    click_on I18n.t("home.organize.back")
-
-    # Same graceful fallback HomeController#index already provides for the
-    # plain editor (no crash, no error page) — reused here, not reimplemented.
-    assert_no_selector "input[value='999999']"
-  end
-
-  # Remaining rename/create/delete go through their controllers (40+
-  # tests) — only Organize's own navigation and drags stay here.
+  # Logo/back/stale-id navigation is plain GETs plus static hrefs (see
+  # HomeControllerTest). Only prompt-form wiring and drags stay here.
   test "dragging a folder above another one reorders them within the notebook, persisted across reload" do
     notebook = users(:one).notebooks.create!(name: "Organize Notebook")
     folder_a = notebook.folders.create!(name: "Folder A")
@@ -79,7 +37,8 @@ class OrganizeTest < ApplicationSystemTestCase
 
     visit root_url(notebook_id: notebook.id, organize: true)
 
-    drag("#organize_folder_#{folder_b.id} > div > .organize-drag-handle", above: "#organize_folder_#{folder_a.id}")
+    drag("#organize_folder_#{folder_b.id} > div > .organize-drag-handle", above: "#organize_folder_#{folder_a.id}",
+      settled: -> { folder_b.reload.position == 1 })
 
     assert_equal 1, folder_b.reload.position
     assert_equal 2, folder_a.reload.position
@@ -100,7 +59,8 @@ class OrganizeTest < ApplicationSystemTestCase
 
     visit root_url(notebook_id: source_notebook.id, organize: true)
 
-    drag("#organize_folder_#{folder.id} > div > .organize-drag-handle", into: "#organize_notebook_#{target_notebook.id} [data-organize-target='folderList']")
+    drag("#organize_folder_#{folder.id} > div > .organize-drag-handle", into: "#organize_notebook_#{target_notebook.id} [data-organize-target='folderList']",
+      settled: -> { folder.reload.notebook == target_notebook })
 
     assert_equal target_notebook, folder.reload.notebook
     assert_equal target_notebook, note.reload.notebook, "the folder's notes must follow via the notebook_id cascade, exactly as the non-drag move endpoint already guarantees"
@@ -120,7 +80,8 @@ class OrganizeTest < ApplicationSystemTestCase
 
     visit root_url(notebook_id: notebook.id, organize: true)
 
-    drag("#organize_note_#{moved_note.id} > div > .organize-drag-handle", into: "#organize_folder_#{target_folder.id} [data-organize-target='noteList']")
+    drag("#organize_note_#{moved_note.id} > div > .organize-drag-handle", into: "#organize_folder_#{target_folder.id} [data-organize-target='noteList']",
+      settled: -> { moved_note.reload.folder == target_folder })
 
     assert_equal target_folder, moved_note.reload.folder
     assert_equal notebook, moved_note.notebook
@@ -144,7 +105,8 @@ class OrganizeTest < ApplicationSystemTestCase
     # Target the notebook's header row specifically, not its whole <li>
     # (which also has a nested folder-list Sortable container) — landing
     # on that container instead confuses which Sortable instance receives it.
-    drag("#organize_notebook_#{notebook_b.id} > div > .organize-drag-handle", above: "#organize_notebook_#{notebook_a.id} > div")
+    drag("#organize_notebook_#{notebook_b.id} > div > .organize-drag-handle", above: "#organize_notebook_#{notebook_a.id} > div",
+      settled: -> { notebook_b.reload.position < notebook_a.reload.position })
 
     # Relative order, not absolute positions — a fixture notebook already
     # exists ahead of both of these.
@@ -152,10 +114,10 @@ class OrganizeTest < ApplicationSystemTestCase
   end
 
   private
-    # SortableJS runs with forceFallback: true, tracking a real mouse
-    # gesture — Capybara's drag_to isn't enough; small incremental moves
-    # via Selenium's Actions API reliably work.
-    def drag(source_selector, above: nil, into: nil)
+    # forceFallback tracks a real mouse gesture — Capybara's drag_to is
+    # not enough. Mid-gesture sleeps pace mousemove events; the drop
+    # polls `settled:` instead of a fixed sleep.
+    def drag(source_selector, above: nil, into: nil, settled:)
       source = find(source_selector).native
       target = find(above || into).native
 
@@ -163,9 +125,8 @@ class OrganizeTest < ApplicationSystemTestCase
       action.move_to(source).click_and_hold.perform
       sleep 0.2
 
-      # Dropping "above" a row targets its upper edge (a small negative
-      # y-offset); dropping "into" an (often still-empty) container
-      # targets its center.
+      # "above" targets the row's upper edge; "into" an often-empty
+      # container's center.
       offset = above ? -10 : 0
       5.times do |i|
         action.move_to(target, 0, offset - (i * 5)).perform
@@ -173,6 +134,6 @@ class OrganizeTest < ApplicationSystemTestCase
       end
 
       action.release.perform
-      sleep 0.5
+      wait_until("dragged order never persisted", &settled)
     end
 end

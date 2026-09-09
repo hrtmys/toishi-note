@@ -38,8 +38,11 @@ class NotebookTest < ActiveSupport::TestCase
   end
 
   test "position is assigned automatically, appended after existing siblings" do
-    # notebooks(:one) already occupies position 1 for users(:one).
-    second = users(:one).notebooks.create!(name: "Second")
+    # users(:admin) owns no fixture notebooks — no fixture coupling.
+    first = users(:admin).notebooks.create!(name: "First")
+    second = users(:admin).notebooks.create!(name: "Second")
+
+    assert_equal 1, first.position
     assert_equal 2, second.position
   end
 

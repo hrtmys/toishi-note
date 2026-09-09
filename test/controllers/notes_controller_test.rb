@@ -194,6 +194,28 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @notebook, @note.notebook
   end
 
+  test "move 404s for another user's note, and moves nothing" do
+    foreign_notebook = users(:two).notebooks.create!(name: "Theirs")
+    foreign_folder = foreign_notebook.folders.create!(name: "Foreign Folder")
+    foreign_note = foreign_folder.notes.create!(notebook: foreign_notebook, title: "Theirs", note_type: "md")
+    own_folder = @notebook.folders.create!(name: "Own Folder")
+
+    patch move_note_url(foreign_note), params: { target_folder_id: own_folder.id }
+
+    assert_response :not_found
+    assert_equal foreign_folder, foreign_note.reload.folder
+  end
+
+  test "move 404s for another user's folder as the target, and moves nothing" do
+    foreign_notebook = users(:two).notebooks.create!(name: "Theirs")
+    foreign_folder = foreign_notebook.folders.create!(name: "Foreign Folder")
+
+    patch move_note_url(@note), params: { target_folder_id: foreign_folder.id }
+
+    assert_response :not_found
+    assert_equal @folder, @note.reload.folder
+  end
+
   test "exports a note as a downloadable .md file" do
     @note.update!(content: "# Hello")
 

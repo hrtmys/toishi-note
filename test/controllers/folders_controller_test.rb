@@ -64,5 +64,27 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal other_notebook, @folder.reload.notebook
     assert_equal other_notebook, note.reload.notebook, "the folder's notes must follow via the notebook_id cascade"
+    # move_to! runs ahead of the client's full-order reindex, so the moved
+    # folder must land exactly where folder_ids puts it.
+    assert_equal 1, @folder.position
+  end
+
+  test "move 404s for another user's folder, and moves nothing" do
+    theirs = users(:two).notebooks.create!(name: "Theirs")
+    foreign_folder = theirs.folders.create!(name: "Foreign")
+
+    patch move_notebook_folder_url(@notebook, foreign_folder), params: { target_notebook_id: @notebook.id, folder_ids: [ @folder.id ] }
+
+    assert_response :not_found
+    assert_equal theirs, foreign_folder.reload.notebook
+  end
+
+  test "move 404s for another user's notebook as the target, and moves nothing" do
+    foreign_notebook = users(:two).notebooks.create!(name: "Theirs")
+
+    patch move_notebook_folder_url(@notebook, @folder), params: { target_notebook_id: foreign_notebook.id, folder_ids: [ @folder.id ] }
+
+    assert_response :not_found
+    assert_equal @notebook, @folder.reload.notebook
   end
 end

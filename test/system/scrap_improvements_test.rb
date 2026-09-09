@@ -54,7 +54,7 @@ class ScrapImprovementsTest < ApplicationSystemTestCase
     row.find_field("source").native.send_keys(:tab) # blur to trigger the change event
 
     # Fire-and-forget save with no UI signal — poll the DB briefly.
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until item.reload.source.present? }
+    wait_until("scrap source PATCH never landed") { item.reload.source.present? }
     assert_equal "ChatGPT conversation", item.source
   end
 

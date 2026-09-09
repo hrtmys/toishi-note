@@ -34,12 +34,9 @@ class EditorFabTest < ApplicationSystemTestCase
       check "editorFabToggle"
     end
 
-    # The toggle's PATCH is fire-and-forget from the browser's perspective —
-    # nothing in the UI confirms it landed — so poll the database briefly
-    # rather than reloading on a race against an in-flight request.
-    Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.1 until users(:one).reload.editor_fab_enabled?
-    end
+    # Fire-and-forget PATCH with no UI confirmation — poll the DB
+    # briefly rather than reloading into a race.
+    wait_until("editor FAB setting PATCH never landed") { users(:one).reload.editor_fab_enabled? }
 
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
     assert_selector ".editor-fab-button", visible: true

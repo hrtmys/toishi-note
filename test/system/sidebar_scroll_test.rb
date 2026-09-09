@@ -37,13 +37,10 @@ class SidebarScrollTest < ApplicationSystemTestCase
       list.scrollTop = list.scrollHeight
       list.dispatchEvent(new Event("scroll"))
     JS
-    scrolled_to = Timeout.timeout(Capybara.default_max_wait_time) do
-      loop do
-        value = page.evaluate_script("document.querySelector('#notes-list').scrollTop")
-        break value if value.to_i.positive?
-        sleep 0.05
-      end
+    wait_until("the notes list never scrolled — is it overflowing?") do
+      page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i.positive?
     end
+    scrolled_to = page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i
 
     # Deleted via the note editor header's delete button, which needs
     # turbo_frame: "_top" to reach the sidebar with its redirect — without
@@ -57,13 +54,12 @@ class SidebarScrollTest < ApplicationSystemTestCase
     # exactly the case that has to fall back to the saved position.
     assert_no_selector "#notes-list .bg-secondary"
 
-    # The list is one row shorter after delete, so max scrollTop shrank
-    # too — the browser clamps scrolled_to down. Assert against that
-    # clamped ceiling, not the now-unreachable pre-delete number.
+    # Clamped to the post-delete ceiling, within 2px — scroll offsets
+    # round per devicePixelRatio, so exact integers flake across Chrome.
     max_scroll_top = page.evaluate_script(<<~JS).to_i
       document.querySelector('#notes-list').scrollHeight - document.querySelector('#notes-list').clientHeight
     JS
-    assert_equal [ scrolled_to, max_scroll_top ].min, page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i
+    assert_in_delta [ scrolled_to, max_scroll_top ].min, page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i, 2
   end
 
   private
