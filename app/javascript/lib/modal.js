@@ -10,6 +10,11 @@ export function installModalHideQueue(element, getModal) {
       getModal().hide()
     }
   })
+  // hide() on an already-closed modal returns early without hidden, so a
+  // queued hide can outlive its modal. Every open fires show first.
+  element.addEventListener("show.bs.modal", () => {
+    state.hideQueued = false
+  })
   element.addEventListener("hidden.bs.modal", () => {
     state.hideQueued = false
   })

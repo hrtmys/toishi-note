@@ -11,8 +11,8 @@ export default class extends Controller {
 
   connect() {
     this.modal = bootstrap.Modal.getOrCreateInstance(this.element)
-    // Opens via data-bs-toggle, so no show() of ours — the hidden half
-    // still guards against a stale queued hide tripping a later open.
+    // Opens via data-bs-toggle, so no show() of ours — the show-event
+    // half of the queue still guards against a stale hide on reopen.
     this.modalState = installModalHideQueue(this.element, () => this.modal)
   }
 
