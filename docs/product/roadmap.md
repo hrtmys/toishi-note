@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-08-15
+updated: 2026-09-09
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -15,7 +15,11 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 
 ## 1. Where we are
 
-Everything the old roadmap called Phase 0 through Phase 4 has shipped: auth (password + trusted header), the three note types, Settings, Compare, i18n, Organize, export, image attachments, Word/Excel paste. What has *not* shipped is anything that makes the app fast to **move around in**, and that is now the single most-felt gap in daily use.
+**v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
+
+Since then (2026-08-24 → 2026-09-09) the work has been a **post-beta hardening wave**, not v0.2 features: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`). No v0.2-planned feature (editor shortcuts batch, global pins, resizable panes, search-over-body, import, scratch pad, trash, PNG capture, URL titles) has shipped yet.
+
+What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the single most-felt gap in daily use.
 
 ## 2. Version numbering — and one correction to release-process.md
 
@@ -27,9 +31,9 @@ Everything the old roadmap called Phase 0 through Phase 4 has shipped: auth (pas
 | v1.x | Presentation, local distribution — things that widen *where* the app runs. |
 | **v2.0.0** | Encrypted notebooks and the researcher tier. The first release that changes the data model in a way v1.x can't. |
 
-[`release-process.md`](../engineering/release-process.md) says the repo move happens at v1.0. **That is now wrong: the move happens at v0.1.0**, because the whole point of a public beta is having somewhere for strangers to file issues. The mechanics in that document (fresh initial commit, `.gitignore` check, decide the old repo's fate, update the remote) are unchanged and still authoritative — only the version label moves.
+[`release-process.md`](../engineering/release-process.md) said the repo move happens at v1.0. **That was corrected: the move happened at v0.1.0** (public repo `hrtmys/toishi-note`, old repo kept private), because the whole point of a public beta is having somewhere for strangers to file issues. The mechanics in that document (fresh initial commit, `.gitignore` check, decide the old repo's fate, update the remote) are unchanged and still authoritative — only the version label moved.
 
-Gate for cutting v0.1.0: [`docs/engineering/pre-beta-checklist.md`](../engineering/pre-beta-checklist.md).
+v0.1.0 was cut against [`docs/engineering/pre-beta-checklist.md`](../engineering/pre-beta-checklist.md) — all exit criteria checked, tag `v0.1.0` on 2026-08-24.
 
 ## 3. The organizing thesis for v0.1 – v0.5: the movement layer
 
@@ -44,6 +48,8 @@ Obsidian solved this with a quick switcher and links. Notion solved it with sear
 5. **`[[Internal links]]` + backlinks** — structural jumps, and the thing that makes the graph of notes navigable rather than the tree. *(v0.5)*
 
 Everything in that list shares one UI. Do not build five entry points.
+
+*Status 2026-09-09:* items 1–2 shipped in v0.1.0 (palette: recent-first + title `LIKE` match + alternate via preselected second entry; ranking since moved into `Note.search_ranked`, with empty-state/keyboard polish). Unplanned but shipped alongside: per-user last-notebook/folder memory, which removes one re-navigation step on reload. Items 3–5 have not started — the palette still searches titles only, no `note_links` table exists, no daily note.
 
 ## 4. Differentiation, stated plainly
 
@@ -84,6 +90,10 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 14 | Local version (Ruby, not Electron) | **Adopt as two answers** — documented localhost Docker now, a `toishi-note` CLI gem at v1.5, encrypted notebooks at v2.0 | v0.1 / v1.5 / v2.0 |
 | 15 | Presentation mode (Rabbit compatible?) | **Adopt, redefined** — built-in slide mode, plus *export* to Rabbit rather than embedding it | v1.5 |
 | 16 | Paste a URL, fetch the title | **Split** — paste-over-selection client-side; title fetch opt-in and SSRF-guarded | v0.2 / v0.4 |
+
+### Status as of 2026-09-09
+
+Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. #11 is partial — the sidebar now shows more than two rows and no longer snaps on click, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16, and the v0.2 half of #4.
 
 ### Notes on the non-obvious calls
 
@@ -164,14 +174,14 @@ Ordered by how much they matter, not by size.
 
 ### Data safety (these are the v1.0 story)
 
-- **Multi-device overwrite is currently silent data loss.** `autosave_controller.js` PUTs the entire note body 500ms after typing stops, with no version check, and `NotesController#update` accepts it. The stated primary persona has a work PC, a home PC, and a phone. Two devices with the same note open, and the last save wins with no warning. Add `lock_version` (Rails optimistic locking) and, on conflict, tell the user rather than picking for them. **v0.2** — this is a correctness bug against the persona, not an enhancement.
-- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a 30-day window and an undo toast. **v0.4.**
-- **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.**
-- **Backups are promised and don't exist.** The old roadmap describes a "Last backup: 3 hours ago ✅" line. Shipping a public beta that holds someone's notes with no documented backup path is a trust problem. The runbook (`sqlite3 .backup` + rclone on cron) is a **v0.1** documentation task; the status line in the Account tab is **v1.0**.
+- **~~Multi-device overwrite is currently silent data loss.~~ — shipped in v0.1.0.** `notes.lock_version` (Rails optimistic locking): the autosave sends/stores the version, and on conflict a banner offers reload vs. keep-mine instead of last-write-wins. Polished post-beta (conflict dialog keep/cancel UX).
+- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a 30-day window and an undo toast. **v0.4.** Still open.
+- **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.** Still open.
+- **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see `docs/engineering/backup.md`). What remains is the Account-tab status line — still a **v1.0** item.
 
 ### Product
 
-- **A seeded welcome notebook on first run.** The empty state is currently a shrug. Seed a notebook whose first note *is* the tutorial — Ctrl+P, `[[links]]`, the three note types, the FAB — written in Markdown so reading it demonstrates the editor. Highest-leverage onboarding change available, and it makes screenshots easy. **v0.2.**
+- **~~A seeded welcome notebook on first run.~~ — shipped in v0.1.0.** `db/seeds.rb` creates a locale-aware welcome notebook whose first note *is* the tutorial (three note types, editor rendering, Ctrl+P).
 - **Daily note.** Obsidian's most-used feature, and it fits "self-learning notes" exactly: one keystroke opens today's note, created if absent. **v0.5.**
 - **Publish a note as a read-only link.** This is the other answer to the screenshot request, and a better one for anything longer than a paragraph. It does add an unauthenticated public endpoint, against design principle 2 — so: off by default, per-note, unguessable token, revocable, and never for a whole notebook. **v1.x**, deliberately after the PNG route, which needs no new attack surface.
 - **A `?` keyboard-shortcut cheatsheet,** once there are enough shortcuts to forget. **v0.4.**
@@ -185,38 +195,54 @@ Each of these is a separate README, a separate Zenn post, and a separate surface
 - `@toishi/office-clipboard` — Word/Excel clipboard HTML → Markdown, already isolated in `word_clipboard.js` / `html_to_markdown.js`, merged-cell handling and all.
 - `turndown-plugin-katex` — the sup/sub → KaTeX plugin already planned in the archived roadmap.
 
-### Refactoring
+### Refactoring — all done (2026-09-09)
 
-- **`app/views/home/index.html.erb` is 353 lines** and contains the sidebar, all three note-type editors, and 66 lines of inline CSS. It is the first file a curious contributor opens. Extract `home/_sidebar`, `notes/_todo_editor`, `notes/_scrap_editor`; move the CSS to SCSS partials. **Do this before the fresh repo** — first impressions of the code are part of a launch.
-- **Dead code to delete before the fresh repo, not after:** the vendored EasyMDE/CodeMirror stylesheet (~15KB for a dependency that isn't installed), `NotesController#preview` plus the `redcarpet` gem (rendering is client-side; the only caller is a test), the `window.hljs` / `window.marked` globals, five empty helper modules. A clean repo is the entire point of the exercise.
-- **`Note::DEFAULT_TITLES` is hardcoded Japanese** (`無題のノート`), so an English-locale user gets Japanese titles — and `auto_set_title` only pattern-matches the Japanese placeholders, so an English-created note never auto-retitles from its first line. Both symptoms of deriving "has the user titled this?" from string comparison. Model it as a boolean instead.
-- **`Note#todo_completion_percentage` issues three COUNT queries per render.** Minor, but it's in a partial that renders on every TODO interaction.
-- **`navigation_controller.js#disconnect` passes a freshly-bound function to `removeEventListener`,** so the listener is never removed. Compare `scroll_controller.js`, which stores the bound handler correctly.
+Every item in this subsection shipped during the pre-beta cleanup or the post-beta hardening wave, so it is recorded here as done rather than re-planned:
+
+- **`home/index.html.erb` extraction** — done pre-beta (353 → ~87 lines; sidebar/editors extracted, inline CSS moved to SCSS).
+- **Dead code deletion** — done pre-beta (EasyMDE CSS, `NotesController#preview` + `redcarpet`, unused globals, empty helpers).
+- **`Note::DEFAULT_TITLES` hardcoded Japanese** — done pre-beta (explicit titled-state, translated display values).
+- **`Note#todo_completion_percentage` three COUNT queries** — done post-beta (single grouped query, memoized per render).
+- **`navigation_controller.js#disconnect` leaked listener** — done pre-beta (stored bound handler).
 
 ---
 
 ## 8. Release plan
 
-### v0.1.0 — Public beta 🚀
+### v0.1.0 — Public beta ✅ shipped 2026-08-24
 
 *Theme: a stranger can install it, and moving around it feels fast.*
 
-- Everything in [`pre-beta-checklist.md`](../engineering/pre-beta-checklist.md) — bundle size, CDN removal, self-hosted fonts, sanitization, dead code, docs, backup runbook
-- Ctrl/Cmd+P palette: recent notes + fuzzy title match, plus alternate-between-last-two
+- Everything in [`pre-beta-checklist.md`](../engineering/pre-beta-checklist.md) — bundle size, CDN removal, self-hosted fonts, sanitization, dead code, docs, backup runbook (`bin/backup` / `bin/restore`)
+- Ctrl/Cmd+P palette: recent notes + title match, plus alternate-between-last-two
 - Markdown list continuation and Tab indent (IME-safe, undo-preserving)
 - Non-proportional UD font on content surfaces
 - Sidebar scrolls the active row into view
 - Email and sign-out move to a Settings "Account" tab; sign-out hidden under trusted-header auth
+- Optimistic locking (`lock_version`) + conflict prompt — built during pre-beta, so it rode the v0.1.0 cut rather than waiting for v0.2
+- Seeded locale-aware welcome notebook (`db/seeds.rb` rewrite) — same, shipped here rather than v0.2
 - README rewritten for self-hosters, `README.ja.md` added, `CHANGELOG.md` started
-- **Repository refresh happens here.**
+- **Repository refresh happened here** (public `hrtmys/toishi-note`; old repo kept private).
 
-### v0.2.0 — The editor earns its keep
+### v0.1.x — Post-beta hardening ✅ shipped 2026-08-24 → 2026-09-09
+
+No new roadmap features; stability and correctness for the beta audience:
+
+- Per-user last-notebook/folder memory (one fewer re-navigation on reload)
+- CRUD operations give visible feedback (flash toasts); flash/toast Stimulus connect-order race fixed
+- Three N+1 queries fixed; palette ranking relocated into `Note.search_ranked`
+- Row-level locks + unique indexes around concurrent position/reparent/promote writes
+- Image upload size cap + real image validation; bulk TODO import count cap
+- Silent autosave/settings/scrap-source failures now surface an error toast
+- Preview scroll stability and Mermaid/KaTeX hardening under rapid typing
+- IME-safe auto-title; Word-paste robustness (unformatted pastes, copy failures, pasted images)
+- Dev environment refresh (`.devcontainer` → `Dockerfile.dev` + `bin/d`); palette empty-state/keyboard and sidebar empty-state polish
+
+### v0.2.0 — The editor earns its keep (planned, not started)
 
 - Remaining editor shortcuts; paste-URL-over-selection
-- Optimistic locking + conflict prompt
 - Global pinned section, cross-notebook
 - Flexible sidebar pane heights
-- Seeded welcome notebook
 
 ### v0.3.0 — Getting your notes in and finding them again
 
