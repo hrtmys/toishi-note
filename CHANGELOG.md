@@ -13,6 +13,7 @@ The public beta — everything below shipped in the run-up to the first release 
 - Content Security Policy (`script-src 'self'`, no `unsafe-inline`) — the whole third-party-CDN removal effort (below) is what made this achievable.
 - `bin/ci`: one-command local verification (tests, RuboCop, Brakeman, dependency audits) with compact, token-efficient output — see `docs/engineering/verification.md`.
 - `bin/backup` / `bin/restore`: tested SQLite-safe backup and restore for `storage/` — see `docs/engineering/backup.md`.
+- Optimistic locking on note saves (`lock_version`): concurrent edits from a second device show a conflict prompt (reload vs. keep mine) instead of silently last-write-wins. (Shipped in v0.1.0; recorded here 2026-09-09 — it was missing from these notes.)
 - `.env.example`, a real self-hosting quickstart in `docs/engineering/deployment.md`, and `APP_HOST`/`APP_PROTOCOL` env vars so password-reset/invite emails link to the right domain instead of a placeholder.
 
 ### Fixed

@@ -7,7 +7,7 @@ updated: 2026-09-09
 
 # Roadmap — v0.1 to v2.0
 
-This supersedes [`ux-roadmap.md.old`](ux-roadmap.md.old), which is kept as an archive because it holds the *reasoning* behind decisions that are still in force (persona pivot, auth design, Word/Excel paste split, Compare's three failed designs). Nothing in this document contradicts the persona or the design principles there — it re-plans **what ships when**, now that Phases 0–4 are actually built and the app has been used daily.
+This supersedes [`ux-roadmap.md.old`](ux-roadmap.md.old), which is kept as an archive because it holds the *reasoning* behind decisions that are still in force (persona pivot, auth design, Word/Excel paste split, Compare's three failed designs). Nothing in this document contradicts the persona or the design principles there — it re-plans **what ships when**, now that Phases 0–4 are actually built and the app has been used daily. (One flagged exception: publish links in §7, explicitly weighed against design principle 2.)
 
 This document fixes direction only. Implementation belongs in issues and PRs.
 
@@ -17,23 +17,23 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 
 **v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
 
-Since then (2026-08-24 → 2026-09-09) the work has been a **post-beta hardening wave**, not v0.2 features: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`). No v0.2-planned feature (editor shortcuts batch, global pins, resizable panes, search-over-body, import, scratch pad, trash, PNG capture, URL titles) has shipped yet.
+Since then (2026-08-24 → 2026-09-09) the work has been a **post-beta hardening wave**, not v0.2 features: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`). No post-v0.1 roadmap feature (editor shortcuts batch, global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL titles) has shipped yet.
 
-What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the single most-felt gap in daily use.
+What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
 
 ## 2. Version numbering — and one correction to release-process.md
 
 | Version | Meaning |
 |---|---|
-| **v0.1.0** | **Public beta.** The fresh `toishi-note` repository is created here, not at v1.0. First release strangers are invited to run. |
+| **v0.1.0** | **Public beta.** The fresh `toishi-note` repository was created here, not at v1.0. First release strangers are invited to run. |
 | v0.2 – v0.5 | Beta iterations. Breaking changes allowed, but every release must migrate cleanly. |
 | **v1.0.0** | "I would tell a stranger to trust their notes to this." Data safety and polish, not new surface. |
 | v1.x | Presentation, local distribution — things that widen *where* the app runs. |
 | **v2.0.0** | Encrypted notebooks and the researcher tier. The first release that changes the data model in a way v1.x can't. |
 
-[`release-process.md`](../engineering/release-process.md) said the repo move happens at v1.0. **That was corrected: the move happened at v0.1.0** (public repo `hrtmys/toishi-note`, old repo kept private), because the whole point of a public beta is having somewhere for strangers to file issues. The mechanics in that document (fresh initial commit, `.gitignore` check, decide the old repo's fate, update the remote) are unchanged and still authoritative — only the version label moved.
+[`release-process.md`](../engineering/release-process.md) said the repo move happens at v1.0. **That was corrected: the move happened at v0.1.0** (public repo `hrtmys/toishi-note`, old repo kept private), because the whole point of a public beta is having somewhere for strangers to file issues. The mechanics in that document (fresh initial commit, `.gitignore` check, decide the old repo's fate, update the remote) are unchanged and still authoritative — only the version label moved, and the move itself is now done.
 
-v0.1.0 was cut against [`docs/engineering/pre-beta-checklist.md`](../engineering/pre-beta-checklist.md) — all exit criteria checked, tag `v0.1.0` on 2026-08-24.
+v0.1.0 was cut against [`pre-beta-checklist.md`](../engineering/pre-beta-checklist.md) — all exit criteria checked, tag `v0.1.0` on 2026-08-24.
 
 ## 3. The organizing thesis for v0.1 – v0.5: the movement layer
 
@@ -41,7 +41,7 @@ The stated daily pain is not writing and not organizing. It is **travel**: going
 
 Obsidian solved this with a quick switcher and links. Notion solved it with search and a sidebar tree. Neither is magic — both just made "jump straight there" cheaper than "walk there." So do that, in this order, cheapest first:
 
-1. **Command palette (Ctrl/Cmd+P)** — most-recently-viewed notes first, then fuzzy match over every note title. Two keystrokes to anywhere. *(v0.1)*
+1. **Command palette (Ctrl/Cmd+P)** — most-recently-viewed notes first, then match over every note title. Two keystrokes to anywhere. *(v0.1)*
 2. **Alternate (Ctrl/Cmd+Tab or Ctrl+P twice)** — bounce between the last two notes without reading a list. This is literally the "行き来する" case; it deserves its own zero-thought gesture. *(v0.1)*
 3. **Global pinned section** — `notes.is_pinned` already exists and is currently used only to sort within one folder. Surfacing pinned notes cross-notebook at the top of the sidebar is a few lines and turns an existing column into a favorites bar. *(v0.2)*
 4. **Search, folded into the same palette** — not a separate screen. *(v0.3)*
@@ -97,7 +97,7 @@ Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (p
 
 ### Notes on the non-obvious calls
 
-**#3 — hide the email and sign-out.** The right fix is not a solo-only conditional. The sidebar header is prime real estate spent on information you already know (your own email) and an action you take once a month. Move both into the Settings modal's "Account" tab — a tab the old roadmap already designed and never built. Then, separately: when `TRUSTED_HEADER_AUTH_HEADER` is active, hide sign-out entirely, because it currently signs you out and the very next request signs you straight back in. That is a real bug hiding inside a cosmetic request.
+**#3 — hide the email and sign-out.** The right fix is not a solo-only conditional. The sidebar header is prime real estate spent on information you already know (your own email) and an action you take once a month. Move both into the Settings modal's "Account" tab — a tab the old roadmap had designed but that shipped only with v0.1.0. Then, separately: when `TRUSTED_HEADER_AUTH_HEADER` is active, hide sign-out entirely, because it currently signs you out and the very next request signs you straight back in. That is a real bug hiding inside a cosmetic request.
 
 **#4 — do not adopt CodeMirror or EasyMDE.** Three reasons. The bundle is already far too large (see the checklist). Every paste handler in the app — Word, Excel, images — is written against a real `<textarea>` and would need rewriting. And CodeMirror 5, which EasyMDE wraps, has a long history of Japanese IME composition bugs, which is disqualifying for this audience. Write the behaviors directly.
 
@@ -110,7 +110,7 @@ Two implementation constraints that must be honored or the feature is worse than
 
 Good extraction candidate: `@toishi/markdown-textarea`.
 
-**#6 — screenshot.** "The whole note screen" would include the sidebar and toolbar, which nobody wants in a LINE message. Capture the rendered preview pane only, as PNG, from the same FAB that already hosts "Copy for Word." Two constraints to plan around: `ClipboardItem` image writes need a secure context and are not universally available (Firefox in particular), so ship a "download PNG" fallback in the same action; and DOM-to-image rasterization only embeds fonts it can read, which is a second reason to self-host the font (§ pre-beta item 3) rather than pull it from Google.
+**#6 — screenshot.** "The whole note screen" would include the sidebar and toolbar, which nobody wants in a LINE message. Capture the rendered preview pane only, as PNG, from the same FAB that already hosts "Copy for Word." Two constraints to plan around: `ClipboardItem` image writes need a secure context and are not universally available (Firefox in particular), so ship a "download PNG" fallback in the same action; and DOM-to-image rasterization only embeds fonts it can read, which is a second reason to self-host the font (pre-beta checklist Blocker 3) rather than pull it from Google.
 
 Consider also that the underlying want here is *sharing*, and a read-only public link is the other answer to it — see §7.
 
@@ -136,7 +136,7 @@ Do not fix the restore timing. Delete the guessing: **scroll the currently-activ
 
 **#14 — the local version.** Three separate answers, because "local" is being asked to mean three things:
 
-- *Runs on my laptop:* already true. `docker compose up` bound to `127.0.0.1` is a local version. This is a documentation task (v0.1), not a code one — and the current `docker-compose.yml` cannot serve it, since it joins an external network that only exists on the production VPS.
+- *Runs on my laptop:* already true. `docker compose up` bound to `127.0.0.1` is a local version. Before v0.1.0 this was a documentation task because the then-current `docker-compose.yml` could not serve it — it joined an external network that only existed on the production VPS. Shipped in v0.1.0 as a self-contained file reachable at `127.0.0.1:3000` out of the box.
 - *Installs like a Ruby tool:* a `toishi-note` gem with a CLI that boots Puma on localhost against a SQLite file in `~/.toishi-note` and opens a browser — `jekyll serve` for notes. Pure Ruby, no Electron, small memory. **v1.5.** Honest cost: a local-only instance gives up the multi-device story that is currently the strongest reason to use this at all.
 - *I don't want secrets on the VPS:* the actually-interesting answer is **client-side encrypted notebooks** — mark a notebook end-to-end encrypted, encrypt content in the browser under a passphrase, the server stores ciphertext it cannot read. This keeps multi-device sync, which the local build sacrifices. It costs server-side search, server-side export, and preview for those notes, and losing the passphrase means losing the data with no reset path. That is a v2.0-sized commitment, and it is the right shape for the problem.
 
@@ -164,7 +164,7 @@ These carry over from the archived roadmap with no scheduled release. They are s
 - **Passkey / WebAuthn and OIDC login.** Deprioritized deliberately: the maintainer's own deployment sits behind Cloudflare Access, which already solves this, and Rails ships no WebAuthn support, so it is not the small job it sounds like. Revisit when someone running a standalone instance actually asks.
 - **TOTP / 2FA.** Answers a different question ("is this really you?") than the one the auth design solves ("you forgot your password and email doesn't reach you"). Revisit only if this ever opens up beyond a trusted team.
 - **Bulk operations on the admin team list** (export, multi-remove) — revisit alongside import/export work in v0.3.
-- **Tags** — see § 7.
+- **Tags** — see §7.
 
 ---
 
@@ -177,7 +177,7 @@ Ordered by how much they matter, not by size.
 - **~~Multi-device overwrite is currently silent data loss.~~ — shipped in v0.1.0.** `notes.lock_version` (Rails optimistic locking): the autosave sends/stores the version, and on conflict a banner offers reload vs. keep-mine instead of last-write-wins. Polished post-beta (conflict dialog keep/cancel UX).
 - **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a 30-day window and an undo toast. **v0.4.** Still open.
 - **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.** Still open.
-- **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see `docs/engineering/backup.md`). What remains is the Account-tab status line — still a **v1.0** item.
+- **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see [backup.md](../engineering/backup.md)). What remains is the Account-tab status line — still a **v1.0** item.
 
 ### Product
 
@@ -199,7 +199,7 @@ Each of these is a separate README, a separate Zenn post, and a separate surface
 
 Every item in this subsection shipped during the pre-beta cleanup or the post-beta hardening wave, so it is recorded here as done rather than re-planned:
 
-- **`home/index.html.erb` extraction** — done pre-beta (353 → ~87 lines; sidebar/editors extracted, inline CSS moved to SCSS).
+- **`home/index.html.erb` extraction** — done pre-beta (353 → 87 lines; sidebar/editors extracted, inline CSS moved to SCSS).
 - **Dead code deletion** — done pre-beta (EasyMDE CSS, `NotesController#preview` + `redcarpet`, unused globals, empty helpers).
 - **`Note::DEFAULT_TITLES` hardcoded Japanese** — done pre-beta (explicit titled-state, translated display values).
 - **`Note#todo_completion_percentage` three COUNT queries** — done post-beta (single grouped query, memoized per render).
@@ -220,7 +220,7 @@ Every item in this subsection shipped during the pre-beta cleanup or the post-be
 - Sidebar scrolls the active row into view
 - Email and sign-out move to a Settings "Account" tab; sign-out hidden under trusted-header auth
 - Optimistic locking (`lock_version`) + conflict prompt — built during pre-beta, so it rode the v0.1.0 cut rather than waiting for v0.2
-- Seeded locale-aware welcome notebook (`db/seeds.rb` rewrite) — same, shipped here rather than v0.2
+- Seeded locale-aware welcome notebook (`db/seeds.rb` rewrite) — likewise, shipped here rather than v0.2
 - README rewritten for self-hosters, `README.ja.md` added, `CHANGELOG.md` started
 - **Repository refresh happened here** (public `hrtmys/toishi-note`; old repo kept private).
 
