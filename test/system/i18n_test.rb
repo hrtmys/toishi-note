@@ -15,9 +15,8 @@ class I18nTest < ApplicationSystemTestCase
       choose "日本語"
     end
 
-    # The switch reloads the page client-side — rather than race that,
-    # wait for the save to land server-side, then visit fresh ourselves.
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until users(:one).reload.locale == "ja" }
+    # The switch reloads client-side — wait for the save, then visit fresh.
+    wait_until("locale switch PATCH never landed") { users(:one).reload.locale == "ja" }
 
     visit root_url
     # The gear icon's tooltip is Japanese now too — explicit locale: :ja
@@ -43,32 +42,8 @@ class I18nTest < ApplicationSystemTestCase
     end
   end
 
-  test "the sidebar renders in Japanese once that's the signed-in user's locale" do
-    users(:one).update!(locale: "ja")
-    notebook = users(:one).notebooks.create!(name: "Test Notebook")
-    notebook.folders.create!(name: "Test Folder")
-
-    visit root_url(notebook_id: notebook.id)
-
-    assert_text I18n.t("home.notebooks.heading", locale: :ja)
-    assert_text I18n.t("home.folders.heading", locale: :ja)
-    assert_text I18n.t("home.files.heading", locale: :ja)
-    assert_selector "html[lang=ja]"
-  end
-
-  test "the md editor's toolbar renders in Japanese once that's the signed-in user's locale" do
-    users(:one).update!(locale: "ja", compare_enabled: true)
-    notebook = users(:one).notebooks.create!(name: "Test Notebook")
-    folder = notebook.folders.create!(name: "Test Folder")
-    note = folder.notes.create!(title: "Note", content: "Hello", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-
-    assert_selector "button[title='#{I18n.t("editor.modes.edit_only", locale: :ja)}']"
-    assert_selector "textarea[placeholder='#{I18n.t("editor.content_placeholder", locale: :ja)}']"
-    assert_selector "button[title='#{I18n.t("editor.fab.button_title", locale: :ja)}']"
-  end
-
+  # Static Japanese rendering is covered by HomeControllerTest via
+  # assert_select. Only the switch flow and the Stimulus toast stay here.
   test "a Stimulus controller's own UI text (a toast) is in Japanese too, not just server-rendered copy" do
     users(:one).update!(locale: "ja")
     notebook = users(:one).notebooks.create!(name: "Test Notebook")

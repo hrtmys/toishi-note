@@ -54,6 +54,8 @@ class ScrapItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "md", new_note.note_type
     assert_equal "Existing scrap", new_note.content
     assert_equal @note.folder_id, new_note.folder_id
+    # Auto-titled from the content's first line, like a fresh md note.
+    assert_equal "Existing scrap", new_note.title
     assert_redirected_to root_url(notebook_id: @note.notebook_id, folder_id: @note.folder_id, note_id: new_note.id)
   end
 

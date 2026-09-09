@@ -39,6 +39,39 @@ class PositionedTest < ActiveSupport::TestCase
     assert_equal 1, foreign_folder.reload.position, "a foreign record must never be written to, even if it's included in the (invalid) request"
   end
 
+  test "reposition! with an empty id set on an empty scope is a silent no-op" do
+    notebook = users(:one).notebooks.create!(name: "Empty Notebook")
+
+    assert_nothing_raised do
+      Positioned.reposition!(notebook.folders, [])
+    end
+  end
+
+  test "reposition! raises on duplicated ids, and touches nothing" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    a = notebook.folders.create!(name: "A")
+    b = notebook.folders.create!(name: "B")
+
+    assert_raises(ActiveRecord::RecordNotFound) do
+      Positioned.reposition!(notebook.folders, [ a.id, a.id ])
+    end
+
+    assert_equal [ 1, 2 ], [ a.reload.position, b.reload.position ]
+  end
+
+  test "reposition! works in a todo_items scope, not just folders" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Todos", note_type: "todo")
+    x = note.todo_items.create!(content: "X")
+    y = note.todo_items.create!(content: "Y")
+
+    Positioned.reposition!(note.todo_items, [ y.id, x.id ])
+
+    assert_equal 1, y.reload.position
+    assert_equal 2, x.reload.position
+  end
+
   test "reposition! raises, inside its own transaction, if a sibling is destroyed after the caller's own id-set check" do
     notebook = users(:one).notebooks.create!(name: "Notebook")
     a = notebook.folders.create!(name: "A")

@@ -39,8 +39,8 @@ class ImageAttachmentsTest < ApplicationSystemTestCase
     read_value = -> { page.evaluate_script("document.querySelector(\"textarea[name='note[content]']\").value") }
 
     uploading_marker = I18n.t("js.image_upload.uploading", filename: "photo.png")
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until read_value.call.include?(uploading_marker) }
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 while read_value.call.include?(uploading_marker) }
+    wait_until("image upload placeholder never appeared") { read_value.call.include?(uploading_marker) }
+    wait_until("image upload never resolved to a blob URL") { !read_value.call.include?(uploading_marker) }
 
     assert_match %r{!\[\]\(/rails/active_storage/blobs/}, read_value.call
 

@@ -40,9 +40,7 @@ class NoteSortTest < ApplicationSystemTestCase
     click_on "A-Z"
     assert_equal [ "Banana", "Apple", "Cherry" ], note_titles
 
-    Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.1 until @banana.reload.is_pinned?
-    end
+    wait_until("pin PATCH never landed") { @banana.reload.is_pinned? }
 
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id)
     assert_equal [ "Banana", "Cherry", "Apple" ], note_titles

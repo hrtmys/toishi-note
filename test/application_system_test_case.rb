@@ -26,6 +26,15 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     end
   end
 
+  # For conditions no Capybara matcher can see (a DB row, a scroll
+  # offset, a transient textarea value). The message must name the
+  # awaited save or render — a bare Timeout::Error says nothing.
+  def wait_until(message)
+    Timeout.timeout(Capybara.default_max_wait_time, nil, message) do
+      sleep 0.05 until yield
+    end
+  end
+
   # System tests run a real separate browser process, so
   # SessionTestHelper's cookie-jar trick can't reach it — sign in through
   # the form instead, waiting for it to disappear before the next `visit`.

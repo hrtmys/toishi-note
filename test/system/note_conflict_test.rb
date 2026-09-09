@@ -167,7 +167,7 @@ class NoteConflictTest < ApplicationSystemTestCase
 
   private
 
-  def wait_for_content(expected)
-    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until @note.reload.content == expected }
-  end
+    def wait_for_content(expected)
+      wait_until("autosave never persisted #{expected.inspect}") { @note.reload.content == expected }
+    end
 end
