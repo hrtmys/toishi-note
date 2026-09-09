@@ -6,6 +6,28 @@ class OrganizeTest < ApplicationSystemTestCase
     sign_in_as users(:one)
   end
 
+  # prompt-form needs a real prompt dialog, which only a browser can
+  # drive — one rename test carries that coverage for all CRUD uses.
+  test "renaming a notebook from Organize stays in Organize AND updates the sidebar immediately" do
+    notebook = users(:one).notebooks.create!(name: "Old Name")
+
+    visit root_url(notebook_id: notebook.id)
+    click_on "Toishi Note"
+
+    within "#organize_notebook_#{notebook.id}" do
+      accept_prompt(with: "New Name") { click_on I18n.t("home.common.rename") }
+    end
+
+    # Still in Organize (a full re-render of the same view, not left it)...
+    assert_text I18n.t("home.organize.heading")
+    assert_text "New Name"
+    # ...and the plain sidebar (rendered alongside Organize, not replaced by
+    # it) reflects the change too.
+    within "#notebooks-list" do
+      assert_text "New Name"
+    end
+  end
+
   test "clicking the logo opens Organize, showing the full notebook/folder/note tree" do
     notebook = users(:one).notebooks.create!(name: "Organize Notebook")
     folder = notebook.folders.create!(name: "Organize Folder")
@@ -48,11 +70,8 @@ class OrganizeTest < ApplicationSystemTestCase
     assert_no_selector "input[value='999999']"
   end
 
-  # Notebook/folder/note rename/create/delete through Organize are thin
-  # prompt-form submissions onto Notebooks/Folders/NotesController, which
-  # own 40+ tests including the stay-in-Organize redirects and the
-  # sidebar re-renders — no browser needed for those. Only Organize's own
-  # navigation (open/back/stale-id) and the SortableJS drags stay here.
+  # Remaining rename/create/delete go through their controllers (40+
+  # tests) — only Organize's own navigation and drags stay here.
   test "dragging a folder above another one reorders them within the notebook, persisted across reload" do
     notebook = users(:one).notebooks.create!(name: "Organize Notebook")
     folder_a = notebook.folders.create!(name: "Folder A")

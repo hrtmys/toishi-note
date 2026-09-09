@@ -6,12 +6,9 @@ class AdminPanelTest < ApplicationSystemTestCase
     sign_in_as users(:admin)
   end
 
-  # Invite / invalid-invite / reset-link / remove / self-remove are all
-  # covered by Admin::UsersControllerTest (10 tests, including the
-  # readonly one-time-link inputs locked via assert_select above) — no
-  # browser needed. Only the JS-only navigation hijack stays here: it
-  # needs a real localStorage + Turbo navigation, which no
-  # controller test can provide.
+  # Invite/remove/reset are covered by Admin::UsersControllerTest — only
+  # the localStorage navigation hijack needs a real browser (see
+  # navigation_controller.js).
   test "a stale lastPath from a previous note-editor visit doesn't yank the admin off this page" do
     # localStorage is shared per browser origin, not per account — a value
     # left over from an earlier login (or a member account on the same

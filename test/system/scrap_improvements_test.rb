@@ -42,10 +42,22 @@ class ScrapImprovementsTest < ApplicationSystemTestCase
     assert_equal "First fragment\n\n---\n\nSecond fragment", page.evaluate_script("window.__copiedText")
   end
 
-  # Source-tag persistence is covered by ScrapItemsControllerTest ("should
-  # update the optional source tag" + blank-valid); the polling wait here
-  # added nothing but a Timeout failure mode. Only the hover/confirm UI
-  # path, the clipboard toast, and the collapse toggle stay.
+  # The endpoint is covered by ScrapItemsControllerTest, but the browser
+  # wiring (change event → fetch) is JS-only, so one test stays here.
+  test "setting an optional source tag on a scrap item persists it" do
+    item = @note.scrap_items.create!(content: "From a chat")
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    row = find("#scrap_item_#{item.id}")
+    row.hover
+    row.fill_in "source", with: "ChatGPT conversation"
+    row.find_field("source").native.send_keys(:tab) # blur to trigger the change event
+
+    # Fire-and-forget save with no UI signal — poll the DB briefly.
+    Timeout.timeout(Capybara.default_max_wait_time) { sleep 0.1 until item.reload.source.present? }
+    assert_equal "ChatGPT conversation", item.source
+  end
+
   test "long scrap content collapses, with a working Show more/less toggle" do
     # Separate paragraphs, so they reliably stack vertically regardless of
     # container width — unlike single newlines, which Markdown collapses

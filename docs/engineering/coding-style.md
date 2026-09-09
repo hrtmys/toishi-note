@@ -24,9 +24,11 @@ Ride Rails' conventions, don't fight them. Anything a linter can settle mechanic
 ## Comments
 
 - **Write comments in English**, same reasoning as [docs being in English](../README.md): code is read by anyone who ends up contributing, regardless of what language the surrounding conversation happened in.
+- **One line preferred, three consecutive lines maximum** (enforced by `bin/commentlint` in `bin/ci`, new comments only). A comment that needs more room is a sign the code should be restructured — or the comment shortened.
 - **Don't narrate history in comments.** No `# added: ...` / `# changed: ...` style comments — that's git history's job, and a comment like that goes stale (and starts lying) the moment it's no longer recent. Only comment on *why* the code is the way it is.
   - Bad: `# changed from nullify to destroy`
   - Good: `# Deleting a folder cascades to its notes, so none are orphaned`
+- **Don't restate what the code already says.** Most code — and therefore most AI readers — needs no comment at all. No comment-code-comment sandwiches explaining a single statement from both sides; if the *why* takes one line, one line is the whole comment.
 - **Don't mark block boundaries with comments.** Something like `# end of this section` is redundant — Ruby's `end` and method boundaries already make that clear.
 
 ## Tests

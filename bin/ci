@@ -68,6 +68,13 @@ STEPS = [
     summarize: ->(log) { log[/^\d+ files? inspected,.*$/] || "see log" }
   ),
   Step.new(
+    name: "comment_convention",
+    label: "commentlint",
+    blocking: true,
+    command: "bin/commentlint",
+    summarize: ->(log) { log[/^commentlint: .*$/] || "see log" }
+  ),
+  Step.new(
     name: "brakeman",
     label: "brakeman",
     blocking: true,

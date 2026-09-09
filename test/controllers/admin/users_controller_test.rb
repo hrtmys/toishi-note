@@ -37,10 +37,12 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     get admin_users_path
 
     assert_response :success
-    # The Remove button's confirm names the teammate's notebook count, so a
-    # misclick can't silently nuke data — locked here so no system test
-    # has to be. Scoped by email: users(:one) owns exactly notebooks(:one).
+    # The Remove confirm names the teammate's notebook count (scoped by
+    # email here: users(:one) owns exactly notebooks(:one)).
     assert_select "form[data-turbo-confirm*='Remove one@example.com'][data-turbo-confirm*='permanently deletes 1 notebook']", count: 1
+    # ...and the admin's own row must offer no Remove button at all (the
+    # server would refuse it anyway — this is about not offering).
+    assert_select "form[data-turbo-confirm*='Remove admin@example.com']", count: 0
   end
 
   test "an admin invites a teammate without ever choosing their password" do

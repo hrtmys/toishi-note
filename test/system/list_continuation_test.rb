@@ -69,14 +69,9 @@ class ListContinuationTest < ApplicationSystemTestCase
     textarea.click
     textarea.send_keys("- first")
 
-    # Assigning textarea.value would wipe the browser's undo stack; the
-    # controller must use document.execCommand("insertText") instead. A
-    # real Ctrl+Z assertion used to live here, but Chrome's undo
-    # coalescing granularity is a browser internal — newer versions merge
-    # the whole typed line into one undo step, so it failed
-    # deterministically with no app change. Spying on execCommand locks
-    # the behavior we own (the insertion path) without depending on the
-    # browser's undo grouping.
+    # .value assignment would wipe the browser's undo stack; the
+    # controller must use execCommand("insertText") instead. Chrome's undo
+    # grouping changed under us, so spy the call instead of asserting undo.
     page.execute_script(<<~JS)
       window.__execCommandCalls = []
       const original = document.execCommand.bind(document)

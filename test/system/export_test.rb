@@ -10,10 +10,8 @@ class ExportTest < ApplicationSystemTestCase
     @note = @folder.notes.create!(title: "Sample Note", content: "# Hi", note_type: "md", notebook: @notebook)
   end
 
-  # The two export-link hrefs are static markup, covered by
-  # HomeControllerTest ("the editor export link and the sidebar notebook
-  # export icon...") via assert_select — no browser needed. Only the
-  # actual download behavior stays here.
+  # Both hrefs are covered by HomeControllerTest via assert_select.
+  # Only the actual download behavior stays here.
   test "clicking Export downloads without navigating away from the editor" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 
