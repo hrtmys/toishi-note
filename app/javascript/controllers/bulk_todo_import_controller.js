@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import * as bootstrap from "bootstrap"
 import { t } from "../lib/translations"
+import { hideModal, installModalHideQueue } from "../lib/modal"
 
 // Renders a live preview of a pasted JSON array of TODO tasks so a typo
 // is visible before submitting. Convenience only — the server re-parses
@@ -10,6 +11,9 @@ export default class extends Controller {
 
   connect() {
     this.modal = bootstrap.Modal.getOrCreateInstance(this.element)
+    // Opens via data-bs-toggle, so no show() of ours — the show-event
+    // half of the queue still guards against a stale hide on reopen.
+    this.modalState = installModalHideQueue(this.element, () => this.modal)
   }
 
   preview() {
@@ -112,7 +116,7 @@ export default class extends Controller {
     if (event.detail.success) {
       this.formTarget.reset()
       this.reset()
-      this.modal.hide()
+      hideModal(this.modalState, this.modal)
     }
   }
 }

@@ -147,4 +147,18 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_operator notebook_preload_queries, :<=, 1,
       "expected @folders to be eager-loaded with :notebook (<= 1 such query), got #{notebook_preload_queries}"
   end
+
+  test "the editor export link and the sidebar notebook export icon point at the export endpoints" do
+    # Absorbs ExportTest's two href system tests: an href is static markup,
+    # fully covered by assert_select without a browser.
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Note", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+
+    assert_response :success
+    assert_select "a[href=?]", export_note_path(note), text: I18n.t("home.common.export")
+    assert_select "#notebooks-list a[title=?][href=?]", I18n.t("home.notebooks.export"), export_notebook_path(notebook)
+  end
 end

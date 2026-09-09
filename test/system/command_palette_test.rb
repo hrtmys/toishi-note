@@ -47,6 +47,10 @@ class CommandPaletteTest < ApplicationSystemTestCase
     visit_note(matching)
 
     press_ctrl_p
+    # The shown handler clears the input — typing first loses the query
+    # on slow runners, so wait for the focus it sets at the end.
+    assert_selector "#paletteModal.show"
+    assert_selector "[data-palette-target='input']:focus"
     find("[data-palette-target='input']").fill_in with: "Ruby"
 
     within "#paletteModal" do
@@ -58,6 +62,19 @@ class CommandPaletteTest < ApplicationSystemTestCase
     assert_no_selector "#paletteModal.show"
     # Never navigated away from the note that was open before Ctrl+P.
     assert_current_path root_path(notebook_id: @notebook.id, folder_id: @folder.id, note_id: matching.id)
+  end
+
+  test "Escape pressed immediately after opening still closes the palette" do
+    # Regression net for hide-during-show-transition (see lib/modal.js):
+    # no waits on purpose, so this lands inside the fade on any machine.
+    note = create_note("Only Note")
+    visit_note(note)
+
+    press_ctrl_p
+    find("[data-palette-target='input']").send_keys(:escape)
+
+    assert_no_selector "#paletteModal.show"
+    assert_current_path root_path(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
   end
 
   test "ArrowDown/ArrowUp move the selection before Enter confirms it" do

@@ -18,42 +18,8 @@ class SetupFlowTest < ApplicationSystemTestCase
     assert_predicate User.last, :member?
   end
 
-  test "team mode creates an admin account, with a plain username instead of an email" do
-    visit new_setup_path
-
-    choose I18n.t("setup.mode_team"), allow_label_click: true
-    fill_in I18n.t("auth.email_or_username"), with: "it-admin"
-    fill_in I18n.t("activerecord.attributes.user.password"), with: "password", match: :prefer_exact
-    fill_in I18n.t("activerecord.attributes.user.password_confirmation"), with: "password"
-    click_on I18n.t("setup.create_account")
-
-    assert_text I18n.t("admin.users.title")
-    assert_predicate User.last, :admin?
-    assert_equal "it-admin", User.last.email_address
-  end
-
-  test "an admin account created with a username can sign back in with it" do
-    visit new_setup_path
-    choose I18n.t("setup.mode_team"), allow_label_click: true
-    fill_in I18n.t("auth.email_or_username"), with: "it-admin"
-    fill_in I18n.t("activerecord.attributes.user.password"), with: "password", match: :prefer_exact
-    fill_in I18n.t("activerecord.attributes.user.password_confirmation"), with: "password"
-    click_on I18n.t("setup.create_account")
-    assert_text I18n.t("admin.users.title")
-
-    click_on I18n.t("home.sign_out")
-
-    # Sign-out redirects via Turbo, landing a beat after click_on returns —
-    # wait for the field itself (not just any text on the page) before
-    # typing into it, the same defensive wait sign_in_as uses elsewhere.
-    assert_selector "input[name='email_address']:not([disabled])"
-    fill_in I18n.t("auth.email_or_username"), with: "it-admin"
-    fill_in I18n.t("activerecord.attributes.user.password"), with: "password"
-    click_on I18n.t("sessions.sign_in")
-
-    assert_text I18n.t("admin.users.title")
-  end
-
+  # Team/usernames are covered by SetupControllerTest. The trusted-header
+  # toggle is JS-only and the headerless submit guards error display.
   test "an invalid setup submission shows the error instead of nothing" do
     visit new_setup_path
 
@@ -85,9 +51,8 @@ class SetupFlowTest < ApplicationSystemTestCase
     end
   end
 
-  # Selenium can't fake a Cloudflare Access header — this is the scenario
-  # a deployer would hit toggling this on before finishing reverse-proxy
-  # setup; previously bitten by a Turbo-swallowed error response here.
+  # The 422 itself is covered by SetupControllerTest — this proves the
+  # error reaches the screen instead of being swallowed on the way.
   test "submitting Cloudflare Access without an actual trusted header shows an error instead of nothing" do
     with_trusted_header_auth do
       visit new_setup_path

@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import * as bootstrap from "bootstrap"
+import { hideModal, installModalHideQueue, showModal } from "../lib/modal"
 
 // The Ctrl+P / Cmd+P command palette. The initial list needs no fetch:
 // HomeController#index already renders recently-viewed notes into the
@@ -10,6 +11,7 @@ export default class extends Controller {
 
   connect() {
     this.modal = bootstrap.Modal.getOrCreateInstance(this.element)
+    this.modalState = installModalHideQueue(this.element, () => this.modal)
     this.searchTimeout = null
 
     // Window-scoped since the point is opening the palette from anywhere.
@@ -47,7 +49,7 @@ export default class extends Controller {
       this.inputTarget.focus()
     }, { once: true })
 
-    this.modal.show()
+    showModal(this.modalState, this.modal)
   }
 
   // Debounced, and lets Turbo do the fetch by setting the results frame's
@@ -88,7 +90,7 @@ export default class extends Controller {
         this.visitSelected()
         break
       case "Escape":
-        this.modal.hide()
+        hideModal(this.modalState, this.modal)
         break
     }
   }
@@ -107,7 +109,7 @@ export default class extends Controller {
   visit(url) {
     if (!url) return
 
-    this.modal.hide()
+    hideModal(this.modalState, this.modal)
     window.Turbo.visit(url)
   }
 

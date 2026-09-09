@@ -50,6 +50,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          # bin/commentlint diffs against the merge-base, so it needs
+          # full history, not the default shallow checkout.
+          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -68,6 +72,9 @@ jobs:
 
       - name: Lint code for consistent style
         run: bin/rubocop -f github
+
+      - name: Lint new comments for the comment convention
+        run: bin/commentlint
 
   test:
     runs-on: ubuntu-latest

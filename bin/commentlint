@@ -1,0 +1,80 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Enforces the comment convention (docs/engineering/coding-style.md) on
+# newly written comments only: at most 3 consecutive comment lines.
+# Pre-existing blocks are grandfathered — this guards what AI and humans
+# write from here on, without forcing a repo-wide rewrite (generated
+# files like db/schema.rb would never comply).
+#
+# Compared against the merge-base with origin/master, using the working
+# tree (so uncommitted edits are checked too). Needs full git history;
+# CI checks out with fetch-depth: 0 for exactly this reason.
+require "open3"
+
+MAX_CONSECUTIVE = 3
+TRACKED_EXTENSIONS = %w[.rb .js].freeze
+
+def fail_with(message)
+  warn message
+  exit 1
+end
+
+base, status = Open3.capture2("git", "merge-base", "HEAD", "origin/master")
+fail_with(<<~MSG) unless status.success?
+  commentlint: cannot determine the merge-base with origin/master.
+  Fetch full history first (git fetch --unshallow / fetch-depth: 0).
+MSG
+base = base.strip
+
+files, _ = Open3.capture2("git", "diff", "--name-only", base, "--")
+offenses = []
+
+files.split("\n").each do |file|
+  next unless TRACKED_EXTENSIONS.include?(File.extname(file))
+  next unless File.file?(file)
+
+  added = []
+  diff, _ = Open3.capture2("git", "diff", "-U0", base, "--", file)
+  diff.scan(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/) do |start, count|
+    count = count ? count.to_i : 1
+    added.concat((start.to_i...(start.to_i + count)).to_a) if count.positive?
+  end
+  next if added.empty?
+
+  lines = begin
+    File.readlines(file, encoding: "UTF-8")
+  rescue StandardError
+    next
+  end
+  lines << ""
+  run_start = nil
+  lines.each_with_index do |line, index|
+    if line.match?(/^\s*(#|\/\/)/)
+      run_start = index if run_start.nil?
+    else
+      if !run_start.nil? && index - run_start > MAX_CONSECUTIVE
+        run_lines = ((run_start + 1)..index).to_a
+        offenses << [ file, run_lines.first ] if (run_lines & added).any?
+      end
+      run_start = nil
+    end
+  end
+end
+
+if offenses.any?
+  puts "COMMENT CONVENTION VIOLATIONS (#{offenses.size}):"
+  offenses.each { |file, line| puts "  #{file}:#{line} — more than #{MAX_CONSECUTIVE} consecutive comment lines" }
+  puts <<~MSG
+
+    Comment convention (docs/engineering/coding-style.md#comments):
+    comments must be English, one line preferred, three consecutive lines
+    maximum. Write a comment only where the code alone does not explain
+    itself — state the non-obvious WHY, never restate WHAT the code does.
+    Split longer explanations; delete anything a reader (human or AI)
+    can already see in the code.
+  MSG
+  exit 1
+end
+
+puts "commentlint: no new violations (#{files.split("\n").size} files changed vs merge-base)"
