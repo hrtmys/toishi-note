@@ -56,8 +56,9 @@ describe("hideModal", () => {
     const modal = fakeModal()
     const state = installModalHideQueue(element, () => modal)
 
+    // Bootstrap's hide() returns early here, so no hidden event follows.
     hideModal(state, modal)
-    element.fire("hidden.bs.modal")
+    element.fire("show.bs.modal")
     element.fire("shown.bs.modal")
 
     assert.equal(modal.hides, 1)
