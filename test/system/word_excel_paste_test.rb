@@ -73,82 +73,6 @@ class WordExcelPasteTest < ApplicationSystemTestCase
     </html>
   HTML
 
-  # Trimmed from a real-world paste — a merged rowspan header cell
-  # leaving a cell-less <tr> behind. expandMergedCells must not
-  # introduce a phantom duplicate row when filling in covered cells.
-  EXCEL_ROWSPAN_HEADER_HTML = <<~HTML
-    <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-    <body>
-    <table border=0 cellpadding=0 cellspacing=0 width=140>
-     <col width=70 span=2>
-     <tr height=25>
-      <td rowspan=2 class=xl69 width=70>group</td>
-      <td rowspan=2 class=xl71 width=70>count</td>
-     </tr>
-     <tr height=25>
-     </tr>
-     <tr height=25>
-      <td height=25 class=xl67 width=70>sample</td>
-      <td class=xl68>18</td>
-     </tr>
-    </table>
-    </body>
-    </html>
-  HTML
-
-  # A grouped header spanning multiple columns (colspan). The header row
-  # has fewer physical cells than the data rows; without expanding the
-  # merge first, the mismatch misaligns every column once GFM renders it.
-  EXCEL_COLSPAN_HEADER_HTML = <<~HTML
-    <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-    <body>
-    <table border=0 cellpadding=0 cellspacing=0 width=280>
-     <col width=70 span=4>
-     <tr height=25>
-      <td colspan=2 class=xl69 width=140>Group A</td>
-      <td colspan=2 class=xl69 width=140>Group B</td>
-     </tr>
-     <tr height=25>
-      <td class=xl67 width=70>Name</td>
-      <td class=xl67 width=70>Score</td>
-      <td class=xl67 width=70>Name</td>
-      <td class=xl67 width=70>Score</td>
-     </tr>
-     <tr height=25>
-      <td class=xl68 width=70>Alice</td>
-      <td class=xl68>90</td>
-      <td class=xl68 width=70>Bob</td>
-      <td class=xl68>85</td>
-     </tr>
-    </table>
-    </body>
-    </html>
-  HTML
-
-  # A full-width title row ahead of the real header row. Naive first-row
-  # promotion would make that title the <thead>, showing identical title
-  # text in every column instead of the real per-column labels below.
-  EXCEL_TITLE_ROW_HTML = <<~HTML
-    <html xmlns:x="urn:schemas-microsoft-com:office:excel">
-    <body>
-    <table border=0 cellpadding=0 cellspacing=0 width=140>
-     <col width=70 span=2>
-     <tr height=25>
-      <td colspan=2 class=xl92 width=140>Summary</td>
-     </tr>
-     <tr height=25>
-      <td class=xl67 width=70>Name</td>
-      <td class=xl67 width=70>Score</td>
-     </tr>
-     <tr height=25>
-      <td class=xl68 width=70>Alice</td>
-      <td class=xl68>90</td>
-     </tr>
-    </table>
-    </body>
-    </html>
-  HTML
-
   # A minimal valid 1x1 PNG, base64-encoded — matches the fixture used by
   # ImageAttachmentsTest — standing in for the rendered-selection image a
   # real Excel/Sheets clipboard always adds alongside the table HTML.
@@ -297,60 +221,9 @@ class WordExcelPasteTest < ApplicationSystemTestCase
     assert_equal value_after_first_convert, evaluate_textarea_value
   end
 
-  test "Convert to Markdown handles a merged (rowspan) header cell cleanly, without a phantom empty row" do
-    users(:one).update!(table_paste_enabled: true)
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
-
-    dispatch_paste(EXCEL_ROWSPAN_HEADER_HTML, plain_text: "group\tcount\n\nsample\t18")
-    find(".editor-fab-button").click
-    click_on I18n.t("editor.fab.convert_table_paste")
-
-    value = evaluate_textarea_value
-    assert_match(/\|\s*group\s*\|\s*count\s*\|/, value)
-    assert_match(/\|\s*-+\s*\|\s*-+\s*\|/, value)
-    assert_match(/\|\s*sample\s*\|\s*18\s*\|/, value)
-    # The row the rowspan header merges into has no cells of its own —
-    # it must not resurface as a separate, blank table row.
-    assert_no_match(/^\s*\|\s*\|\s*\|\s*$/, value)
-  end
-
-  test "Convert to Markdown keeps every row's column count consistent for a colspan-grouped header" do
-    users(:one).update!(table_paste_enabled: true)
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
-
-    dispatch_paste(EXCEL_COLSPAN_HEADER_HTML, plain_text: "Group A\t\tGroup B\t\nName\tScore\tName\tScore\nAlice\t90\tBob\t85")
-    find(".editor-fab-button").click
-    click_on I18n.t("editor.fab.convert_table_paste")
-
-    value = evaluate_textarea_value
-    table_rows = value.lines.map(&:strip).select { |line| line.start_with?("|") }
-    assert_equal 4, table_rows.size, "expected a header, a separator, and two data rows:\n#{table_rows.join("\n")}"
-
-    column_counts = table_rows.map { |row| row.count("|") }
-    assert_equal 1, column_counts.uniq.size,
-      "every row must have the same column count — the colspan header must not leave later rows misaligned:\n#{table_rows.join("\n")}"
-
-    assert_match(/Alice.*90.*Bob.*85/, table_rows.last)
-  end
-
-  test "Convert to Markdown promotes the real header, not a full-width title row" do
-    users(:one).update!(table_paste_enabled: true)
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
-
-    dispatch_paste(EXCEL_TITLE_ROW_HTML, plain_text: "Summary\nName\tScore\nAlice\t90")
-    find(".editor-fab-button").click
-    click_on I18n.t("editor.fab.convert_table_paste")
-
-    value = evaluate_textarea_value
-    assert_match(/\|\s*Alice\s*\|\s*90\s*\|/, value)
-
-    # The title must not have become the column header — a duplicated
-    # "Summary" body row further down is fine; what matters is the <thead>.
-    table_rows = value.lines.map(&:strip).select { |line| line.start_with?("|") }
-    assert_equal "| Name | Score |", table_rows.first
-    assert_match(/^\|\s*-+\s*\|\s*-+\s*\|$/, table_rows.second)
-  end
-
+  # Table shapes (rowspan/colspan/title-row) are locked in
+  # test/javascript/html_to_markdown.test.js — the Convert button wiring
+  # above is the only browser part, so only it stays here.
   test "pasting a plain image, with no HTML alongside it, is still handled as an image upload" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 

@@ -22,35 +22,21 @@ class TextFormattingTest < ApplicationSystemTestCase
   test "text formatting modal applies selected transformations" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 
-    # Open the FAB, then the formatting submenu inside it
     find(".editor-fab-button").click
     find("button[title='#{I18n.t("editor.fab.quick_formatting_title")}']").click
-
-    # Wait for the submenu itself, not just its first checkbox — a plain
-    # d-none check can pass a beat before layout of the unhidden subtree finishes.
     assert_selector ".editor-fab-submenu:not(.d-none)"
 
-    # Select all transformation options
+    # All five keys in one shot: a typo silently disables one transform.
+    # Each transform alone lives in test/javascript/text_format.test.js.
     find("#fmtFullwidth").check
     find("#fmtPunct").check
     find("#fmtNumJp").check
     find("#fmtNewlines").check
     find("#fmtBrackets").check
 
-    # Apply formatting
     find("button", text: I18n.t("editor.fab.apply")).click
 
-    # Verify textarea content has been transformed
-    textarea = find("textarea[name='note[content]']")
-    value = textarea.value
-
-    # Fullwidth digits -> halfwidth digits
-    assert_match /1234567890/, value
-    # Removes the space between a number and Japanese text ("1000 と" -> "1000と")
-    assert_no_match /1000\s+と/, value
-    # Collapses consecutive blank lines into one
-    assert_no_match /\n{2,}/, value
-    # Removes text wrapped in []
-    assert_no_match /\[削除したい\]/, value
+    assert_equal "1234567890\n1000と 文字 の間 の 空白\n行1行2\n",
+      find("textarea[name='note[content]']").value
   end
 end

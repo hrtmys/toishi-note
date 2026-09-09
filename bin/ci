@@ -30,6 +30,12 @@ def minitest_summary(log)
   log[/^\d+ runs?,.*$/] || "no summary line found — see log"
 end
 
+def tap_failures(log)
+  # Same idea for `node --test --test-reporter=tap`: one "not ok" line
+  # per failing test, without the YAML diagnostics block that follows.
+  log.scan(/^not ok \d+ - (.+)$/).flatten.map(&:strip).uniq
+end
+
 def minitest_failures(log)
   # Just the failing/erroring test names (Minitest always prints one
   # right after "Failure:"/"Error:"), not their backtraces — enough to
@@ -52,6 +58,17 @@ STEPS = [
     blocking: true,
     command: "bin/rails test",
     summarize: ->(log) { minitest_summary(log) }
+  ),
+  Step.new(
+    name: "js_tests",
+    label: "yarn test:js",
+    blocking: true,
+    command: "yarn test:js",
+    summarize: ->(log) {
+      pass = log[/^# pass (\d+)/, 1]
+      fail = log[/^# fail (\d+)/, 1]
+      (pass && fail) ? "#{pass} pass, #{fail} fail" : "see log"
+    }
   ),
   Step.new(
     name: "rails_test_system",
@@ -148,7 +165,13 @@ def run_step(step, log_dir)
     summary: step.summarize.call(output),
     seconds: elapsed,
     log_path: log_path,
-    failure_detail: (minitest_failures(output) if status == :fail && step.name.start_with?("rails_test"))
+    failure_detail: (
+      if status == :fail && step.name.start_with?("rails_test")
+        minitest_failures(output)
+      elsif status == :fail && step.name == "js_tests"
+        tap_failures(output)
+      end
+    )
   )
 end
 
