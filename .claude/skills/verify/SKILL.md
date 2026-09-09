@@ -5,7 +5,7 @@ description: Run this project's full pre-merge verification (tests, lint, securi
 
 # Verify
 
-This repo has a single entry point for "is this branch good to merge": `bin/ci`. It runs `yarn build`, `bin/rails test`, `bin/rails test:system`, RuboCop, commentlint, Brakeman, `bundler-audit`, and `yarn audit` — the same gauntlet every PR in this project's history has gone through — and prints one line per step instead of each tool's full output. See `docs/engineering/verification.md` for why each step exists and what counts as blocking vs. advisory.
+This repo has a single entry point for "is this branch good to merge": `bin/ci`. It runs `yarn build`, `bin/rails test`, `yarn test:js`, `bin/rails test:system`, RuboCop, commentlint, Brakeman, `bundler-audit`, and `yarn audit` — the same gauntlet every PR in this project's history has gone through — and prints one line per step instead of each tool's full output. See `docs/engineering/verification.md` for why each step exists and what counts as blocking vs. advisory.
 
 **Do not reconstruct this gauntlet by hand.** Do not run `bin/rails test`, `bin/rails test:system`, `bin/rubocop`, `bin/brakeman`, `bin/bundler-audit`, or `yarn audit` as separate tool calls and read each one's full output — that is the exact pattern this skill exists to replace, and it burns a conversation's context on output that is 99% "this passed" noise. One `bin/ci` call gives the same information in a fraction of the tokens.
 

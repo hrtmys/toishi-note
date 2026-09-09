@@ -1,48 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
+import { parseListMarker, currentLine } from "../lib/list_marker"
 
 // Continues Markdown list markers on Enter, removing an empty marker
 // instead of continuing it forever. Also lets Tab/Shift+Tab indent a
 // list line. Deliberately small, not a step towards CodeMirror.
-
-// Recognizes five marker shapes: "-", "*", "1.", "- [ ]" (task list), and
-// ">". Task-list is checked first since it's a superset of bare bullet.
-function parseListMarker(line) {
-  let m
-
-  m = line.match(/^(\s*)([-*])(\s+)\[([ xX])\](\s*)/)
-  if (m) {
-    return {
-      full: m[0],
-      rest: line.slice(m[0].length),
-      // A continued task starts unchecked, regardless of whether the
-      // item it followed was checked — carrying a checkmark forward
-      // onto a brand new, not-yet-done item would be actively wrong.
-      continued: `${m[1]}${m[2]}${m[3]}[ ]${m[5]}`
-    }
-  }
-
-  m = line.match(/^(\s*)([-*])(\s+)/)
-  if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: m[0] }
-  }
-
-  m = line.match(/^(\s*)(\d+)([.)])(\s+)/)
-  if (m) {
-    const nextNumber = parseInt(m[2], 10) + 1
-    return {
-      full: m[0],
-      rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${m[4]}`
-    }
-  }
-
-  m = line.match(/^(\s*)(>)(\s*)/)
-  if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: m[0] }
-  }
-
-  return null
-}
 
 export default class extends Controller {
   keydown(event) {
@@ -67,7 +28,7 @@ export default class extends Controller {
     // sense — leave it to the browser's normal behavior.
     if (selectionStart !== selectionEnd) return
 
-    const { lineStart, lineEnd, line } = this.currentLine(value, selectionStart)
+    const { lineStart, lineEnd, line } = currentLine(value, selectionStart)
     const marker = parseListMarker(line)
     if (!marker) return
 
@@ -90,7 +51,7 @@ export default class extends Controller {
   handleTab(event) {
     const textarea = event.target
     const { selectionStart, selectionEnd, value } = textarea
-    const { lineStart, line } = this.currentLine(value, selectionStart)
+    const { lineStart, line } = currentLine(value, selectionStart)
 
     // Tab is only ever special-cased on a list line; anywhere else it
     // keeps its normal browser meaning (move focus).
@@ -114,12 +75,5 @@ export default class extends Controller {
       document.execCommand("insertText", false, "  ")
       textarea.setSelectionRange(selectionStart + 2, selectionEnd + 2)
     }
-  }
-
-  currentLine(value, caretPosition) {
-    const lineStart = value.lastIndexOf("\n", caretPosition - 1) + 1
-    const nextNewline = value.indexOf("\n", caretPosition)
-    const lineEnd = nextNewline === -1 ? value.length : nextNewline
-    return { lineStart, lineEnd, line: value.slice(lineStart, lineEnd) }
   }
 }

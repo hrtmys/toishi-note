@@ -40,6 +40,9 @@ jobs:
       - name: Install JavaScript dependencies
         run: yarn install --immutable
 
+      - name: Run JavaScript unit tests
+        run: yarn test:js
+
       - name: Scan for known security vulnerabilities in npm packages used
         run: yarn audit
 

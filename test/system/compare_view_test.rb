@@ -48,20 +48,8 @@ class CompareViewTest < ApplicationSystemTestCase
     end
   end
 
-  test "pasting text into Before/After highlights the word-level diff between them" do
-    open_compare_modal
-
-    within "#compareModal" do
-      set_field "#compareBefore", "The quick brown fox"
-      set_field "#compareAfter", "The quick red fox jumps"
-
-      assert_no_text I18n.t("compare.empty")
-      assert_selector "del.diff-removed", text: "brown"
-      assert_selector "ins.diff-added", text: "red"
-      assert_selector "ins.diff-added", text: "jumps"
-    end
-  end
-
+  # Word-level rendering is locked in test/javascript/text_diff.test.js.
+  # Only the modal wiring stays here.
   test "identical Before/After text shows an explicit 'no differences' message" do
     open_compare_modal
 

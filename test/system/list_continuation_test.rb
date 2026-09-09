@@ -7,14 +7,10 @@ class ListContinuationTest < ApplicationSystemTestCase
     @folder = @notebook.folders.create!(name: "Test Folder")
   end
 
-  # Each pair is [ starting marker text, expected continued marker on the
-  # next line ] — see list_continuation_controller.js's parseListMarker.
+  # Full matrix in test/javascript/list_marker.test.js; the browser
+  # keeps one shape per path (identical wiring otherwise).
   MARKERS = {
-    "bullet dash" => [ "- ", "- " ],
-    "bullet star" => [ "* ", "* " ],
-    "ordered" => [ "1. ", "2. " ],
-    "task list" => [ "- [ ] ", "- [ ] " ],
-    "blockquote" => [ "> ", "> " ]
+    "bullet dash" => [ "- ", "- " ]
   }
 
   MARKERS.each do |name, (marker, continued)|
