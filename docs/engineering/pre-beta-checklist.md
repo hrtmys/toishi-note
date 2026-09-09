@@ -112,7 +112,7 @@ The three comments this item originally flagged (`layouts/application.html.erb`,
 
 Not release-blocking, but each is something a reviewer will notice.
 
-All done except the last one:
+All done (the last one landed post-beta):
 
 - ~~There is no Content Security Policy.~~ — done (`script-src 'self'`, no `unsafe-inline`; see `config/initializers/content_security_policy.rb`).
 - ~~Kamal is half-configured scaffolding that isn't used.~~ — done (removed entirely).
@@ -120,7 +120,7 @@ All done except the last one:
 - ~~Nullable booleans with no database default~~ — done (`notes.is_pinned`, `todo_items.is_checked` are both `null: false, default: false`).
 - ~~`notebooks.name` and `folders.name` are nullable`~~ — done (both `null: false` in the schema now).
 - ~~`navigation_controller.js#disconnect` passes a freshly-bound function to `removeEventListener`~~ — done, fixed alongside the sidebar-scroll rework (see `scroll_controller.js`'s pattern, now copied there too).
-- **`Note#todo_completion_percentage` issues three COUNT queries per render** (`todo_items_total_count` twice, `todo_items_completed_count` once), in a partial that re-renders on every TODO interaction. Still open — low severity, not a correctness issue.
+- ~~`Note#todo_completion_percentage` issues three COUNT queries per render~~ (`todo_items_total_count` twice, `todo_items_completed_count` once), in a partial that re-renders on every TODO interaction. — done post-beta (single grouped query, memoized per render).
 
 ## 12. Found during the pre-open-source audit (2026-08-16), not on the original list
 
