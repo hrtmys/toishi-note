@@ -87,5 +87,8 @@ application.register("note-conflict", NoteConflictController)
 import ListContinuationController from "./list_continuation_controller"
 application.register("list-continuation", ListContinuationController)
 
+import EditorShortcutsController from "./editor_shortcuts_controller"
+application.register("editor-shortcuts", EditorShortcutsController)
+
 import PaletteController from "./palette_controller"
 application.register("palette", PaletteController)

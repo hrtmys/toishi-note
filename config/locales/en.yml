@@ -70,6 +70,7 @@ en:
       delete: "Delete"
       export: "Export"
       add: "Add"
+      more_actions: "More actions"
     notebooks:
       heading: "NOTEBOOKS"
       new_prompt: "Enter a notebook name"
@@ -266,7 +267,7 @@ en:
   # to the browser on every page load.
   js:
     copied: "Copied."
-    converted_to_markdown: "Converted to Markdown."
+    converted_to_markdown: "Converted to Markdown. Hold Shift while pasting to keep the original."
     table_paste:
       no_pending_table: "No pasted table to convert yet — paste an Excel/Sheets range first."
     organize:
