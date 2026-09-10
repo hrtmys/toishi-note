@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-09
+updated: 2026-09-10
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -132,7 +132,9 @@ Upgrade to SQLite **FTS5** only when a real corpus is actually slow, and when yo
 
 Do not fix the restore timing. Delete the guessing: **scroll the currently-active row into view** (`scrollIntoView({ block: "nearest" })`) on connect. The correct scroll position is always "where the thing you selected is," it needs no storage, and it cannot go stale. Keep `scroll_controller` only if some list genuinely has no active row.
 
-**#13 — the vanishing scratch pad.** Content lives in `sessionStorage` and nowhere else: never POSTed, never in the database, never in a backup, gone when the tab closes. That makes it the rare feature that adds real value while *shrinking* the attack surface, which fits design principle 2. Add "Send to Scrap" and "Copy" so anything worth keeping can graduate. Label it honestly in the UI — it is a *durability* guarantee, not a *security* one; browser memory and extensions can still see it, and the copy should say so.
+**#13 — the vanishing scratch pad.** Content lives in `sessionStorage` and nowhere else: never POSTed, never in the database, never in a backup, gone when the tab closes. That makes it the rare feature that adds real value while *shrinking* the attack surface, which fits design principle 2. A single local pad — no auto-save, no auto-send, no expiry mode on the pad itself. Add "Send to Scrap" and "Copy" so anything worth keeping can graduate by explicit user action only. Reuse the existing `lib/markdown_renderer.js` pipeline for preview; no new rendering library. Place it as a global section at the bottom of the sidebar (global state needs a global home; the files pane must not be taxed). Label it honestly in the UI — it is a *durability* guarantee, not a *security* one; browser memory and extensions can still see it, and the copy should say so.
+
+Offline behavior (same feature): when offline is detected (`navigator.onLine` + `online`/`offline` events), show that the app is offline and only cached notes are viewable; editing/saving is disabled with notice, but the vanishing pad keeps working locally (it needs no network by construction). Each offline save records its time; on reconnect, if sessionStorage content remains, offer once: "content saved offline at HH:MM exists — send it to the server?" with Send / Keep local / Discard. (Archive-with-expiry is a separate feature on normal notes — see §7 — not a pad mode.)
 
 **#14 — the local version.** Three separate answers, because "local" is being asked to mean three things:
 
@@ -175,7 +177,8 @@ Ordered by how much they matter, not by size.
 ### Data safety (these are the v1.0 story)
 
 - **~~Multi-device overwrite is currently silent data loss.~~ — shipped in v0.1.0.** `notes.lock_version` (Rails optimistic locking): the autosave sends/stores the version, and on conflict a banner offers reload vs. keep-mine instead of last-write-wins. Polished post-beta (conflict dialog keep/cancel UX).
-- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a 30-day window and an undo toast. **v0.4.** Still open.
+- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a retention window (default 30 days, tunable via a constant/env from the console — never a hardcoded value) and an undo toast. Trash and Archive are separate lists, never mixed. **v0.4.** Still open.
+- **Archive with expiry.** Normal Markdown notes and scrap-type notes can carry an optional archive expiry, set from a button left-aligned in the preview/edit toggle lane (toast popup: 1 hour / 1 day / 1 month / custom datetime; scrap editors get the same button next to Copy-all). Expiry is computed from the last-edited time (`updated_at`): each content update recomputes `expires_at`, reads never extend it. Past expiry the note moves from its folder into a **global Archive section** (one cross-notebook list with origin breadcrumbs — per-notebook nesting is rejected because a note whose folder is gone must still be findable) and becomes read-only: editable no more, deletable yes. Restore reparents to the original folder when it still exists, otherwise falls back to a picker (default: first folder, or create "Restored"). Data model: `notes.status` (`active`/`archived`/`trashed`) + `expires_at` + `original_folder_id`/`original_notebook_id`, swept by an hourly job. **v0.5.** Still open.
 - **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.** Still open.
 - **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see [backup.md](../engineering/backup.md)). What remains is the Account-tab status line — still a **v1.0** item.
 
@@ -243,6 +246,7 @@ No new roadmap features; stability and correctness for the beta audience:
 - Remaining editor shortcuts; paste-URL-over-selection
 - Global pinned section, cross-notebook
 - Flexible sidebar pane heights
+- Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
 
 ### v0.3.0 — Getting your notes in and finding them again
 
@@ -252,8 +256,8 @@ No new roadmap features; stability and correctness for the beta audience:
 
 ### v0.4.0 — Comfort
 
-- Vanishing scratch pad
-- Trash and undo
+- Vanishing scratch pad (sessionStorage-only single pad + offline detection with reconnect prompt — see §5 #13)
+- Trash and undo (soft-delete, configurable retention defaulting to 30 days)
 - Copy preview as PNG
 - URL title fetch (opt-in, SSRF-guarded)
 - Resizable sidebar panes; `?` cheatsheet
@@ -263,6 +267,7 @@ No new roadmap features; stability and correctness for the beta audience:
 - `[[Internal links]]`, autocomplete, unresolved-link creation
 - Backlinks panel
 - Daily note
+- Archive with expiry (global section, read-only, restore flow — see §7)
 
 ### v1.0.0 — Trust
 
