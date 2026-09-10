@@ -60,3 +60,46 @@
   color: #fff;
   border-color: #495057;
 }
+
+// B1: instant offcanvas restore (see showWithoutAnimation in
+// offcanvas_controller.js). Present only for the single show() that
+// re-opens the menu after a Turbo re-render, so notebook/folder taps
+// don't replay the slide-in animation on an already-open menu.
+.offcanvas-instant {
+  transition: none !important;
+}
+
+// B3: per-row touch menus. Hidden everywhere by default; shown only on
+// touch devices. Desktops — including Windows touchscreen laptops whose
+// primary pointer is still a mouse — keep the hover reveal above as the
+// only affordance, and row titles keep their full width there.
+.row-actions-touch {
+  display: none;
+}
+
+// B4: the note header's export/delete buttons must not reserve layout
+// while hidden — they squeezed the title down to about half width.
+// Collapse them until hovered instead; the hover reveal itself stays
+// for desktop. Touch devices use the ellipsis menu, so never flash
+// these via a tap-synthesized hover there.
+#note_editor_header .hover-target {
+  display: none;
+}
+
+#note_editor_header:hover .hover-target {
+  display: inline-block;
+}
+
+// Touch rules apply below the offcanvas breakpoint only: phones get the
+// tap-to-open menus, while desktop widths always keep hover reveal
+// (headless test browsers report hover:none at 1400px, and Windows
+// touchscreen laptops stay mouse-first there).
+@media (pointer: coarse) and (max-width: 991.98px), (hover: none) and (max-width: 991.98px) {
+  .row-actions-touch {
+    display: block;
+  }
+
+  #note_editor_header:hover .hover-target {
+    display: none;
+  }
+}
