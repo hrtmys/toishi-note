@@ -53,6 +53,28 @@
                     indefinitely, pointing at a note that no longer exists. %>
                 <%= button_to t("home.common.delete"), note_path(@current_note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm"), turbo_frame: "_top" }, class: "hover-target btn btn-outline-danger ms-2" %>
               </div>
+
+              <!-- Touch-only header menu: the export/delete buttons above are
+                  hover-revealed (and take no layout until hovered — see
+                  _home.scss), so touch devices get this tap-to-open menu
+                  instead. Shown only on coarse pointers. -->
+              <div class="dropdown row-actions-touch flex-shrink-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="dropdown" aria-expanded="false" title="<%= t("home.common.more_actions") %>" aria-label="<%= t("home.common.more_actions") %>">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <%= link_to export_note_path(@current_note), class: "dropdown-item" do %>
+                      <i class="bi bi-download me-2"></i><%= t("home.common.export") %>
+                    <% end %>
+                  </li>
+                  <li>
+                    <%= button_to note_path(@current_note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm"), turbo_frame: "_top" }, class: "dropdown-item text-danger", form: { class: "m-0" } do %>
+                      <i class="bi bi-x-lg me-2"></i><%= t("home.common.delete") %>
+                    <% end %>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <div class="flex-grow-1 mt-1 overflow-hidden d-flex flex-column">

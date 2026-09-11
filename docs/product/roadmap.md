@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-09
+updated: 2026-09-11
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -17,7 +17,7 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 
 **v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
 
-Since then (2026-08-24 → 2026-09-09) the work has been a **post-beta hardening wave**, not v0.2 features: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`). No post-v0.1 roadmap feature (editor shortcuts batch, global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL titles) has shipped yet.
+Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening wave**, then the first v0.2 slice: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`) — followed by the v0.2 editor batch (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line) plus the mobile/sidebar bug insertions B1–B5 (instant offcanvas restore, undo-preserving paste with Shift opt-out, touch ellipsis menus, unreserved title width, `*` + space + Enter continuation). Still open from the post-v0.1 plan: global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL title fetch.
 
 What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
 
@@ -49,7 +49,7 @@ Obsidian solved this with a quick switcher and links. Notion solved it with sear
 
 Everything in that list shares one UI. Do not build five entry points.
 
-*Status 2026-09-09:* items 1–2 shipped in v0.1.0 (palette: recent-first + title `LIKE` match + alternate via preselected second entry; ranking since moved into `Note.search_ranked`, with empty-state/keyboard polish). Unplanned but shipped alongside: per-user last-notebook/folder memory, which removes one re-navigation step on reload. Items 3–5 have not started — the palette still searches titles only, no `note_links` table exists, no daily note.
+*Status 2026-09-11:* items 1–2 shipped in v0.1.0 (palette: recent-first + title `LIKE` match + alternate via preselected second entry; ranking since moved into `Note.search_ranked`, with empty-state/keyboard polish). Unplanned but shipped alongside: per-user last-notebook/folder memory, which removes one re-navigation step on reload. The v0.2 editor batch from §5 #4 has since shipped too (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K`). Items 3–5 have not started — the palette still searches titles only, no `note_links` table exists, no daily note.
 
 ## 4. Differentiation, stated plainly
 
@@ -91,9 +91,9 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 15 | Presentation mode (Rabbit compatible?) | **Adopt, redefined** — built-in slide mode, plus *export* to Rabbit rather than embedding it | v1.5 |
 | 16 | Paste a URL, fetch the title | **Split** — paste-over-selection client-side; title fetch opt-in and SSRF-guarded | v0.2 / v0.4 |
 
-### Status as of 2026-09-09
+### Status as of 2026-09-11
 
-Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. #11 is partial — the sidebar now shows more than two rows and no longer snaps on click, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16, and the v0.2 half of #4.
+Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. Shipped in the v0.2 slice: #4's v0.2 half (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line, all undo-preserving and IME-safe) and #16's client-side half (paste-URL-over-selection). #11 is partial — the sidebar now shows more than two rows, no longer snaps on click, restores the offcanvas without a replayed animation, has touch ellipsis menus, and the title input fills the freed header width, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16's server-side title fetch, and global pins.
 
 ### Notes on the non-obvious calls
 
@@ -132,7 +132,9 @@ Upgrade to SQLite **FTS5** only when a real corpus is actually slow, and when yo
 
 Do not fix the restore timing. Delete the guessing: **scroll the currently-active row into view** (`scrollIntoView({ block: "nearest" })`) on connect. The correct scroll position is always "where the thing you selected is," it needs no storage, and it cannot go stale. Keep `scroll_controller` only if some list genuinely has no active row.
 
-**#13 — the vanishing scratch pad.** Content lives in `sessionStorage` and nowhere else: never POSTed, never in the database, never in a backup, gone when the tab closes. That makes it the rare feature that adds real value while *shrinking* the attack surface, which fits design principle 2. Add "Send to Scrap" and "Copy" so anything worth keeping can graduate. Label it honestly in the UI — it is a *durability* guarantee, not a *security* one; browser memory and extensions can still see it, and the copy should say so.
+**#13 — the vanishing scratch pad.** Content lives in `sessionStorage` and nowhere else: never POSTed, never in the database, never in a backup, gone when the tab closes. That makes it the rare feature that adds real value while *shrinking* the attack surface, which fits design principle 2. A single local pad — no auto-save, no auto-send, no expiry mode on the pad itself. Add "Send to Scrap" and "Copy" so anything worth keeping can graduate by explicit user action only. Reuse the existing `lib/markdown_renderer.js` pipeline for preview; no new rendering library. Place it as a global section at the bottom of the sidebar (global state needs a global home; the files pane must not be taxed). Label it honestly in the UI — it is a *durability* guarantee, not a *security* one; browser memory and extensions can still see it, and the copy should say so.
+
+Offline behavior (same feature): when offline is detected (`navigator.onLine` + `online`/`offline` events), show that the app is offline and only cached notes are viewable; editing/saving is disabled with notice, but the vanishing pad keeps working locally (it needs no network by construction). Each offline save records its time; on reconnect, if sessionStorage content remains, offer once: "content saved offline at HH:MM exists — send it to the server?" with Send / Keep local / Discard. (Archive-with-expiry is a separate feature on normal notes — see §7 — not a pad mode.)
 
 **#14 — the local version.** Three separate answers, because "local" is being asked to mean three things:
 
@@ -175,7 +177,8 @@ Ordered by how much they matter, not by size.
 ### Data safety (these are the v1.0 story)
 
 - **~~Multi-device overwrite is currently silent data loss.~~ — shipped in v0.1.0.** `notes.lock_version` (Rails optimistic locking): the autosave sends/stores the version, and on conflict a banner offers reload vs. keep-mine instead of last-write-wins. Polished post-beta (conflict dialog keep/cancel UX).
-- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a 30-day window and an undo toast. **v0.4.** Still open.
+- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a retention window (default 30 days, tunable via a constant/env from the console — never a hardcoded value) and an undo toast. Trash and Archive are separate lists, never mixed. **v0.4.** Still open.
+- **Archive with expiry.** Normal Markdown notes and scrap-type notes can carry an optional archive expiry, set from a button left-aligned in the preview/edit toggle lane (toast popup: 1 hour / 1 day / 1 month / custom datetime; scrap editors get the same button next to Copy-all). Expiry is computed from the last-edited time (`updated_at`): each content update recomputes `expires_at`, reads never extend it. Past expiry the note moves from its folder into a **global Archive section** (one cross-notebook list with origin breadcrumbs — per-notebook nesting is rejected because a note whose folder is gone must still be findable) and becomes read-only: editable no more, deletable yes. Restore reparents to the original folder when it still exists, otherwise falls back to a picker (default: first folder, or create "Restored"). Data model: `notes.status` (`active`/`archived`/`trashed`) + `expires_at` + `original_folder_id`/`original_notebook_id`, swept by an hourly job. **v0.5.** Still open.
 - **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.** Still open.
 - **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see [backup.md](../engineering/backup.md)). What remains is the Account-tab status line — still a **v1.0** item.
 
@@ -238,11 +241,12 @@ No new roadmap features; stability and correctness for the beta audience:
 - IME-safe auto-title; Word-paste robustness (unformatted pastes, copy failures, pasted images)
 - Dev environment refresh (`.devcontainer` → `Dockerfile.dev` + `bin/d`); palette empty-state/keyboard and sidebar empty-state polish
 
-### v0.2.0 — The editor earns its keep (planned, not started)
+### v0.2.0 — The editor earns its keep (partially shipped 2026-09-11)
 
-- Remaining editor shortcuts; paste-URL-over-selection
-- Global pinned section, cross-notebook
-- Flexible sidebar pane heights
+- ✅ Remaining editor shortcuts; paste-URL-over-selection
+- ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
+- ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only)
+- ⬜ Flexible sidebar pane heights (still open — panes still fixed-height)
 
 ### v0.3.0 — Getting your notes in and finding them again
 
@@ -252,8 +256,8 @@ No new roadmap features; stability and correctness for the beta audience:
 
 ### v0.4.0 — Comfort
 
-- Vanishing scratch pad
-- Trash and undo
+- Vanishing scratch pad (sessionStorage-only single pad + offline detection with reconnect prompt — see §5 #13)
+- Trash and undo (soft-delete, configurable retention defaulting to 30 days)
 - Copy preview as PNG
 - URL title fetch (opt-in, SSRF-guarded)
 - Resizable sidebar panes; `?` cheatsheet
@@ -263,6 +267,7 @@ No new roadmap features; stability and correctness for the beta audience:
 - `[[Internal links]]`, autocomplete, unresolved-link creation
 - Backlinks panel
 - Daily note
+- Archive with expiry (global section, read-only, restore flow — see §7)
 
 ### v1.0.0 — Trust
 

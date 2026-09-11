@@ -131,6 +131,65 @@ class WordExcelPasteTest < ApplicationSystemTestCase
     assert_includes evaluate_textarea_value, "Decorated span text"
   end
 
+  test "holding Shift while pasting skips the conversion and pastes as-is" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    prevented = page.driver.browser.execute_script(<<~JS, WORD_HTML)
+      const [html] = arguments
+      const dataTransfer = new DataTransfer()
+      dataTransfer.setData("text/html", html)
+      dataTransfer.setData("text/plain", "Bold text and normal text.")
+
+      const textarea = document.querySelector("textarea[name='note[content]']")
+      const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dataTransfer })
+      // ClipboardEvent takes no modifier init — pin shiftKey on, the way
+      // a real Shift+paste presents it to the handler.
+      Object.defineProperty(event, "shiftKey", { value: true })
+      textarea.dispatchEvent(event)
+      return event.defaultPrevented
+    JS
+
+    assert_not prevented
+    assert_no_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
+    assert_equal "", evaluate_textarea_value
+  end
+
+  test "pasting Word HTML inserts via execCommand so undo survives, firing a single input event" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    result = page.driver.browser.execute_script(<<~JS, WORD_HTML)
+      const [html] = arguments
+      window.__execCommandCalls = []
+      window.__inputCount = 0
+
+      const textarea = document.querySelector("textarea[name='note[content]']")
+      textarea.addEventListener("input", () => { window.__inputCount += 1 })
+
+      const original = document.execCommand.bind(document)
+      document.execCommand = function(...args) {
+        window.__execCommandCalls.push([ args[0], args[2] ])
+        return original(...args)
+      }
+
+      const dataTransfer = new DataTransfer()
+      dataTransfer.setData("text/html", html)
+      dataTransfer.setData("text/plain", "Bold text and normal text.")
+
+      const event = new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dataTransfer })
+      textarea.dispatchEvent(event)
+      return { prevented: event.defaultPrevented, calls: window.__execCommandCalls, inputs: window.__inputCount }
+    JS
+
+    assert result["prevented"]
+    assert_equal 1, result["calls"].length
+    assert_equal "insertText", result["calls"][0][0]
+    assert_match(/\*\*Bold text\*\*/, result["calls"][0][1])
+    # execCommand fires exactly one native input event — no manual
+    # dispatch on top, or autosave/preview would double-fire.
+    assert_equal 1, result["inputs"]
+    assert_selector ".toast.show", text: I18n.t("js.converted_to_markdown")
+  end
+
   test "pasting Word HTML that carries an embedded picture converts the text and still uploads the image" do
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
 

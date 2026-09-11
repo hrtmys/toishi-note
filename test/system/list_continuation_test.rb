@@ -33,15 +33,47 @@ class ListContinuationTest < ApplicationSystemTestCase
       visit_note(note)
       textarea = find("textarea[name='note[content]']")
       textarea.click
-      # The marker with nothing after it — parseListMarker leaves an
-      # empty "rest", the case the removal path is for. Cleared in
-      # place, not a fresh line added below.
-      textarea.send_keys(marker)
+      # The empty marker must come from a continuation, not from fresh
+      # typing: type an item, continue it (arming the new empty marker),
+      # then Enter again to drop out of the list.
+      textarea.send_keys("#{marker}first")
+      textarea.send_keys(:enter)
       textarea.send_keys(:enter)
       textarea.send_keys("plain paragraph")
 
-      assert_equal "plain paragraph", textarea.value
+      assert_equal "#{marker}first\nplain paragraph", textarea.value
     end
+  end
+
+  test "typing a fresh star marker then Enter continues the bullet instead of deleting the line" do
+    note = create_note
+
+    visit_note(note)
+    textarea = find("textarea[name='note[content]']")
+    textarea.click
+    textarea.send_keys("* ")
+    textarea.send_keys(:enter)
+    textarea.send_keys("hello")
+
+    assert_equal "* \n* hello", textarea.value
+  end
+
+  test "continuing an ordered item in the middle renumbers the followers" do
+    note = create_note
+
+    visit_note(note)
+    textarea = find("textarea[name='note[content]']")
+    textarea.click
+    textarea.send_keys("1. first")
+    textarea.send_keys(:enter)
+    # The continuation already inserted "2. " — type the item text only.
+    textarea.send_keys("second")
+    # Back up to the end of the first line, then continue it: the new
+    # "2. " item lands between, and the old "2." becomes "3.".
+    textarea.send_keys(:arrow_up)
+    textarea.send_keys(:enter)
+
+    assert_equal "1. first\n2. \n3. second", textarea.value
   end
 
   test "Enter on a plain (non-list) line behaves like a normal newline" do

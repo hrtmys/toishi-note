@@ -46,6 +46,7 @@ ja:
       delete: "削除"
       export: "エクスポート"
       add: "追加"
+      more_actions: "その他の操作"
     notebooks:
       heading: "NOTEBOOKS"
       new_prompt: "ノートブック名を入力してください"
@@ -238,7 +239,7 @@ ja:
       body_text: "こちらのURLからパスワードを再設定できます:\n%{url}\n\nこのリンクは%{duration}で有効期限が切れます。"
   js:
     copied: "コピーしました。"
-    converted_to_markdown: "Markdownに変換しました。"
+    converted_to_markdown: "Markdownに変換しました。Shiftを押しながら貼り付けると変換せずに貼り付けます。"
     table_paste:
       no_pending_table: "変換できる表がまだありません。先にExcel/Sheetsの範囲を貼り付けてください。"
     organize:

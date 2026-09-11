@@ -44,6 +44,34 @@
                   <i class="bi bi-x-lg"></i>
                 <% end %>
               </div>
+
+              <!-- Touch-only row menu: the icon buttons above need hover,
+                  which touch devices don't have. Shown only on coarse
+                  pointers (see _home.scss); desktops keep the hover
+                  reveal as the only affordance. -->
+              <div class="dropdown row-actions-touch flex-shrink-0">
+                <button type="button" class="btn btn-sm py-0 px-1 border-0" style="color: #e0e0e0;" data-bs-toggle="dropdown" aria-expanded="false" title="<%= t("home.common.more_actions") %>" aria-label="<%= t("home.common.more_actions") %>">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <%= link_to export_notebook_path(notebook), class: "dropdown-item" do %>
+                      <i class="bi bi-download me-2"></i><%= t("home.notebooks.export") %>
+                    <% end %>
+                  </li>
+                  <li>
+                    <%= form_with url: notebook_path(notebook), method: :patch, data: { controller: "prompt-form", prompt_message: t("home.notebooks.rename_prompt"), action: "submit->prompt-form#submit" }, class: "m-0" do |f| %>
+                      <%= f.hidden_field :name, value: notebook.name, data: { prompt_form_target: "input" } %>
+                      <button type="submit" class="dropdown-item"><i class="bi bi-pencil me-2"></i><%= t("home.common.rename") %></button>
+                    <% end %>
+                  </li>
+                  <li>
+                    <%= button_to notebook_path(notebook), method: :delete, data: { turbo_confirm: t("home.notebooks.delete_confirm") }, class: "dropdown-item text-danger", form: { class: "m-0" } do %>
+                      <i class="bi bi-x-lg me-2"></i><%= t("home.common.delete") %>
+                    <% end %>
+                  </li>
+                </ul>
+              </div>
             </li>
           <% end %>
         </ul>
@@ -80,6 +108,26 @@
                 <%= button_to notebook_folder_path(folder.notebook, folder), method: :delete, data: { turbo_confirm: t("home.folders.delete_confirm") }, class: "hover-target-icon btn btn-outline-danger py-0 px-2 ms-1", title: t("home.common.delete") do %>
                   <i class="bi bi-x-lg"></i>
                 <% end %>
+              </div>
+
+              <!-- Touch-only row menu: same pattern as the notebook rows above. -->
+              <div class="dropdown row-actions-touch flex-shrink-0">
+                <button type="button" class="btn btn-sm py-0 px-1 border-0" style="color: #e0e0e0;" data-bs-toggle="dropdown" aria-expanded="false" title="<%= t("home.common.more_actions") %>" aria-label="<%= t("home.common.more_actions") %>">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <%= form_with url: notebook_folder_path(folder.notebook, folder), method: :patch, data: { controller: "prompt-form", prompt_message: t("home.folders.rename_prompt"), action: "submit->prompt-form#submit" }, class: "m-0" do |f| %>
+                      <%= f.hidden_field :name, value: folder.name, data: { prompt_form_target: "input" } %>
+                      <button type="submit" class="dropdown-item"><i class="bi bi-pencil me-2"></i><%= t("home.common.rename") %></button>
+                    <% end %>
+                  </li>
+                  <li>
+                    <%= button_to notebook_folder_path(folder.notebook, folder), method: :delete, data: { turbo_confirm: t("home.folders.delete_confirm") }, class: "dropdown-item text-danger", form: { class: "m-0" } do %>
+                      <i class="bi bi-x-lg me-2"></i><%= t("home.common.delete") %>
+                    <% end %>
+                  </li>
+                </ul>
               </div>
             </li>
           <% end %>
@@ -158,6 +206,30 @@
                   <%= button_to note_path(note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm") }, class: "hover-target-icon btn btn-outline-danger py-0 px-2 flex-shrink-0", title: t("home.common.delete"), form: { class: "d-inline" } do %>
                     <i class="bi bi-x-lg"></i>
                   <% end %>
+                </div>
+
+                <!-- Touch-only row menu: same pattern as the notebook rows above. -->
+                <div class="dropdown row-actions-touch flex-shrink-0">
+                  <button type="button" class="btn btn-sm py-0 px-1 border-0" style="color: #e0e0e0;" data-bs-toggle="dropdown" aria-expanded="false" title="<%= t("home.common.more_actions") %>" aria-label="<%= t("home.common.more_actions") %>">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button type="button" class="dropdown-item" data-note-id="<%= note.id %>" data-action="click->note-sort#togglePin">
+                        <i class="bi <%= note.is_pinned? ? 'bi-pin-fill' : 'bi-pin' %> me-2"></i><%= t("home.notes.pin") %>
+                      </button>
+                    </li>
+                    <li>
+                      <%= link_to export_note_path(note), class: "dropdown-item" do %>
+                        <i class="bi bi-download me-2"></i><%= t("home.notes.export") %>
+                      <% end %>
+                    </li>
+                    <li>
+                      <%= button_to note_path(note), method: :delete, data: { turbo_confirm: t("home.notes.delete_confirm") }, class: "dropdown-item text-danger", form: { class: "m-0" } do %>
+                        <i class="bi bi-x-lg me-2"></i><%= t("home.common.delete") %>
+                      <% end %>
+                    </li>
+                  </ul>
                 </div>
               </li>
             <% end %>
