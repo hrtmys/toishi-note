@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-10
+updated: 2026-09-11
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -17,7 +17,7 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 
 **v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
 
-Since then (2026-08-24 → 2026-09-09) the work has been a **post-beta hardening wave**, not v0.2 features: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`). No post-v0.1 roadmap feature (editor shortcuts batch, global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL titles) has shipped yet.
+Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening wave**, then the first v0.2 slice: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`) — followed by the v0.2 editor batch (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line) plus the mobile/sidebar bug insertions B1–B5 (instant offcanvas restore, undo-preserving paste with Shift opt-out, touch ellipsis menus, unreserved title width, `*` + space + Enter continuation). Still open from the post-v0.1 plan: global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL title fetch.
 
 What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
 
@@ -49,7 +49,7 @@ Obsidian solved this with a quick switcher and links. Notion solved it with sear
 
 Everything in that list shares one UI. Do not build five entry points.
 
-*Status 2026-09-09:* items 1–2 shipped in v0.1.0 (palette: recent-first + title `LIKE` match + alternate via preselected second entry; ranking since moved into `Note.search_ranked`, with empty-state/keyboard polish). Unplanned but shipped alongside: per-user last-notebook/folder memory, which removes one re-navigation step on reload. Items 3–5 have not started — the palette still searches titles only, no `note_links` table exists, no daily note.
+*Status 2026-09-11:* items 1–2 shipped in v0.1.0 (palette: recent-first + title `LIKE` match + alternate via preselected second entry; ranking since moved into `Note.search_ranked`, with empty-state/keyboard polish). Unplanned but shipped alongside: per-user last-notebook/folder memory, which removes one re-navigation step on reload. The v0.2 editor batch from §5 #4 has since shipped too (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K`). Items 3–5 have not started — the palette still searches titles only, no `note_links` table exists, no daily note.
 
 ## 4. Differentiation, stated plainly
 
@@ -91,9 +91,9 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 15 | Presentation mode (Rabbit compatible?) | **Adopt, redefined** — built-in slide mode, plus *export* to Rabbit rather than embedding it | v1.5 |
 | 16 | Paste a URL, fetch the title | **Split** — paste-over-selection client-side; title fetch opt-in and SSRF-guarded | v0.2 / v0.4 |
 
-### Status as of 2026-09-09
+### Status as of 2026-09-11
 
-Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. #11 is partial — the sidebar now shows more than two rows and no longer snaps on click, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16, and the v0.2 half of #4.
+Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. Shipped in the v0.2 slice: #4's v0.2 half (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line, all undo-preserving and IME-safe) and #16's client-side half (paste-URL-over-selection). #11 is partial — the sidebar now shows more than two rows, no longer snaps on click, restores the offcanvas without a replayed animation, has touch ellipsis menus, and the title input fills the freed header width, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16's server-side title fetch, and global pins.
 
 ### Notes on the non-obvious calls
 
@@ -241,12 +241,12 @@ No new roadmap features; stability and correctness for the beta audience:
 - IME-safe auto-title; Word-paste robustness (unformatted pastes, copy failures, pasted images)
 - Dev environment refresh (`.devcontainer` → `Dockerfile.dev` + `bin/d`); palette empty-state/keyboard and sidebar empty-state polish
 
-### v0.2.0 — The editor earns its keep (planned, not started)
+### v0.2.0 — The editor earns its keep (partially shipped 2026-09-11)
 
-- Remaining editor shortcuts; paste-URL-over-selection
-- Global pinned section, cross-notebook
-- Flexible sidebar pane heights
-- Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
+- ✅ Remaining editor shortcuts; paste-URL-over-selection
+- ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
+- ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only)
+- ⬜ Flexible sidebar pane heights (still open — panes still fixed-height)
 
 ### v0.3.0 — Getting your notes in and finding them again
 
