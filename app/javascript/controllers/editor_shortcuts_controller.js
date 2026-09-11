@@ -1,13 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 import { currentLine } from "../lib/list_marker"
 
-// The roadmap v0.2 editor batch: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic,
-// Ctrl/Cmd+K link, Ctrl/Cmd+Shift+K delete line, and pasting a URL over
-// a selection turning it into [selection](url). Plain-textarea
-// behaviors, no editor framework. Two constraints from roadmap section
-// 5 #4 apply to every method here: all edits go through
-// execCommand("insertText") so Ctrl+Z keeps working, and every handler
-// bails while isComposing so Japanese IME input never breaks.
+// v0.2 editor batch (bold/italic/link/delete-line/URL-paste).
+// Plain-textarea behaviors; every edit uses execCommand("insertText")
+// so Ctrl+Z keeps working, and handlers bail while isComposing.
 export default class extends Controller {
   keydown(event) {
     // Mid-composition keydowns (including the Enter confirming a
@@ -32,11 +28,8 @@ export default class extends Controller {
   }
 
   paste(event) {
-    // A URL pasted over a selection becomes a link, instead of replacing
-    // the selection with the bare URL. Runs after word-paste and
-    // image-upload in the textarea's action list: rich HTML pastes are
-    // already consumed (converted or dispatched) by then, and anything
-    // carrying an image item belongs to image-upload.
+    // URL over a selection becomes [selection](url). Runs after
+    // word-paste/image-upload, so rich HTML and image items are theirs.
     if (event.isComposing) return
 
     const textarea = this.element
