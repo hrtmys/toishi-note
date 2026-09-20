@@ -40,6 +40,13 @@ ja:
       heading: "整理"
       back: "← 戻る"
       empty: "まだノートブックがありません。"
+    todos:
+      back: "戻る"
+      view_project: "プロジェクト別"
+      view_due: "期限別"
+      empty: "未完了のタスクはありません。"
+      stats: "(%{progress}、期限超過 %{overdue})"
+      checklist: "(チェックリスト)"
     sign_out: "サインアウト"
     common:
       rename: "名前を変更"

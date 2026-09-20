@@ -1,0 +1,32 @@
+<%# The Todos hub — a third mode of the main pane (see index.html.erb's
+    `elsif @todos` branch), not a modal, mirroring how Organize works.
+    todo_items is set when todos_view == "due", todo_notes when it's
+    "project" — only the active view's data is ever loaded. %>
+<div class="h-100 d-flex flex-column overflow-hidden p-4">
+  <div class="d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 flex-shrink-0">
+    <div class="d-flex align-items-center">
+      <%= link_to root_path(notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+          class: "btn btn-outline-secondary btn-sm me-3", title: t("home.todos.back") do %>
+        <i class="bi bi-arrow-left"></i>
+      <% end %>
+      <h4 class="fw-bold m-0"><%= t("home.header.all_open_todos") %></h4>
+    </div>
+
+    <div class="btn-group flex-shrink-0">
+      <%= link_to t("home.todos.view_project"),
+          root_path(todos: true, view: "project", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+          class: "btn btn-sm #{todos_view == 'project' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
+      <%= link_to t("home.todos.view_due"),
+          root_path(todos: true, view: "due", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+          class: "btn btn-sm #{todos_view == 'due' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
+    </div>
+  </div>
+
+  <div class="flex-grow-1 overflow-y-auto custom-scrollbar-light">
+    <% if todos_view == "due" %>
+      <%= render "home/todos_due", todo_items: todo_items %>
+    <% else %>
+      <%= render "home/todos_project", todo_notes: todo_notes %>
+    <% end %>
+  </div>
+</div>

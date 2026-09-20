@@ -64,6 +64,13 @@ en:
       heading: "Organize"
       back: "← Back"
       empty: "No notebooks yet."
+    todos:
+      back: "Back"
+      view_project: "By project"
+      view_due: "By due date"
+      empty: "Nothing open right now."
+      stats: "(%{progress}, overdue %{overdue})"
+      checklist: "(checklist)"
     sign_out: "Sign out"
     common:
       rename: "Rename"

@@ -6,7 +6,9 @@
           class: "fw-bold text-light m-0 text-decoration-none h5 mb-0", id: "sidebarMenuLabel",
           title: t("home.header.organize"), data: { action: "click->offcanvas#close" } %>
       <div class="d-flex align-items-center">
-        <%= link_to todos_path, class: "btn btn-sm btn-outline-secondary border-0 me-1", title: t("home.header.all_open_todos") do %>
+        <%= link_to root_path(todos: true, notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+            class: "btn btn-sm btn-outline-secondary border-0 me-1", title: t("home.header.all_open_todos"),
+            data: { action: "click->offcanvas#close" } do %>
           <i class="bi bi-check2-square"></i>
         <% end %>
         <button type="button" class="btn btn-sm btn-outline-secondary border-0 me-1" data-bs-toggle="modal" data-bs-target="#settingsModal" title="<%= t("home.header.settings") %>">
