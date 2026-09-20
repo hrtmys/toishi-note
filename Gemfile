@@ -37,7 +37,7 @@ gem "bootsnap", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 2.0"
+gem "image_processing", "~> 2.1"
 gem "ruby-vips", "~> 2.0"
 
 group :development, :test do
@@ -77,7 +77,7 @@ group :test do
 end
 
 # Bundle multiple exported notes into a single .zip download
-gem "rubyzip", "~> 3.5", require: "zip"
+gem "rubyzip", "~> 3.6", require: "zip"
 
 # Complete locale files (pluralization, date/time, and — the reason this is
 # here — ActiveRecord/ActionView validation error message templates) for
