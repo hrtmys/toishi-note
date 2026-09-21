@@ -232,6 +232,29 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "exporting a todo note never includes an (id:) tag — that belongs only to /todos.md" do
+    @note.update!(note_type: "todo")
+    @note.todo_items.create!(content: "Buy milk", due_date: Date.new(2026, 9, 1))
+
+    get export_note_url(@note)
+
+    assert_response :success
+    assert_no_match(/\(id:/, response.body)
+  end
+
+  test "PATCHing ai_excluded persists it" do
+    patch note_url(@note), params: { note: { ai_excluded: true } }, as: :turbo_stream
+    assert_response :success
+    assert @note.reload.ai_excluded?
+  end
+
+  test "ai_excluded is never persisted onto another user's note" do
+    foreign_note = notes(:two)
+    patch note_url(foreign_note), params: { note: { ai_excluded: true } }, as: :turbo_stream
+    assert_response :not_found
+    assert_not foreign_note.reload.ai_excluded?
+  end
+
   test "update is protected by CSRF verification (no longer skipped)" do
     original = ActionController::Base.allow_forgery_protection
     ActionController::Base.allow_forgery_protection = true

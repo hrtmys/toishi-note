@@ -31,6 +31,8 @@ ja:
       table_paste_description: "同じフローティングボタンに「Markdownに変換」ボタンを追加し、直前にExcel/Sheetsから貼り付けた表をMarkdownの表に変換できます。通常のCtrl+Vではこれまで通り画像が貼り付けられます — デフォルトではオフです。"
       keep_original_images_label: "アップロードした画像を圧縮しない"
       keep_original_images_description: "貼り付け・ドロップした画像は容量節約のためデフォルトでWebPに変換されます。オンにすると元のファイルのまま保存されます。"
+      ai_handoff_label: "AI引き継ぎ"
+      ai_handoff_description: "ノートごとにAI引き継ぎから除外するトグル、コピー用ボタン、開いているタスクをAIチャットに貼り付けるための GET /todos.md フィードを追加します — デフォルトではオフです。"
   home:
     header:
       all_open_todos: "未完了のTODO一覧"
@@ -47,6 +49,9 @@ ja:
       empty: "未完了のタスクはありません。"
       stats: "(%{progress}、期限超過 %{overdue})"
       checklist: "(チェックリスト)"
+      copy_all: "すべてコピー"
+      copy_group: "コピー"
+      excluded_count: "%{count}件を除外中"
     sign_out: "サインアウト"
     common:
       rename: "名前を変更"
@@ -105,6 +110,7 @@ ja:
         deleted: "ノートを削除しました。"
     todo:
       bulk_add: "一括追加"
+      ai_excluded_label: "AI引き継ぎから除外"
       content_placeholder: "タスクを追加..."
       add_due_date: "期限を追加"
       due_date_label: "期限"
@@ -253,6 +259,8 @@ ja:
       move_failed: "移動を保存できませんでした — 実際の状態を表示するためページを再読み込みします。"
       folder_moved: "フォルダを移動しました。"
       note_moved: "ノートを移動しました。"
+    todos:
+      copy_all: "すべてコピー"
     image_upload:
       uploading: "%{filename} をアップロード中…"
       failed: "%{filename} のアップロードに失敗しました"

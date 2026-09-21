@@ -96,6 +96,85 @@ class HomeTodosTest < ActionDispatch::IntegrationTest
     assert_no_match(/#{other_item.content}/, response.body)
   end
 
+  test "the ai_excluded column is inert while ai_handoff_enabled is off" do
+    excluded = @folder.notes.create!(notebook: @notebook, title: "Excluded Note", note_type: "todo", ai_excluded: true)
+    excluded.todo_items.create!(content: "Should still show")
+
+    get root_url(todos: true, view: "project")
+
+    assert_response :success
+    assert_match "Should still show", response.body
+  end
+
+  test "an excluded note is hidden from the project view once ai_handoff_enabled, with a count line" do
+    users(:one).update!(ai_handoff_enabled: true)
+    excluded = @folder.notes.create!(notebook: @notebook, title: "Excluded Note", note_type: "todo", ai_excluded: true)
+    excluded.todo_items.create!(content: "Should be hidden")
+    @note.todo_items.create!(content: "Open")
+
+    get root_url(todos: true, view: "project")
+
+    assert_response :success
+    assert_no_match(/Should be hidden/, response.body)
+    assert_match "1 excluded", response.body
+  end
+
+  test "an excluded note's items are hidden from the due view once ai_handoff_enabled, with a count line" do
+    users(:one).update!(ai_handoff_enabled: true)
+    excluded = @folder.notes.create!(notebook: @notebook, title: "Excluded Note", note_type: "todo", ai_excluded: true)
+    excluded.todo_items.create!(content: "Should be hidden")
+    @note.todo_items.create!(content: "Open")
+
+    get root_url(todos: true, view: "due")
+
+    assert_response :success
+    assert_no_match(/Should be hidden/, response.body)
+    assert_match "1 excluded", response.body
+  end
+
+  # Gated UI is rendered and hidden with d-none, not omitted — the same shape
+  # as the editor FAB's sections, so the toggle can reveal it without a reload.
+  test "copy buttons are rendered hidden until ai_handoff_enabled" do
+    @note.todo_items.create!(content: "Open")
+
+    get root_url(todos: true, view: "project")
+
+    assert_response :success
+    assert_select "button.ai-handoff-gated.d-none", minimum: 1
+    assert_select "button.ai-handoff-gated:not(.d-none)", false
+  end
+
+  test "copy buttons appear in the project view once ai_handoff_enabled" do
+    users(:one).update!(ai_handoff_enabled: true)
+    @note.todo_items.create!(content: "Open")
+
+    get root_url(todos: true, view: "project")
+
+    assert_response :success
+    assert_match(/bi-clipboard/, response.body)
+  end
+
+  test "todo item content and note titles are HTML-escaped in the project view, not injected raw" do
+    malicious_title = "\"><img src=x onerror=alert(1)>"
+    note = @folder.notes.create!(notebook: @notebook, title: malicious_title, note_type: "todo")
+    note.todo_items.create!(content: "<script>alert(1)</script>")
+
+    get root_url(todos: true, view: "project")
+
+    assert_response :success
+    assert_no_match(/<script>alert\(1\)<\/script>/, response.body)
+    assert_no_match(/"><img src=x onerror=alert\(1\)>/, response.body)
+  end
+
+  test "todo item content is HTML-escaped in the due view, not injected raw" do
+    @note.todo_items.create!(content: "<script>alert(1)</script>")
+
+    get root_url(todos: true, view: "due")
+
+    assert_response :success
+    assert_no_match(/<script>alert\(1\)<\/script>/, response.body)
+  end
+
   test "renders the sidebar rather than a standalone page" do
     @note.todo_items.create!(content: "Open")
 

@@ -248,6 +248,13 @@ class NoteTest < ActiveSupport::TestCase
     assert_equal "- [ ] Renew passport (due: 2026-09-01)", note.to_markdown
   end
 
+  test "to_markdown never includes an (id:) tag — reserved for the /todos.md handoff path only" do
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo", note_type: "todo")
+    note.todo_items.create!(content: "Renew passport", due_date: Date.new(2026, 9, 1))
+
+    assert_no_match(/\(id:/, note.to_markdown)
+  end
+
   test "to_markdown joins scrap items with a --- separator, in position order" do
     note = @folder.notes.create!(notebook: @notebook, title: "Scrap", note_type: "scrap")
     note.scrap_items.create!(content: "First")
