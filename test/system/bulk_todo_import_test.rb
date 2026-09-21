@@ -55,4 +55,55 @@ class BulkTodoImportTest < ApplicationSystemTestCase
       assert_button I18n.t("home.common.add"), disabled: true
     end
   end
+  test "pasting Markdown checklist lines previews them, groups by ## heading, and imports them" do
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    click_on I18n.t("home.todo.bulk_add")
+    assert_selector "#bulk_import_modal_#{@note.id}.show"
+
+    fill_in "entries", with: <<~MD
+      ## Groceries
+      - [ ] Buy milk (due: 2026-09-30)
+      - [x] Call plumber
+      ## Chores
+      - [ ] Water the plants
+    MD
+
+    within "#bulk_import_modal_#{@note.id}" do
+      assert_selector ".list-group-item", text: "Buy milk"
+      assert_selector ".list-group-item", text: "Call plumber"
+      assert_selector ".list-group-item", text: "Water the plants"
+      assert_selector ".list-group-item", text: "Groceries"
+      assert_selector ".list-group-item", text: "Chores"
+
+      click_on I18n.t("home.common.add")
+    end
+
+    assert_no_selector "#bulk_import_modal_#{@note.id}.show"
+
+    contents = @note.todo_items.reload.order(:position).map(&:content)
+    assert_includes contents, "Buy milk"
+    assert_includes contents, "Water the plants"
+    assert_equal Date.new(2026, 9, 30), @note.todo_items.find_by(content: "Buy milk").due_date
+    assert @note.todo_items.find_by(content: "Call plumber").is_checked
+  end
+
+  # The modal appends to one note and cannot delete, so a line asking for a
+  # deletion is refused rather than silently imported without its marker.
+  test "a Markdown line carrying a removal marker is shown as invalid and blocks submission" do
+    item = @note.todo_items.create!(content: "Existing")
+    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
+
+    click_on I18n.t("home.todo.bulk_add")
+    assert_selector "#bulk_import_modal_#{@note.id}.show"
+
+    fill_in "entries", with: "- [ ] Existing (id: #{item.id.to_s(36)};delete!)"
+
+    within "#bulk_import_modal_#{@note.id}" do
+      assert_selector ".list-group-item-danger"
+      assert_button I18n.t("home.common.add"), disabled: true
+    end
+
+    assert TodoItem.exists?(item.id)
+  end
 end

@@ -10,9 +10,11 @@ class TodoHandoff
     This is a snapshot of open tasks from Toishi Note, for handing off to an AI assistant.
 
     Each task is one line: `- [ ] task (due: YYYY-MM-DD) (id: c8)`. The due date and id
-    suffixes are omitted when absent. Keep the `(id: ...)` tag on any line you return — it
-    is how an edit gets matched back to the original task. Notes excluded from AI handoff
-    are not included below.
+    suffixes are omitted when absent. Keep the `(id: ...)` tag exactly as given on every
+    line, including a line you want removed. To delete a task, add `;delete!` directly
+    after the id inside the same parentheses, with no space: `(id: c8;delete!)`. Never
+    remove the id tag itself. To clear a task's due date, write `(due: none)`. Notes
+    excluded from AI handoff are not included below.
   MD
 
   def initialize(user:, scope: nil)

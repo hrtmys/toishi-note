@@ -55,11 +55,11 @@ class HomeController < ApplicationController
     # loads either query, and only the one its active view needs.
     if @todos
       if @todos_view == "due"
-        @todo_items = todos_due_scope
+        @todo_items = Current.user.open_todo_items_by_due
       else
-        @todo_notes = todos_project_scope
+        @todo_notes = Current.user.open_todo_notes
       end
-      @excluded_todos_count = excluded_todos_count
+      @excluded_todos_count = Current.user.excluded_todos_count
     end
   end
 
@@ -71,41 +71,5 @@ class HomeController < ApplicationController
                 Current.user.last_folder_id == @current_folder&.id
 
       Current.user.update_columns(last_notebook_id: @current_notebook&.id, last_folder_id: @current_folder&.id)
-    end
-
-    # The "due" view's flat, cross-notebook, due-date-first list — carried
-    # over verbatim from the old TodosController#index.
-    def todos_due_scope
-      scope = Current.user.todo_items
-        .where(is_checked: false)
-        .includes(note: { folder: :notebook })
-      # joins (not includes) for the exclusion filter, so it doesn't tip
-      # Rails into eager_load and alias `notes` twice alongside the
-      # includes above.
-      scope = scope.joins(:note).where(notes: { ai_excluded: false }) if Current.user.ai_handoff_enabled?
-      scope.reorder(Arel.sql("due_date IS NULL, due_date ASC"))
-    end
-
-    # The "project" view's grouping unit: every note with at least one
-    # open todo item. All its todo_items (not just open ones) are preloaded
-    # so Note's loaded_* helpers avoid a COUNT query per note.
-    def todos_project_scope
-      scope = Current.user.notes
-        .where(id: open_note_ids)
-        .joins(:notebook, :folder)
-      scope = scope.where(ai_excluded: false) if Current.user.ai_handoff_enabled?
-      scope.includes(:notebook, :folder, :todo_items).order("notebooks.name", "folders.name", "notes.title")
-    end
-
-    def open_note_ids
-      Current.user.todo_items.where(is_checked: false).select(:note_id)
-    end
-
-    # Notes hidden by the exclusion filter above, counted so the pane can
-    # show "N excluded" instead of just silently shrinking.
-    def excluded_todos_count
-      return 0 unless Current.user.ai_handoff_enabled?
-
-      Current.user.notes.where(id: open_note_ids, ai_excluded: true).count
     end
 end

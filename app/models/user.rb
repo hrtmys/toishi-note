@@ -32,6 +32,30 @@ class User < ApplicationRecord
 
   before_validation :assign_registered_at, on: :create
 
+  # The Todos hub's "due" view: a flat, cross-notebook, due-date-first list.
+  def open_todo_items_by_due
+    scope = todo_items.where(is_checked: false).includes(note: { folder: :notebook })
+    scope = scope.joins(:note).where(notes: { ai_excluded: false }) if ai_handoff_enabled?
+    scope.reorder(Arel.sql("due_date IS NULL, due_date ASC"))
+  end
+
+  # The Todos hub's "project" view: every note with at least one open item.
+  def open_todo_notes
+    scope = notes.where(id: open_todo_note_ids).joins(:notebook, :folder)
+    scope = scope.where(ai_excluded: false) if ai_handoff_enabled?
+    scope.includes(:notebook, :folder, :todo_items).order("notebooks.name", "folders.name", "notes.title")
+  end
+
+  def open_todo_note_ids
+    todo_items.where(is_checked: false).select(:note_id)
+  end
+
+  def excluded_todos_count
+    return 0 unless ai_handoff_enabled?
+
+    notes.where(id: open_todo_note_ids, ai_excluded: true).count
+  end
+
   private
     def assign_registered_at
       self.registered_at ||= Time.current

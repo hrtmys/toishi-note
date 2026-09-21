@@ -100,17 +100,25 @@ class Note < ApplicationRecord
     todo_items.reject(&:is_checked?).sort_by { |item| [ item.due_date ? 0 : 1, item.due_date ] }
   end
 
-  # Parses a pasted JSON array of bulk-import entries (strings, or objects
-  # with "content" and an optional checked flag). Parsing is deliberately
-  # kept separate from #build_bulk_todo_items below so a caller can enforce
-  # an entry-count cap against the raw array before it bothers
-  # instantiating a batch of records. Malformed JSON, or JSON that isn't an
-  # array, parses to an empty array rather than raising.
+  # Dispatches on the first non-blank char: "[" or "{" is JSON, anything
+  # else is "- [ ]" Markdown via TodoPaste. Kept separate from
+  # #build_bulk_todo_items so a caller can cap the entry count first.
   def self.parse_bulk_todo_entries(raw_json)
-    parsed = JSON.parse(raw_json.to_s)
+    text = raw_json.to_s
+    return parse_bulk_todo_markdown(text) unless text.lstrip.start_with?("[", "{")
+
+    parsed = JSON.parse(text)
     parsed.is_a?(Array) ? parsed : []
   rescue JSON::ParserError
     []
+  end
+
+  # A removal marker has nothing to append to here — this path only ever
+  # creates items — so such a line is dropped rather than built.
+  def self.parse_bulk_todo_markdown(text)
+    TodoPaste.parse(text).lines.reject(&:delete?).map do |line|
+      { "content" => line.content, "checked" => line.checked, "due_date" => line.due.is_a?(Date) ? line.due : nil }
+    end
   end
 
   # Builds (but does not save) a TodoItem on this note for each valid entry
@@ -176,17 +184,17 @@ class Note < ApplicationRecord
   end
 
   def build_bulk_todo_item(entry)
-    content, checked =
+    content, checked, due_date =
       case entry
       when String
-        [ entry, false ]
+        [ entry, false, nil ]
       when Hash
-        [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first ]
+        [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first, entry["due_date"] ]
       end
 
     return if content.to_s.strip.blank?
 
-    todo_items.build(content: content.to_s.strip, is_checked: !!checked)
+    todo_items.build(content: content.to_s.strip, is_checked: !!checked, due_date: due_date)
   end
 
   def auto_set_title
