@@ -1,7 +1,6 @@
-# A SHA256 over a plan's operations plus, for every item they touch, that
-# item's current mutable attributes — so the apply can detect any change
-# since the preview and refuse to act on stale data, without storing
-# anything server-side between the two requests.
+# Covers the operations plus the current attributes of every item they
+# touch, so an apply refuses state the preview never showed — without
+# storing anything server-side between the two requests.
 module TodoApplyPlanDigest
   def self.for(plan)
     Digest::SHA256.hexdigest(plan.operations.map { |op| signature(op) }.to_json)

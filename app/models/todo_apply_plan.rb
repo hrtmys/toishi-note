@@ -95,10 +95,9 @@ class TodoApplyPlan
     @skipped << Skipped.new(reason: :empty_content, heading: line.heading)
   end
 
-  # Note titles aren't unique (PR2), so a heading resolves only when it
-  # names exactly one note — no fuzzy matching, the issue's explicit rule.
-  # Memoized so an ambiguous/unknown heading is reported once per group,
-  # not once per line under it.
+  # Note titles aren't unique, so a heading resolves only when it names
+  # exactly one note. Memoized so an unresolvable heading is reported once
+  # per group rather than once per line under it.
   def resolve_note(heading)
     return @heading_notes[heading] if @heading_notes.key?(heading)
 

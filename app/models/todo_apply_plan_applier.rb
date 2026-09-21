@@ -1,14 +1,11 @@
-# Applies a TodoApplyPlan. One transaction, parent notes locked first,
-# bang methods throughout — following Positioned.reposition! and
-# Folder#move_to!, not TodoItemsController#bulk_create, which saves per
-# record with no transaction and silently drops failures.
+# Applies a TodoApplyPlan in one transaction with the parent notes locked,
+# following Positioned.reposition! — not bulk_create, which saves per record
+# and silently drops failures. An apply that deletes must not half-succeed.
 class TodoApplyPlanApplier
   DigestMismatch = Class.new(StandardError)
 
-  # Re-parses and re-resolves +text+ inside the transaction so the plan
-  # reflects the database as of right now, then aborts the whole apply if
-  # that fresh plan's digest no longer matches what the preview showed.
-  # Returns the applied plan, or nil on a digest mismatch.
+  # Re-resolves inside the transaction so the plan reflects the database as
+  # of now, then aborts if its digest no longer matches the preview's.
   def self.apply!(text:, digest:, user:)
     plan = nil
 
