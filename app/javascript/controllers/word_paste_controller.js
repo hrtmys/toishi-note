@@ -6,7 +6,32 @@ import { t } from "../lib/translations"
 // Markdown. Excel/Sheets ranges are deliberately not auto-converted;
 // Ctrl+V falls through to image-upload's handler, the safe default.
 export default class extends Controller {
+  connect() {
+    // ClipboardEvent carries no modifier state in real browsers, so
+    // event.shiftKey is always false on paste — track Shift ourselves.
+    this.shiftHeld = false
+    this.trackShiftDown = (event) => { if (event.key === "Shift") this.shiftHeld = true }
+    this.trackShiftUp = (event) => { if (event.key === "Shift") this.shiftHeld = false }
+    this.clearShift = () => { this.shiftHeld = false }
+    window.addEventListener("keydown", this.trackShiftDown)
+    window.addEventListener("keyup", this.trackShiftUp)
+    window.addEventListener("blur", this.clearShift)
+  }
+
+  disconnect() {
+    window.removeEventListener("keydown", this.trackShiftDown)
+    window.removeEventListener("keyup", this.trackShiftUp)
+    window.removeEventListener("blur", this.clearShift)
+  }
+
   paste(event) {
+    // Holding Shift while pasting opts out of the conversion — the
+    // browser's native paste lands the clipboard text as-is.
+    if (event.shiftKey || this.shiftHeld) return
+    // A paste landing mid-composition would convert (and toast) while
+    // Japanese IME text is still unconfirmed — stay out of the way.
+    if (event.isComposing) return
+
     const html = event.clipboardData?.getData("text/html")
     if (!html || !looksLikeRichContent(html)) return
 
@@ -33,8 +58,11 @@ export default class extends Controller {
     const start = textarea.selectionStart ?? textarea.value.length
     const end = textarea.selectionEnd ?? textarea.value.length
 
-    textarea.setRangeText(text, start, end, "end")
-    textarea.dispatchEvent(new Event("input", { bubbles: true }))
+    textarea.focus()
+    textarea.setSelectionRange(start, end)
+    // execCommand, not setRangeText: value assignment wipes undo, and
+    // execCommand fires exactly one native input (no manual dispatch).
+    document.execCommand("insertText", false, text)
   }
 }
 

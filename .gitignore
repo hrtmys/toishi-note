@@ -60,6 +60,10 @@
 
 /node_modules
 
+# Crash dumps (core.xxxx) — never commit these.
+/core.*
+/core
+
 # Claude Code's own local/machine state — .claude/skills/ is checked in,
 # this isn't.
 /.claude/settings.local.json

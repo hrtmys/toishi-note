@@ -7,11 +7,11 @@ export default class extends Controller {
   connect() {
     this.offcanvas = new bootstrap.Offcanvas(this.element)
 
-    // A Turbo Drive visit tears down this element and loses the
-    // client-managed open state. Re-open it if it was open before,
-    // below the offcanvas breakpoint only — desktop's sidebar is fixed.
+    // A Turbo visit tears down this element and loses the open state.
+    // Restore it below the offcanvas breakpoint only, instantly: an
+    // animated show() would replay on an already-open menu.
     if (sessionStorage.getItem(OPEN_FLAG_KEY) === "true" && this.belowOffcanvasBreakpoint()) {
-      this.offcanvas.show()
+      this.showWithoutAnimation()
     }
 
     this.element.addEventListener("shown.bs.offcanvas", () => sessionStorage.setItem(OPEN_FLAG_KEY, "true"))
@@ -21,7 +21,21 @@ export default class extends Controller {
   // Called when a note/file link is clicked — the one case that should
   // actually close the menu, since selecting a file is a terminal action.
   close() {
+    // Flag synchronously: the Turbo visit can tear the element down
+    // before the hide animation's hidden event would record it.
+    sessionStorage.setItem(OPEN_FLAG_KEY, "false")
     this.offcanvas.hide()
+  }
+
+  // Re-show with the slide transition suppressed (see
+  // .offcanvas-instant in _home.scss), avoiding a replayed animation.
+  showWithoutAnimation() {
+    if (this.element.classList.contains("show")) return
+    this.element.classList.add("offcanvas-instant")
+    this.element.addEventListener("shown.bs.offcanvas", () => {
+      this.element.classList.remove("offcanvas-instant")
+    }, { once: true })
+    this.offcanvas.show()
   }
 
   belowOffcanvasBreakpoint() {

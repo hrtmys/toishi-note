@@ -29,7 +29,10 @@ export function parseListMarker(line) {
     return {
       full: m[0],
       rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${m[4]}`
+      continued: `${m[1]}${nextNumber}${m[3]}${m[4]}`,
+      // The renumber step needs these back to fix up the lines below a
+      // continued item; bullets/task items/quote never renumber.
+      ordered: { indent: m[1], number: parseInt(m[2], 10), delimiter: m[3] }
     }
   }
 
@@ -46,4 +49,32 @@ export function currentLine(value, caretPosition) {
   const nextNewline = value.indexOf("\n", caretPosition)
   const lineEnd = nextNewline === -1 ? value.length : nextNewline
   return { lineStart, lineEnd, line: value.slice(lineStart, lineEnd) }
+}
+
+// Renumbers consecutive same-indent ordered lines below lineEnd so a
+// continued item keeps the sequence. Returns null when nothing follows.
+export function renumberFollowingLines(value, lineEnd, indent, firstNumber) {
+  if (value[lineEnd] !== "\n") return null
+
+  let pos = lineEnd + 1
+  let number = firstNumber
+  let text = ""
+  let end = lineEnd
+
+  for (;;) {
+    const nextNewline = value.indexOf("\n", pos)
+    const followerEnd = nextNewline === -1 ? value.length : nextNewline
+    const follower = value.slice(pos, followerEnd)
+    const m = follower.match(/^(\s*)(\d+)([.)])(\s+)(.*)$/)
+    if (!m || m[1] !== indent) break
+
+    text += `\n${indent}${number}${m[3]}${m[4]}${m[5]}`
+    end = followerEnd
+    number += 1
+    if (nextNewline === -1) break
+    pos = followerEnd + 1
+  }
+
+  if (end === lineEnd) return null
+  return { end, text }
 }

@@ -1,11 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
-import { parseListMarker, currentLine } from "../lib/list_marker"
+import { parseListMarker, currentLine, renumberFollowingLines } from "../lib/list_marker"
 
 // Continues Markdown list markers on Enter, removing an empty marker
 // instead of continuing it forever. Also lets Tab/Shift+Tab indent a
 // list line. Deliberately small, not a step towards CodeMirror.
 
 export default class extends Controller {
+  connect() {
+    // The marker text this controller's last continuation inserted, when
+    // the caret line is still that pristine empty item. Enter exits the
+    // list only while armed; any real typing disarms (see keydown).
+    this.armedEmptyMarker = null
+  }
+
   keydown(event) {
     // Japanese IME composition sends its own Enter/Tab before either key
     // means anything to us — bail out completely to avoid a stray marker.
@@ -15,6 +22,10 @@ export default class extends Controller {
       this.handleEnter(event)
     } else if (event.key === "Tab") {
       this.handleTab(event)
+    } else if (event.key?.length === 1 || event.key === "Backspace" || event.key === "Delete") {
+      // Real typing ends the pristine continued marker (B5) — Enter
+      // must continue from here, not exit. Other keys leave it armed.
+      this.armedEmptyMarker = null
     }
   }
 
@@ -35,17 +46,33 @@ export default class extends Controller {
     event.preventDefault()
 
     if (marker.rest.trim() === "") {
-      // Nothing after the marker: remove it and drop out of the list,
-      // rather than inserting yet another empty item.
-      textarea.setSelectionRange(lineStart, lineEnd)
-      document.execCommand("insertText", false, "")
-      return
+      // Empty marker exits only when this controller just inserted it
+      // (armed below) — a freshly typed "* " + Enter continues (B5).
+      if (this.armedEmptyMarker !== null) {
+        textarea.setSelectionRange(lineStart, lineEnd)
+        document.execCommand("insertText", false, "")
+        // Pin the caret: engines may leave it before the newline.
+        textarea.setSelectionRange(lineStart, lineStart)
+        this.armedEmptyMarker = null
+        return
+      }
     }
 
-    // execCommand("insertText") — not textarea.value = ... — is load-
-    // bearing: assigning .value wipes the browser's undo stack. execCommand
-    // also leaves the caret right after the inserted marker.
-    document.execCommand("insertText", false, `\n${marker.continued}`)
+    // execCommand preserves the undo stack; ordered continuations
+    // renumber followers in the same step with the caret pinned.
+    const renumbered = marker.ordered
+      ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
+      : null
+    if (renumbered) {
+      const tail = value.slice(selectionStart, lineEnd)
+      textarea.setSelectionRange(selectionStart, renumbered.end)
+      document.execCommand("insertText", false, `\n${marker.continued}${tail}${renumbered.text}`)
+      const caret = selectionStart + 1 + marker.continued.length
+      textarea.setSelectionRange(caret, caret)
+    } else {
+      document.execCommand("insertText", false, `\n${marker.continued}`)
+    }
+    this.armedEmptyMarker = marker.continued
   }
 
   handleTab(event) {
