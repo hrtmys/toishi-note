@@ -201,4 +201,29 @@ class TodoApplyPlanTest < ActiveSupport::TestCase
 
     assert_empty plan.operations
   end
+  # Two lines naming the same item with different intents leave the outcome
+  # decided by line order alone, so neither is applied.
+  test "two lines binding the same id with conflicting intents are both skipped" do
+    item = @note.todo_items.create!(content: "Buy milk")
+    text = <<~MD
+      ## #{@note.title}
+      - [ ] Buy milk and eggs (id: #{item.id.to_s(36)})
+      - [ ] Buy milk (id: #{item.id.to_s(36)};delete!)
+    MD
+
+    plan = plan_for(text)
+
+    assert_empty plan.operations.select { |op| op.item&.id == item.id }
+    assert_includes plan.skipped.map(&:reason), :conflicting_lines
+  end
+
+  test "the same id appearing on two identical lines is a duplicate, not a conflict" do
+    item = @note.todo_items.create!(content: "Buy milk", due_date: Date.new(2026, 9, 30))
+    line = "- [ ] Buy milk (due: 2026-10-01) (id: #{item.id.to_s(36)})"
+
+    plan = plan_for("## #{@note.title}\n#{line}\n#{line}")
+
+    assert_equal 1, plan.operations.count { |op| op.type == :due_change }
+    assert_not_includes plan.skipped.map(&:reason), :conflicting_lines
+  end
 end
