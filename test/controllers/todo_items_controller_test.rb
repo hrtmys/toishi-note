@@ -89,6 +89,20 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "bulk_create imports Markdown checklist lines, not only JSON" do
+    assert_difference("TodoItem.count", 1) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Buy milk" }, as: :turbo_stream
+    end
+    assert_response :success
+    assert @note.todo_items.exists?(content: "Buy milk")
+  end
+
+  test "bulk_create honors a due date pasted on a Markdown checklist line" do
+    post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Renew passport (due: 2026-09-01)" }, as: :turbo_stream
+
+    assert_equal Date.new(2026, 9, 1), @note.todo_items.find_by!(content: "Renew passport").due_date
+  end
+
   test "bulk_create only ever targets the current user's note" do
     other_note = notes(:two) # belongs to users(:two), not the signed-in users(:one)
 
