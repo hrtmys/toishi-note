@@ -61,7 +61,8 @@ class TodoApplyPlanTest < ActiveSupport::TestCase
   # scoping is dropped is an actual cross-account delete.
   test "(id: <another user's item>;delete!) deletes nothing and leaves the foreign item untouched" do
     other_note = notes(:two)
-    foreign_item = other_note.todo_items.create!(content: "Not yours", is_checked: false)
+    # A real due date, not nil, so the due assertion below actually asserts something.
+    foreign_item = other_note.todo_items.create!(content: "Not yours", is_checked: false, due_date: Date.new(2026, 1, 1))
     original_content = foreign_item.content
     original_checked = foreign_item.is_checked
     original_due = foreign_item.due_date
