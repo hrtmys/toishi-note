@@ -153,6 +153,15 @@ class Note < ApplicationRecord
     images.last
   end
 
+  # Shared with TodoHandoff (the /todos.md generator) so the checkbox/due
+  # format has exactly one implementation. Do not change what this returns —
+  # Note/Notebook export pin it byte for byte.
+  def todo_item_markdown_line(item)
+    checkbox = item.is_checked? ? "[x]" : "[ ]"
+    due = item.due_date ? " (due: #{item.due_date.iso8601})" : ""
+    "- #{checkbox} #{item.content}#{due}"
+  end
+
   private
 
   # Single grouped-COUNT query, memoized per note instance, so a render
@@ -164,12 +173,6 @@ class Note < ApplicationRecord
 
   def export_display_name
     title
-  end
-
-  def todo_item_markdown_line(item)
-    checkbox = item.is_checked? ? "[x]" : "[ ]"
-    due = item.due_date ? " (due: #{item.due_date.iso8601})" : ""
-    "- #{checkbox} #{item.content}#{due}"
   end
 
   def build_bulk_todo_item(entry)
