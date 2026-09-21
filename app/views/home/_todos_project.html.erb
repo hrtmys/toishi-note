@@ -13,9 +13,7 @@
           <%= t("home.todos.stats", progress: note.loaded_todo_progress, overdue: note.loaded_overdue_count) %>
           <%= t("home.todos.checklist") if note.loaded_checklist? %>
         <% end %>
-        <% if Current.user.ai_handoff_enabled? %>
-          <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md, note_id: note.id), label: t("home.todos.copy_group") } %>
-        <% end %>
+        <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md, note_id: note.id), label: t("home.todos.copy_group") } %>
       </div>
       <% note.loaded_open_todo_items.each do |item| %>
         <div id="all_todos_item_<%= item.id %>">

@@ -51,39 +51,10 @@ export default class extends Controller {
     this.save("keep_original_images", event.target.checked)
   }
 
-  // The copy button's markup is genuinely absent (not just hidden) until
-  // this setting is on, so enabling it needs the button built here too.
   toggleAiHandoff(event) {
-    this.updateCopyAllButton(event.target.checked)
+    document.querySelectorAll(".ai-handoff-gated")
+      .forEach((el) => el.classList.toggle("d-none", !event.target.checked))
     this.save("ai_handoff_enabled", event.target.checked)
-
-    // Closes the modal so the just-revealed button is reachable — after a
-    // delay, since hide() silently no-ops during the modal's own show
-    // transition.
-    if (event.target.checked) {
-      setTimeout(() => document.querySelector("#settingsModal .btn-close")?.click(), 400)
-    }
-  }
-
-  updateCopyAllButton(enabled) {
-    const container = document.getElementById("todosCopyAllContainer")
-    if (!container) return
-
-    if (!enabled) {
-      container.innerHTML = ""
-      return
-    }
-
-    if (container.querySelector("[data-controller='todos-copy']")) return
-
-    const button = document.createElement("button")
-    button.type = "button"
-    button.className = "btn btn-outline-secondary btn-sm"
-    button.dataset.controller = "todos-copy"
-    button.dataset.todosCopyUrlValue = container.dataset.copyUrl
-    button.dataset.action = "click->todos-copy#copy"
-    button.innerHTML = `<i class="bi bi-clipboard me-1"></i>${t("todos.copy_all")}`
-    container.appendChild(button)
   }
 
   // The one setting that's *not* fade-in-place: already-rendered text

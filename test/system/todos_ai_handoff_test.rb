@@ -28,6 +28,9 @@ class TodosAiHandoffTest < ApplicationSystemTestCase
 
     wait_until("ai_handoff_enabled PATCH never landed") { users(:one).reload.ai_handoff_enabled? }
 
+    find("#settingsModal .btn-close").click
+    assert_no_selector "#settingsModal.show"
+
     find("button:has(i.bi-clipboard)", match: :first).click
     assert_selector ".toast.show", text: I18n.t("js.copied")
 

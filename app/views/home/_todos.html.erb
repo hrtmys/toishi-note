@@ -11,10 +11,8 @@
     </div>
 
     <div class="d-flex align-items-center flex-shrink-0">
-      <span id="todosCopyAllContainer" class="me-2" data-copy-url="<%= todos_path(format: :md) %>">
-        <% if Current.user.ai_handoff_enabled? %>
-          <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md), label: t("home.todos.copy_all") } %>
-        <% end %>
+      <span class="me-2">
+        <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md), label: t("home.todos.copy_all") } %>
       </span>
 
       <div class="btn-group">

@@ -132,13 +132,16 @@ class HomeTodosTest < ActionDispatch::IntegrationTest
     assert_match "1 excluded", response.body
   end
 
-  test "copy buttons are absent from the pane until ai_handoff_enabled" do
+  # Gated UI is rendered and hidden with d-none, not omitted — the same shape
+  # as the editor FAB's sections, so the toggle can reveal it without a reload.
+  test "copy buttons are rendered hidden until ai_handoff_enabled" do
     @note.todo_items.create!(content: "Open")
 
     get root_url(todos: true, view: "project")
 
     assert_response :success
-    assert_no_match(/bi-clipboard/, response.body)
+    assert_select "button.ai-handoff-gated.d-none", minimum: 1
+    assert_select "button.ai-handoff-gated:not(.d-none)", false
   end
 
   test "copy buttons appear in the project view once ai_handoff_enabled" do
