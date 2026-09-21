@@ -80,28 +80,22 @@ class Note < ApplicationRecord
     (todo_items_completed_count.to_f / total * 100).round
   end
 
-  # "done/total" for the Todos hub's project-view group header. Reads the
-  # already-loaded todo_items association (array ops, not SQL) — only
-  # correct when the caller preloaded it, e.g. via .includes(:todo_items).
+  # The loaded_* helpers read the preloaded todo_items association in Ruby
+  # instead of querying, so they are only correct when the caller used
+  # .includes(:todo_items) — the Todos hub's project view does.
   def loaded_todo_progress
     "#{todo_items.count(&:is_checked?)}/#{todo_items.size}"
   end
 
-  # Same preload precondition as #loaded_todo_progress.
   def loaded_overdue_count
     todo_items.count(&:overdue?)
   end
 
-  # True when none of this note's todo items carry a due date at all —
-  # the Todos hub annotates such a note as a plain checklist. Same
-  # preload precondition as #loaded_todo_progress.
+  # A note with no due dates anywhere is annotated as a plain checklist.
   def loaded_checklist?
     todo_items.none?(&:due_date)
   end
 
-  # Open items only, due-first with nulls last — the same ordering rule
-  # the due view uses, applied within one note's group. Same preload
-  # precondition as #loaded_todo_progress.
   def loaded_open_todo_items
     todo_items.reject(&:is_checked?).sort_by { |item| [ item.due_date ? 0 : 1, item.due_date ] }
   end
