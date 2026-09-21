@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-11
+updated: 2026-09-21
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -17,7 +17,7 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 
 **v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
 
-Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening wave**, then the first v0.2 slice: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`) — followed by the v0.2 editor batch (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line) plus the mobile/sidebar bug insertions B1–B5 (instant offcanvas restore, undo-preserving paste with Shift opt-out, touch ellipsis menus, unreserved title width, `*` + space + Enter continuation). Still open from the post-v0.1 plan: global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL title fetch.
+Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening wave**, then the first v0.2 slice: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`) — followed by the v0.2 editor batch (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line) plus the mobile/sidebar bug insertions B1–B5 (instant offcanvas restore, undo-preserving paste with Shift opt-out, touch ellipsis menus, unreserved title width, `*` + space + Enter continuation). Then a **TODO-hub wave** (2026-09-21, issue #47, PRs #49–#51): `/todos` folded into the main pane with a project view, a Settings-gated Markdown handoff at `GET /todos.md`, and bulk apply of an AI's edited reply behind a confirm-gated preview. Still open from the post-v0.1 plan: global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL title fetch.
 
 What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
 
@@ -91,9 +91,9 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 15 | Presentation mode (Rabbit compatible?) | **Adopt, redefined** — built-in slide mode, plus *export* to Rabbit rather than embedding it | v1.5 |
 | 16 | Paste a URL, fetch the title | **Split** — paste-over-selection client-side; title fetch opt-in and SSRF-guarded | v0.2 / v0.4 |
 
-### Status as of 2026-09-11
+### Status as of 2026-09-21
 
-Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. Shipped in the v0.2 slice: #4's v0.2 half (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line, all undo-preserving and IME-safe) and #16's client-side half (paste-URL-over-selection). #11 is partial — the sidebar now shows more than two rows, no longer snaps on click, restores the offcanvas without a replayed animation, has touch ellipsis menus, and the title input fills the freed header width, but panes are still fixed-height, not flexible or resizable. Not started: #5, #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16's server-side title fetch, and global pins.
+Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. Shipped in the v0.2 slice: #4's v0.2 half (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line, all undo-preserving and IME-safe) and #16's client-side half (paste-URL-over-selection). #11 is partial — the sidebar now shows more than two rows, no longer snaps on click, restores the offcanvas without a replayed animation, has touch ellipsis menus, and the title input fills the freed header width, but panes are still fixed-height, not flexible or resizable. **#5 shipped 2026-09-21**, inside the TODO-hub wave rather than on its own: the per-note bulk-add modal now takes `- [ ]` Markdown as well as JSON, and carries due dates through, which is what "bullets → TODO" was asking for. Not started: #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16's server-side title fetch, and global pins.
 
 ### Notes on the non-obvious calls
 
@@ -167,6 +167,8 @@ These carry over from the archived roadmap with no scheduled release. They are s
 - **TOTP / 2FA.** Answers a different question ("is this really you?") than the one the auth design solves ("you forgot your password and email doesn't reach you"). Revisit only if this ever opens up beyond a trusted team.
 - **Bulk operations on the admin team list** (export, multi-remove) — revisit alongside import/export work in v0.3.
 - **Tags** — see §7.
+- **A custom prompt template for the AI handoff** — deferred in #47 rather than dropped. It backs straight into Settings bloat, and the preamble is editable in the AI chat itself. Revisit on repeated demand, not on the first request.
+- **A dedicated multi-note import screen** — covered for now by the paste box and preview on `/todos`.
 
 ---
 
@@ -248,11 +250,25 @@ No new roadmap features; stability and correctness for the beta audience:
 - ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only)
 - ⬜ Flexible sidebar pane heights (still open — panes still fixed-height)
 
+### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
+
+*Theme: TODOs scatter across notebooks by design; managing them shouldn't mean walking the tree, and handing them to an AI shouldn't mean retyping them.*
+
+Issue #47, shipped as three PRs (#49, #50, #51). Not a release of its own — it rides whichever cut comes next.
+
+- `/todos` stops being a standalone page and becomes a mode of the main pane, so the sidebar survives. Two stateless views: grouped by `Notebook / Folder / Note`, or the existing global due-first list. Fixes a real bug on the way — the old view dropped the folder name entirely.
+- A Settings-gated AI handoff, off by default per design principle 1: a per-note `ai_excluded` flag, copy buttons, and `GET /todos.md` — session-authenticated Markdown, scoped by notebook/folder/note, with a preamble, a `## Structure` tree, and a collapsed recently-done block. No public API, no server-side LLM key, no egress requirement; the loop is copy-paste, which is what an IT-ops network can actually do.
+- Bulk apply of the AI's reply, behind a preview that lists every add, check, due change and delete before anything runs, and a digest that makes the apply refuse any state the preview didn't describe.
+
+**Two rules did most of the design work, and are worth keeping in mind for anything else that mutates from pasted text.** Removal is never inferred — an item missing from the paste is untouched, and a missing `(due:)` never clears a date, because a chat reply gets truncated and a partial paste must not wipe what it omitted. And removal therefore has to be sayable out loud: `(id: <base36>;delete!)` deletes, `(due: none)` clears. The delete marker lives *inside* the id tag rather than standing alone as `(delete)`, because a task can genuinely read "Clean up old backup files (delete)" — and because embedding it makes an unbound delete syntactically impossible rather than a rule the parser has to remember. The cost is that an AI may garble the marker; every way it can do so ends in no deletion, which is the right direction to fail.
+
+Rejected along the way, and still rejected: a PAT-authenticated task API (grows the attack surface, design principle 2), a server-side LLM key (cost, secrets, and dead on a no-egress network), and a separate `Task` model (the Notion-database direction this project is deliberately not taking).
+
 ### v0.3.0 — Getting your notes in and finding them again
 
 - Search (`LIKE`), inside the palette
 - **Import** from an Obsidian vault or folder of Markdown
-- Bullets → TODO
+- ✅ Bullets → TODO — shipped 2026-09-21 inside the TODO-hub wave
 
 ### v0.4.0 — Comfort
 
