@@ -1,16 +1,9 @@
-# Renders a user's open TODOs as Markdown for pasting into an AI chat
-# (GET /todos.md). A PORO, per NotebookExporter's precedent — it spans
-# Notebook, Folder, Note and TodoItem, so it belongs in none of them.
-#
-# +scope+ is an already Current.user-resolved Notebook, Folder, Note, or nil
-# for the whole account — resolution happens in TodosController, not here.
-#
-# The preamble and structural headings ("## Structure", "Recently done (N
-# days)") are fixed English text, not run through I18n, the same way the
-# Settings modal's Language tab names are: this is a format a future parser
-# (PR3) binds to, and it must read identically regardless of the viewer's
-# locale.
+# Renders a user's open TODOs as Markdown for pasting into an AI chat.
+# A PORO per NotebookExporter's precedent: it spans Notebook, Folder, Note
+# and TodoItem, so it belongs in none of them.
 class TodoHandoff
+  # Structural text stays English: PR3's parser binds to it, so it must read
+  # the same whatever locale the viewer is in.
   RECENTLY_DONE_WINDOW = 7.days
 
   PREAMBLE = <<~MD.strip
@@ -59,7 +52,7 @@ class TodoHandoff
     lines = recently_done_lines
     return if lines.empty?
 
-    ([ "<details><summary>Recently done (7 days)</summary>", "" ] + lines + [ "</details>" ]).join("\n")
+    ([ "<details><summary>Recently done (#{RECENTLY_DONE_WINDOW.inspect})</summary>", "" ] + lines + [ "</details>" ]).join("\n")
   end
 
   def recently_done_lines
@@ -102,7 +95,7 @@ class TodoHandoff
   def excluded_count
     return 0 unless @user.ai_handoff_enabled?
 
-    base_scope.where(ai_excluded: true).to_a.count { |note| note.todo_items.any? }
+    base_scope.where(ai_excluded: true).to_a.count { |note| note.loaded_open_todo_items.any? }
   end
 
   def base_scope
