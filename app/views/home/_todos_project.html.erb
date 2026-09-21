@@ -1,0 +1,22 @@
+<% if todo_notes.empty? %>
+  <div class="text-center text-muted p-5">
+    <i class="bi bi-check2-circle display-1 mb-3 d-block"></i>
+    <%= t("home.todos.empty") %>
+  </div>
+<% else %>
+  <% todo_notes.each do |note| %>
+    <div class="bg-white rounded shadow-sm border p-3 mb-3">
+      <%= link_to root_path(notebook_id: note.notebook_id, folder_id: note.folder_id, note_id: note.id),
+          class: "small text-muted text-decoration-none d-block mb-2" do %>
+        <%= note.notebook.name %> / <%= note.folder.name %> / <%= note.title %>
+        <%= t("home.todos.stats", progress: note.loaded_todo_progress, overdue: note.loaded_overdue_count) %>
+        <%= t("home.todos.checklist") if note.loaded_checklist? %>
+      <% end %>
+      <% note.loaded_open_todo_items.each do |item| %>
+        <div id="all_todos_item_<%= item.id %>">
+          <%= render partial: "todo_items/item", locals: { item: item } %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

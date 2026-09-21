@@ -20,6 +20,10 @@
 
       <% if @organize %>
         <%= render "home/organize", notebooks: Current.user.notebooks.includes(folders: :notes) %>
+      <% elsif @todos %>
+        <%= render "home/todos",
+            todos_view: @todos_view, todo_items: @todo_items, todo_notes: @todo_notes,
+            current_notebook: @current_notebook, current_folder: @current_folder, current_note: @current_note %>
       <% else %>
         <%= turbo_frame_tag "main_editor", class: "h-100 d-flex flex-column overflow-hidden" do %>
           <% if @current_note %>

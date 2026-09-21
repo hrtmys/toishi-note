@@ -80,6 +80,26 @@ class Note < ApplicationRecord
     (todo_items_completed_count.to_f / total * 100).round
   end
 
+  # The loaded_* helpers read the preloaded todo_items association in Ruby
+  # instead of querying, so they are only correct when the caller used
+  # .includes(:todo_items) — the Todos hub's project view does.
+  def loaded_todo_progress
+    "#{todo_items.count(&:is_checked?)}/#{todo_items.size}"
+  end
+
+  def loaded_overdue_count
+    todo_items.count(&:overdue?)
+  end
+
+  # A note with no due dates anywhere is annotated as a plain checklist.
+  def loaded_checklist?
+    todo_items.none?(&:due_date)
+  end
+
+  def loaded_open_todo_items
+    todo_items.reject(&:is_checked?).sort_by { |item| [ item.due_date ? 0 : 1, item.due_date ] }
+  end
+
   # Parses a pasted JSON array of bulk-import entries (strings, or objects
   # with "content" and an optional checked flag). Parsing is deliberately
   # kept separate from #build_bulk_todo_items below so a caller can enforce
