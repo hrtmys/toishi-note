@@ -100,6 +100,7 @@ en:
           unbound_marker: "A removal marker with no matching task — skipped."
           content_changed_with_marker: "This line was both edited and marked for removal — skipped."
           empty_content: "Empty task line — skipped."
+          conflicting_lines: "Another line in this paste targets the same task — skipped."
     sign_out: "Sign out"
     common:
       rename: "Rename"

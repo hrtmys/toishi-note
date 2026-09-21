@@ -76,6 +76,7 @@ ja:
           unbound_marker: "対応するタスクがない削除マーカーのためスキップしました。"
           content_changed_with_marker: "内容の変更と削除マーカーが同時にあるためスキップしました。"
           empty_content: "内容が空のためスキップしました。"
+          conflicting_lines: "同じタスクを指す行が他にもあるためスキップしました。"
     sign_out: "サインアウト"
     common:
       rename: "名前を変更"

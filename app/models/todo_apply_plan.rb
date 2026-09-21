@@ -12,8 +12,10 @@ class TodoApplyPlan
     @skipped = []
     @seen_signatures = {}
     @heading_notes = {}
+    @bound_op_lines = Hash.new { |h, k| h[k] = [] }
 
     lines.each { |line| process(line) }
+    resolve_id_conflicts
   end
 
   private
@@ -49,9 +51,30 @@ class TodoApplyPlan
       return
     end
 
-    return @operations << Operation.new(type: :delete, note: item.note, item: item) if line.delete?
+    before = @operations.size
+    if line.delete?
+      @operations << Operation.new(type: :delete, note: item.note, item: item)
+    else
+      content_changed ? process_rename(line, item) : process_in_place(line, item)
+    end
+    @bound_op_lines[item.id] << { line: line, range: before...@operations.size } if @operations.size > before
+  end
 
-    content_changed ? process_rename(line, item) : process_in_place(line, item)
+  # Two lines binding the same id with no stated precedence between them is
+  # exactly the "don't apply on a guess" case, so both are dropped.
+  def resolve_id_conflicts
+    conflicting_indices = []
+
+    @bound_op_lines.each_value do |entries|
+      next if entries.size < 2
+
+      entries.each do |entry|
+        conflicting_indices.concat(entry[:range].to_a)
+        @skipped << Skipped.new(reason: :conflicting_lines, heading: entry[:line].heading)
+      end
+    end
+
+    conflicting_indices.sort.reverse_each { |i| @operations.delete_at(i) }
   end
 
   def process_rename(line, item)
