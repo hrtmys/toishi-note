@@ -1,7 +1,5 @@
-<%# The Todos hub — a third mode of the main pane (see index.html.erb's
-    `elsif @todos` branch), not a modal, mirroring how Organize works.
-    todo_items is set when todos_view == "due", todo_notes when it's
-    "project" — only the active view's data is ever loaded. %>
+<%# The Todos hub — a third mode of the main pane, mirroring Organize.
+    Only the active view's data (todo_items or todo_notes) is loaded. %>
 <div class="h-100 d-flex flex-column overflow-hidden p-4">
   <div class="d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 flex-shrink-0">
     <div class="d-flex align-items-center">

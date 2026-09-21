@@ -82,10 +82,8 @@ class HomeController < ApplicationController
     end
 
     # The "project" view's grouping unit: every note with at least one
-    # open todo item, with its notebook/folder for the header and *all*
-    # its todo_items (not just open ones) preloaded, so Note's loaded_*
-    # helpers can derive done/total and overdue counts without issuing a
-    # COUNT query per note.
+    # open todo item. All its todo_items (not just open ones) are preloaded
+    # so Note's loaded_* helpers avoid a COUNT query per note.
     def todos_project_scope
       open_note_ids = Current.user.todo_items.where(is_checked: false).select(:note_id)
 
