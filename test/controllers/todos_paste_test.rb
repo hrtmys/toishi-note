@@ -120,6 +120,10 @@ class TodosPasteTest < ActionDispatch::IntegrationTest
       TodoItem.validates :content, presence: true
     end
 
+    # Fails loudly if TodoItem ever gains a validator this restore doesn't replace,
+    # rather than quietly dropping it for every later test in the process.
+    assert_equal [ :content ], TodoItem.validators.flat_map(&:attributes).uniq
+
     assert TodoItem.exists?(doomed_to_survive.id)
     assert_not TodoItem.exists?(content: "New task")
     assert TodoItem.exists?(survivor.id)
