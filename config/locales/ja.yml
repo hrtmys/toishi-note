@@ -304,6 +304,7 @@ ja:
       invalid_json: "有効なJSONではありません。"
       must_be_array: "JSONはタスクの配列である必要があります。"
       skipped_invalid_task: "スキップ — 有効なタスクではありません: %{raw}"
+      markdown_delete_unsupported: "削除マーカーはここでは使用できません — スキップしました: %{raw}"
     forms:
       adding: "追加中…"
       add_failed: "追加できませんでした — 通信状況を確認してください。"

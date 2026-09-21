@@ -332,6 +332,7 @@ en:
       invalid_json: "That isn't valid JSON."
       must_be_array: "The JSON must be an array of tasks."
       skipped_invalid_task: "Skipped — not a valid task: %{raw}"
+      markdown_delete_unsupported: "Removal markers aren't supported here — skipped: %{raw}"
     forms:
       adding: "Adding…"
       add_failed: "Couldn't add that — check your connection."
