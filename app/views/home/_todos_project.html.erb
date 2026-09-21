@@ -15,11 +15,13 @@
         <% end %>
         <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md, note_id: note.id), label: t("home.todos.copy_group") } %>
       </div>
-      <% note.loaded_open_todo_items.each do |item| %>
-        <div id="all_todos_item_<%= item.id %>">
-          <%= render partial: "todo_items/item", locals: { item: item } %>
-        </div>
-      <% end %>
+      <div id="todo_list_<%= note.id %>">
+        <% note.loaded_open_todo_items.each do |item| %>
+          <div id="all_todos_item_<%= item.id %>">
+            <%= render partial: "todo_items/item", locals: { item: item } %>
+          </div>
+        <% end %>
+      </div>
     </div>
   <% end %>
 <% end %>

@@ -1,0 +1,11 @@
+<%# locals: view %>
+<div class="bg-white rounded shadow-sm border p-3 mb-3 flex-shrink-0">
+  <%= form_with url: preview_todos_path, method: :post, id: "todos_paste_form" do %>
+    <%= hidden_field_tag :view, view %>
+    <label for="text" class="form-label small text-muted"><%= t("home.todos.paste.label") %></label>
+    <%= text_area_tag :text, nil, id: "text", class: "form-control mb-2", rows: 4,
+        aria: { label: t("home.todos.paste.label") } %>
+    <%= submit_tag t("home.todos.paste.preview"), class: "btn btn-outline-secondary btn-sm" %>
+  <% end %>
+  <div id="todos_paste_preview" class="mt-3"></div>
+</div>

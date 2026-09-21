@@ -26,7 +26,11 @@
     </div>
   </div>
 
-  <div class="flex-grow-1 overflow-y-auto custom-scrollbar-light">
+  <% if Current.user.ai_handoff_enabled? %>
+    <%= render "todos/paste_form", view: todos_view %>
+  <% end %>
+
+  <div id="todos_hub_body" class="flex-grow-1 overflow-y-auto custom-scrollbar-light">
     <% if todos_view == "due" %>
       <%= render "home/todos_due", todo_items: todo_items %>
     <% else %>
