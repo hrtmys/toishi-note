@@ -28,8 +28,12 @@ class TodosAiHandoffTest < ApplicationSystemTestCase
 
     wait_until("ai_handoff_enabled PATCH never landed") { users(:one).reload.ai_handoff_enabled? }
 
-    find("#settingsModal .btn-close").click
-    assert_no_selector "#settingsModal.show"
+    # Bootstrap ignores hide() while its own show transition is still running,
+    # so the close has to be retried rather than clicked once.
+    wait_until("settings modal never closed") do
+      find("#settingsModal .btn-close").click
+      has_no_selector?("#settingsModal.show", wait: 0.3)
+    end
 
     find("button:has(i.bi-clipboard)", match: :first).click
     assert_selector ".toast.show", text: I18n.t("js.copied")
