@@ -10,13 +10,21 @@
       <h4 class="fw-bold m-0"><%= t("home.header.all_open_todos") %></h4>
     </div>
 
-    <div class="btn-group flex-shrink-0">
-      <%= link_to t("home.todos.view_project"),
-          root_path(todos: true, view: "project", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
-          class: "btn btn-sm #{todos_view == 'project' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
-      <%= link_to t("home.todos.view_due"),
-          root_path(todos: true, view: "due", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
-          class: "btn btn-sm #{todos_view == 'due' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
+    <div class="d-flex align-items-center flex-shrink-0">
+      <span id="todosCopyAllContainer" class="me-2" data-copy-url="<%= todos_path(format: :md) %>">
+        <% if Current.user.ai_handoff_enabled? %>
+          <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md), label: t("home.todos.copy_all") } %>
+        <% end %>
+      </span>
+
+      <div class="btn-group">
+        <%= link_to t("home.todos.view_project"),
+            root_path(todos: true, view: "project", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+            class: "btn btn-sm #{todos_view == 'project' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
+        <%= link_to t("home.todos.view_due"),
+            root_path(todos: true, view: "due", notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
+            class: "btn btn-sm #{todos_view == 'due' ? 'btn-secondary' : 'btn-outline-secondary'}" %>
+      </div>
     </div>
   </div>
 
@@ -27,4 +35,8 @@
       <%= render "home/todos_project", todo_notes: todo_notes %>
     <% end %>
   </div>
+
+  <% if excluded_todos_count.to_i.positive? %>
+    <div class="text-muted small mt-2 flex-shrink-0"><%= t("home.todos.excluded_count", count: excluded_todos_count) %></div>
+  <% end %>
 </div>

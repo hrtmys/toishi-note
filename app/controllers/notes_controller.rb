@@ -123,7 +123,7 @@ class NotesController < ApplicationController
   private
 
   def note_params
-    params.require(:note).permit(:title, :content, :is_pinned, :lock_version)
+    params.require(:note).permit(:title, :content, :is_pinned, :ai_excluded, :lock_version)
   end
 
   def move_params
