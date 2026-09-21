@@ -67,6 +67,6 @@ class TodoDueDatesTest < ApplicationSystemTestCase
 
     find("a[title='#{I18n.t('home.todos.back')}']").click
 
-    assert_selector "input[value=?]", @note.title
+    assert_selector "input[value='#{@note.title}']"
   end
 end
