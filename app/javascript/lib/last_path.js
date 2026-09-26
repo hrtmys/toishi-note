@@ -1,6 +1,4 @@
-// Cleans a stored/candidate "last note location" for the navigation
-// controller. Only a bare root ("/") on the same origin is worth
-// restoring; mode params (organize/todos/view) shouldn't be replayed.
+// Mode params (organize/todos/view) reopen a mode, not a note, so they're never replayed.
 export function rememberablePath(href, origin) {
   let url
   try {
