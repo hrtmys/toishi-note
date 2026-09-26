@@ -223,4 +223,43 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[placeholder=?]", I18n.t("editor.content_placeholder", locale: :ja)
     assert_select "button[title=?]", I18n.t("editor.fab.button_title", locale: :ja)
   end
+
+  test "the pinned section lists a pinned note from a notebook other than the open one" do
+    open_notebook = users(:one).notebooks.create!(name: "Open Notebook")
+    open_folder = open_notebook.folders.create!(name: "Open Folder")
+    other_notebook = users(:one).notebooks.create!(name: "Other Notebook")
+    other_folder = other_notebook.folders.create!(name: "Other Folder")
+    pinned = other_folder.notes.create!(notebook: other_notebook, title: "Far Away Pinned", note_type: "md", is_pinned: true)
+
+    get root_url(notebook_id: open_notebook.id, folder_id: open_folder.id)
+
+    assert_response :success
+    assert_select "#pinned-list", text: /#{Regexp.escape(pinned.title)}/
+  end
+
+  test "the pinned section never shows another user's pinned notes" do
+    own_notebook = users(:one).notebooks.create!(name: "Own Notebook")
+    own_folder = own_notebook.folders.create!(name: "Own Folder")
+    own_folder.notes.create!(notebook: own_notebook, title: "Own Pinned", note_type: "md", is_pinned: true)
+    foreign_notebook = users(:two).notebooks.create!(name: "Foreign Notebook")
+    foreign_folder = foreign_notebook.folders.create!(name: "Foreign Folder")
+    foreign_folder.notes.create!(notebook: foreign_notebook, title: "Foreign Pinned", note_type: "md", is_pinned: true)
+
+    get root_url(notebook_id: own_notebook.id, folder_id: own_folder.id)
+
+    assert_response :success
+    assert_select "#pinned-list", text: /Own Pinned/
+    assert_no_match(/Foreign Pinned/, response.body)
+  end
+
+  test "with no pinned notes the pinned section renders nothing at all" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    folder.notes.create!(notebook: notebook, title: "Plain Note", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id)
+
+    assert_response :success
+    assert_select "#pinned-list", count: 0
+  end
 end
