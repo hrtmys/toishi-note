@@ -59,6 +59,8 @@ ja:
         renamed: "ノートブック名を変更しました。"
         rename_failed: "ノートブック名を変更できませんでした。"
         deleted: "ノートブックを削除しました。"
+    pinned:
+      heading: "ピン留め"
     folders:
       heading: "FOLDERS"
       new_prompt: "フォルダ名を入力してください"

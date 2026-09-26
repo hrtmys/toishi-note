@@ -48,6 +48,8 @@ class HomeController < ApplicationController
     # Feeds the Ctrl+P palette's initial state so opening it costs no
     # round trip.
     @palette_notes = Current.user.notes.recently_viewed
+
+    @pinned_notes = Current.user.notes.pinned
   end
 
   private

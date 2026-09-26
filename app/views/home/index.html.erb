@@ -4,7 +4,8 @@
     <%= render partial: "home/sidebar", locals: {
       notebooks: @notebooks, current_notebook: @current_notebook,
       folders: @folders, current_folder: @current_folder,
-      notes: @notes, current_note: @current_note
+      notes: @notes, current_note: @current_note,
+      pinned_notes: @pinned_notes
     } %>
 
     <!-- Right column: the note body. -->

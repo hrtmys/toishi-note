@@ -16,6 +16,29 @@
       </div>
     </div>
 
+    <% if pinned_notes.any? %>
+    <div class="d-flex flex-column flex-shrink-0" style="max-height: 20vh;">
+      <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
+        <p class="text-secondary small mb-0 fw-bold"><%= t("home.pinned.heading") %></p>
+      </div>
+      <div id="pinned-list" data-scroll-id="pinned" data-controller="scroll" class="overflow-y-auto overflow-x-hidden custom-scrollbar-dark flex-grow-1" style="min-height: 0;">
+        <ul class="list-unstyled mb-0 pe-2">
+          <% pinned_notes.each do |note| %>
+            <li class="d-flex justify-content-between align-items-center rounded p-1 mb-1 <%= 'bg-secondary text-white' if note == current_note %>">
+              <%= link_to root_path(notebook_id: note.notebook_id, folder_id: note.folder_id, note_id: note.id),
+                  class: "text-decoration-none text-truncate flex-grow-1 px-1",
+                  style: "color: #e0e0e0;",
+                  title: "#{note.notebook.name} / #{note.folder.name}",
+                  data: { turbo_frame: "_top", action: "click->offcanvas#close" } do %>
+                <i class="bi <%= note_icon_class(note) %> me-2 opacity-75"></i><%= note.title %>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    </div>
+    <% end %>
+
     <div class="d-flex flex-column flex-shrink-0" style="max-height: 28vh;">
       <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
         <p class="text-secondary small mb-0 fw-bold"><%= t("home.notebooks.heading") %></p>

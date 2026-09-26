@@ -83,6 +83,8 @@ en:
         renamed: "Notebook renamed."
         rename_failed: "Couldn't rename the notebook."
         deleted: "Notebook deleted."
+    pinned:
+      heading: "Pinned"
     folders:
       heading: "FOLDERS"
       new_prompt: "Enter a folder name"

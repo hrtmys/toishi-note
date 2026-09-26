@@ -24,6 +24,7 @@ class Note < ApplicationRecord
   # needed because notebooks already declares a default order scope that
   # a plain #order would only append to.
   scope :recently_viewed, -> { includes(:notebook, :folder).reorder(last_viewed_at: :desc).limit(10) }
+  scope :pinned, -> { where(is_pinned: true).includes(:notebook, :folder).reorder(:title) }
 
   before_validation :auto_set_title
 
