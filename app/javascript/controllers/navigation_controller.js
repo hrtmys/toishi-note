@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { rememberablePath } from "../lib/last_path.js"
 
 // Restores the last visited notebook/note on reload, via localStorage.
 // Scoped to a bare "/" with no query string, since checking path alone
@@ -7,10 +8,18 @@ export default class extends Controller {
   connect() {
     if (window.location.pathname === "/" && window.location.search === "") {
       const last = localStorage.getItem("lastPath")
-      if (last && last !== window.location.href) {
+      const cleaned = last ? rememberablePath(last, window.location.origin) : null
+
+      if (cleaned) {
+        localStorage.setItem("lastPath", cleaned)
+      } else {
+        localStorage.removeItem("lastPath")
+      }
+
+      if (cleaned && cleaned !== window.location.href) {
         // Use Turbo to navigate without full reload.
         import("@hotwired/turbo-rails").then(({ Turbo }) => {
-          Turbo.visit(last)
+          Turbo.visit(cleaned)
         }).catch(() => {})
       }
     }
@@ -29,15 +38,8 @@ export default class extends Controller {
   storeLocation(event) {
     const link = event.target.closest("a")
     if (link && link.href) {
-      try {
-        const url = new URL(link.href)
-        // Only remember note-editor navigation (root path, note/notebook
-        // params) — a click into an admin/auth page shouldn't later
-        // "restore" you there on the next root-path visit.
-        if (url.origin === window.location.origin && url.pathname === "/") {
-          localStorage.setItem("lastPath", url.href)
-        }
-      } catch (_) {}
+      const cleaned = rememberablePath(link.href, window.location.origin)
+      if (cleaned) localStorage.setItem("lastPath", cleaned)
     }
   }
 }
