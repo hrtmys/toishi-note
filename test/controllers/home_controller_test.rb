@@ -203,6 +203,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       text: I18n.t("home.organize.back")
   end
 
+  test "the layout links the manifest with use-credentials, so Cloudflare Access cookies reach it" do
+    get root_url
+
+    assert_response :success
+    assert_select "link[rel=manifest][href='/manifest.json'][crossorigin='use-credentials']"
+  end
+
   test "the sidebar and md editor toolbar render in the signed-in user's locale" do
     # Locale-driven copy is server-rendered — assert_select covers it.
     # Only the Language-switch flow and the Stimulus toast need a browser.
