@@ -32,7 +32,7 @@ class SidebarPanesTest < ApplicationSystemTestCase
   end
 
   test "when even the minimums don't fit, the sidebar itself scrolls" do
-    page.driver.browser.manage.window.resize_to(1400, 380)
+    page.driver.browser.manage.window.resize_to(1400, 300)
     open_busy_notebook
 
     assert list_scrolls?("#sidebarMenu > div"), "the sidebar wrapper should scroll"
