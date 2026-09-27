@@ -12,6 +12,10 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # wait budget under load. Raised here for the whole suite.
   Capybara.default_max_wait_time = 8
 
+  # The browser window outlives each test, so one that resizes it (to a phone
+  # width, say) would otherwise leave the next test with a hidden sidebar.
+  setup { page.driver.browser.manage.window.resize_to(1400, 1400) }
+
   # `visit` only waits for `load`, not our JS bundle — a click right after
   # can land before its listener attaches. Waiting for `window.Stimulus`
   # (set once the bundle runs) closes that gap.
