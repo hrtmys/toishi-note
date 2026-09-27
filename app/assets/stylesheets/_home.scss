@@ -103,3 +103,28 @@
     display: none;
   }
 }
+
+// Sidebar sections (home/_sidebar.html.erb): each list sizes to its content
+// up to a share of the sidebar, then scrolls; Files takes the rest.
+.sidebar-panes {
+  overflow-y: auto;
+}
+
+.sidebar-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 4rem;
+  max-height: 35%;
+}
+
+.sidebar-pane--pinned {
+  max-height: 25%;
+}
+
+// A zero basis keeps Files from shrinking, so the capped panes give way first.
+.sidebar-pane--files {
+  flex: 1 1 0;
+  min-height: 10rem;
+  max-height: none;
+}
