@@ -8,8 +8,6 @@ class SidebarPanesTest < ApplicationSystemTestCase
     40.times { |i| @notebook.folders.create!(name: "Folder #{i}") }
   end
 
-  teardown { page.driver.browser.manage.window.resize_to(1400, 1400) }
-
   test "long notebook and folder lists grow to their share of the sidebar, then scroll" do
     open_busy_notebook
 
