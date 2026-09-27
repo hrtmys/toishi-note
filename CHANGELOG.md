@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project doesn't yet follow Semantic Versioning strictly (pre-1.0 — see `docs/product/roadmap.md`'s versioning table for what each stage means).
 
+## [Unreleased]
+
+### Fixed
+- Chrome and Edge now offer "Install app" again. The manifest pointed at a single 1536px icon, which Chrome rejects as unsuitable, so the only option left was "install page as app", which pins the current URL. The manifest now lists standard 192px and 512px icons.
+
 ## [0.2.0] — 2026-09-27
 
 The editor batch, the TODO hub, and the first two pieces of faster movement around the app. Migrations are additive only (two boolean columns).
