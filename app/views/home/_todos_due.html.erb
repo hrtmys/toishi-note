@@ -1,0 +1,18 @@
+<% if todo_items.empty? %>
+  <div class="text-center text-muted p-5">
+    <i class="bi bi-check2-circle display-1 mb-3 d-block"></i>
+    <%= t("home.todos.empty") %>
+  </div>
+<% else %>
+  <div class="bg-white rounded shadow-sm border p-3">
+    <% todo_items.each do |item| %>
+      <div id="all_todos_item_<%= item.id %>">
+        <%= link_to root_path(notebook_id: item.note.notebook_id, folder_id: item.note.folder_id, note_id: item.note.id),
+            class: "small text-muted text-decoration-none d-block mt-2" do %>
+          <%= item.note.folder.notebook.name %> / <%= item.note.folder.name %> / <%= item.note.title %>
+        <% end %>
+        <%= render partial: "todo_items/item", locals: { item: item } %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

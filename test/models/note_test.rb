@@ -248,6 +248,13 @@ class NoteTest < ActiveSupport::TestCase
     assert_equal "- [ ] Renew passport (due: 2026-09-01)", note.to_markdown
   end
 
+  test "to_markdown never includes an (id:) tag — reserved for the /todos.md handoff path only" do
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo", note_type: "todo")
+    note.todo_items.create!(content: "Renew passport", due_date: Date.new(2026, 9, 1))
+
+    assert_no_match(/\(id:/, note.to_markdown)
+  end
+
   test "to_markdown joins scrap items with a --- separator, in position order" do
     note = @folder.notes.create!(notebook: @notebook, title: "Scrap", note_type: "scrap")
     note.scrap_items.create!(content: "First")
@@ -315,6 +322,47 @@ class NoteTest < ActiveSupport::TestCase
     items = note.build_bulk_todo_items([ "Valid one", nil, 42, { "no_content" => true }, "", "  ", "Valid two" ])
 
     assert_equal [ "Valid one", "Valid two" ], items.map(&:content)
+  end
+
+  test "parse_bulk_todo_entries still dispatches to JSON when the first non-blank char is [" do
+    entries = Note.parse_bulk_todo_entries("  \n [\"Buy milk\"]")
+    assert_equal [ "Buy milk" ], entries
+  end
+
+  test "parse_bulk_todo_entries still dispatches to JSON when the first non-blank char is {" do
+    assert_equal [], Note.parse_bulk_todo_entries('{"content": "Not an array"}')
+  end
+
+  test "parse_bulk_todo_entries parses '- [ ]' Markdown lines when the input isn't JSON" do
+    entries = Note.parse_bulk_todo_entries("- [ ] Buy milk\n- [x] Call plumber")
+    assert_equal 2, entries.size
+  end
+
+  test "a due date on a pasted Markdown line survives into the built TodoItem" do
+    entries = Note.parse_bulk_todo_entries("- [ ] Renew passport (due: 2026-09-01)")
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items(entries)
+
+    assert_equal Date.new(2026, 9, 1), items.first.due_date
+  end
+
+  test "an (id: ...) tag on a pasted Markdown line is stripped and discarded, never bound" do
+    entries = Note.parse_bulk_todo_entries("- [ ] Buy milk (id: c8)")
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items(entries)
+
+    assert_equal "Buy milk", items.first.content
+  end
+
+  test "a Markdown line carrying a removal marker is not built into an item" do
+    entries = Note.parse_bulk_todo_entries("- [ ] Buy milk\n- [ ] Old task (id: c8;delete!)")
+    note = @folder.notes.create!(notebook: @notebook, title: "Todo Note", note_type: "todo")
+
+    items = note.build_bulk_todo_items(entries)
+
+    assert_equal [ "Buy milk" ], items.map(&:content)
   end
 
   test "attach_uploaded_image keeps the original when compress is false" do

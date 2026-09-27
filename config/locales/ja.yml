@@ -31,6 +31,8 @@ ja:
       table_paste_description: "同じフローティングボタンに「Markdownに変換」ボタンを追加し、直前にExcel/Sheetsから貼り付けた表をMarkdownの表に変換できます。通常のCtrl+Vではこれまで通り画像が貼り付けられます — デフォルトではオフです。"
       keep_original_images_label: "アップロードした画像を圧縮しない"
       keep_original_images_description: "貼り付け・ドロップした画像は容量節約のためデフォルトでWebPに変換されます。オンにすると元のファイルのまま保存されます。"
+      ai_handoff_label: "AI引き継ぎ"
+      ai_handoff_description: "ノートごとにAI引き継ぎから除外するトグル、コピー用ボタン、開いているタスクをAIチャットに貼り付けるための GET /todos.md フィードを追加します — デフォルトではオフです。"
   home:
     header:
       all_open_todos: "未完了のTODO一覧"
@@ -40,6 +42,41 @@ ja:
       heading: "整理"
       back: "← 戻る"
       empty: "まだノートブックがありません。"
+    todos:
+      back: "戻る"
+      view_project: "プロジェクト別"
+      view_due: "期限別"
+      empty: "未完了のタスクはありません。"
+      stats: "(%{progress}、期限超過 %{overdue})"
+      checklist: "(チェックリスト)"
+      copy_all: "すべてコピー"
+      copy_group: "コピー"
+      excluded_count: "%{count}件を除外中"
+      paste:
+        label: "AIの返信からタスクを貼り付け"
+        preview: "プレビュー"
+        confirm: "適用"
+        applied: "変更を適用しました。"
+        apply_failed: "変更を適用できませんでした。"
+        nothing_found: "貼り付けたテキストにタスク行が見つかりませんでした。"
+        no_heading: "(見出しなし)"
+        no_due: "なし"
+        irreversible: "削除は取り消せません。"
+        digest_mismatch: "プレビュー後にタスクが変更されました。もう一度確認してください。"
+        over_cap: "一度に貼り付けられたタスク行が多すぎます。"
+        group_add: "追加"
+        group_check: "完了状態"
+        group_due_change: "期限"
+        group_delete: "削除"
+        group_skipped: "スキップ"
+        skip_reasons:
+          ambiguous_heading: "「%{heading}」に一致するノートが複数あるためスキップしました。"
+          unknown_heading: "「%{heading}」に一致するノートがないためスキップしました。"
+          duplicate_line: "重複した行のためスキップしました。"
+          unbound_marker: "対応するタスクがない削除マーカーのためスキップしました。"
+          content_changed_with_marker: "内容の変更と削除マーカーが同時にあるためスキップしました。"
+          empty_content: "内容が空のためスキップしました。"
+          conflicting_lines: "同じタスクを指す行が他にもあるためスキップしました。"
     sign_out: "サインアウト"
     common:
       rename: "名前を変更"
@@ -100,6 +137,7 @@ ja:
         deleted: "ノートを削除しました。"
     todo:
       bulk_add: "一括追加"
+      ai_excluded_label: "AI引き継ぎから除外"
       content_placeholder: "タスクを追加..."
       add_due_date: "期限を追加"
       due_date_label: "期限"
@@ -248,6 +286,8 @@ ja:
       move_failed: "移動を保存できませんでした — 実際の状態を表示するためページを再読み込みします。"
       folder_moved: "フォルダを移動しました。"
       note_moved: "ノートを移動しました。"
+    todos:
+      copy_all: "すべてコピー"
     image_upload:
       uploading: "%{filename} をアップロード中…"
       failed: "%{filename} のアップロードに失敗しました"
@@ -267,6 +307,7 @@ ja:
       invalid_json: "有効なJSONではありません。"
       must_be_array: "JSONはタスクの配列である必要があります。"
       skipped_invalid_task: "スキップ — 有効なタスクではありません: %{raw}"
+      markdown_delete_unsupported: "削除マーカーはここでは使用できません — スキップしました: %{raw}"
     forms:
       adding: "追加中…"
       add_failed: "追加できませんでした — 通信状況を確認してください。"

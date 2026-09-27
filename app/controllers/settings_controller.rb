@@ -15,6 +15,6 @@ class SettingsController < ApplicationController
 
   private
     def settings_params
-      params.permit(:editor_fab_enabled, :compare_enabled, :table_paste_enabled, :keep_original_images, :locale)
+      params.permit(:editor_fab_enabled, :compare_enabled, :table_paste_enabled, :keep_original_images, :ai_handoff_enabled, :locale)
     end
 end

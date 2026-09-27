@@ -28,6 +28,15 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_not users(:one).reload.table_paste_enabled?
   end
 
+  test "toggles ai_handoff_enabled" do
+    patch settings_url, params: { ai_handoff_enabled: true }, as: :json
+    assert_response :success
+    assert users(:one).reload.ai_handoff_enabled?
+
+    patch settings_url, params: { ai_handoff_enabled: false }, as: :json
+    assert_not users(:one).reload.ai_handoff_enabled?
+  end
+
   test "toggles keep_original_images" do
     patch settings_url, params: { keep_original_images: true }, as: :json
     assert_response :success

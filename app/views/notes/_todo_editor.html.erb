@@ -3,6 +3,14 @@
     <div class="flex-grow-1">
       <%= render partial: "todo_items/progress", locals: { note: note } %>
     </div>
+    <% if Current.user.ai_handoff_enabled? %>
+      <div class="form-check form-switch ms-2 mb-3" data-controller="ai-excluded-toggle" data-ai-excluded-toggle-note-id-value="<%= note.id %>">
+        <input class="form-check-input" type="checkbox" role="switch" id="aiExcludedToggle"
+            data-action="change->ai-excluded-toggle#toggle"
+            <%= "checked" if note.ai_excluded? %>>
+        <label class="form-check-label small text-nowrap" for="aiExcludedToggle"><%= t("home.todo.ai_excluded_label") %></label>
+      </div>
+    <% end %>
     <button type="button" class="btn btn-outline-secondary btn-sm ms-2 mb-3" data-bs-toggle="modal" data-bs-target="#bulk_import_modal_<%= note.id %>">
       <%= t("home.todo.bulk_add") %>
     </button>

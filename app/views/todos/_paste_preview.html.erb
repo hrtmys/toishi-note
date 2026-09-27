@@ -1,0 +1,73 @@
+<%# locals: plan, text, digest, any_lines, view %>
+<% if !any_lines %>
+  <p class="text-muted small mb-0"><%= t("home.todos.paste.nothing_found") %></p>
+<% else %>
+  <%= form_with url: apply_todos_path, method: :post do %>
+    <%= hidden_field_tag :text, text, id: "todos_paste_confirm_text" %>
+    <%= hidden_field_tag :digest, digest, id: "todos_paste_confirm_digest" %>
+    <%= hidden_field_tag :view, view %>
+
+    <% adds = plan.operations.select { |op| op.type == :add } %>
+    <% checks = plan.operations.select { |op| op.type == :check } %>
+    <% due_changes = plan.operations.select { |op| op.type == :due_change } %>
+    <% deletes = plan.operations.select { |op| op.type == :delete } %>
+
+    <% if adds.any? %>
+      <div id="todos_paste_adds" class="mb-3">
+        <h6><%= t("home.todos.paste.group_add") %></h6>
+        <ul class="list-group">
+          <% adds.each do |op| %>
+            <li class="list-group-item"><%= op.content %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if checks.any? %>
+      <div id="todos_paste_checks" class="mb-3">
+        <h6><%= t("home.todos.paste.group_check") %></h6>
+        <ul class="list-group">
+          <% checks.each do |op| %>
+            <li class="list-group-item"><%= op.item.content %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if due_changes.any? %>
+      <div id="todos_paste_due_changes" class="mb-3">
+        <h6><%= t("home.todos.paste.group_due_change") %></h6>
+        <ul class="list-group">
+          <% due_changes.each do |op| %>
+            <li class="list-group-item"><%= op.item.content %>: <%= todos_paste_due_text(op.old_due) %> &rarr; <%= todos_paste_due_text(op.new_due) %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if deletes.any? %>
+      <div id="todos_paste_deletes" class="mb-3 border border-danger rounded p-2">
+        <h6 class="text-danger"><%= t("home.todos.paste.group_delete") %></h6>
+        <p class="small text-danger mb-2"><%= t("home.todos.paste.irreversible") %></p>
+        <ul class="list-group mb-2">
+          <% deletes.each do |op| %>
+            <li class="list-group-item list-group-item-danger"><%= op.item.content %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <% if plan.skipped.any? %>
+      <div id="todos_paste_skipped" class="mb-3">
+        <h6><%= t("home.todos.paste.group_skipped") %></h6>
+        <ul class="list-group">
+          <% plan.skipped.each do |skip| %>
+            <li class="list-group-item list-group-item-warning"><%= todos_paste_skip_text(skip) %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= submit_tag t("home.todos.paste.confirm"), class: "btn btn-danger btn-sm" %>
+  <% end %>
+<% end %>

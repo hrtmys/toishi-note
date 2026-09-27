@@ -15,7 +15,12 @@ Rails.application.routes.draw do
 
   resource :settings, only: [ :update ]
   resource :palette, only: [ :show ], controller: "palette"
-  resources :todos, only: [ :index ]
+  resources :todos, only: [ :index ] do
+    collection do
+      post :preview
+      post :apply
+    end
+  end
 
   root "home#index"
 

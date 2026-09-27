@@ -55,6 +55,8 @@ en:
       table_paste_description: "Adds a 'Convert to Markdown' button to the same floating button, turning the table you just pasted from Excel/Sheets into a Markdown table on demand. Plain Ctrl+V still just pastes the image, exactly as before — off by default."
       keep_original_images_label: "Don't compress uploaded images"
       keep_original_images_description: "Pasted/dropped images are converted to WebP by default to save space. Turn this on to keep the original file instead."
+      ai_handoff_label: "AI handoff"
+      ai_handoff_description: "Adds a per-note toggle to exclude a note from AI handoff, and copy buttons plus a GET /todos.md feed for pasting your open tasks into an AI chat — off by default."
   home:
     header:
       all_open_todos: "All open TODOs"
@@ -64,6 +66,41 @@ en:
       heading: "Organize"
       back: "← Back"
       empty: "No notebooks yet."
+    todos:
+      back: "Back"
+      view_project: "By project"
+      view_due: "By due date"
+      empty: "Nothing open right now."
+      stats: "(%{progress}, overdue %{overdue})"
+      checklist: "(checklist)"
+      copy_all: "Copy all"
+      copy_group: "Copy"
+      excluded_count: "%{count} excluded"
+      paste:
+        label: "Paste tasks from an AI reply"
+        preview: "Preview"
+        confirm: "Apply"
+        applied: "Changes applied."
+        apply_failed: "Couldn't apply these changes."
+        nothing_found: "No task lines found in the pasted text."
+        no_heading: "(no heading)"
+        no_due: "none"
+        irreversible: "Deletes are permanent and cannot be undone."
+        digest_mismatch: "These tasks changed since you previewed them. Please review again."
+        over_cap: "Too many task lines pasted at once."
+        group_add: "Add"
+        group_check: "Check state"
+        group_due_change: "Due date"
+        group_delete: "Delete"
+        group_skipped: "Skipped"
+        skip_reasons:
+          ambiguous_heading: "\"%{heading}\" matches more than one note — skipped."
+          unknown_heading: "\"%{heading}\" doesn't match any note — skipped."
+          duplicate_line: "Duplicate line — skipped."
+          unbound_marker: "A removal marker with no matching task — skipped."
+          content_changed_with_marker: "This line was both edited and marked for removal — skipped."
+          empty_content: "Empty task line — skipped."
+          conflicting_lines: "Another line in this paste targets the same task — skipped."
     sign_out: "Sign out"
     common:
       rename: "Rename"
@@ -121,6 +158,7 @@ en:
         deleted: "Note deleted."
     todo:
       bulk_add: "Bulk add"
+      ai_excluded_label: "Exclude from AI handoff"
       content_placeholder: "Add a task..."
       add_due_date: "Add due date"
       due_date_label: "Due date"
@@ -276,6 +314,8 @@ en:
       move_failed: "Couldn't save that move — the page will reload to show the real state."
       folder_moved: "Folder moved."
       note_moved: "Note moved."
+    todos:
+      copy_all: "Copy all"
     image_upload:
       uploading: "Uploading %{filename}…"
       failed: "Failed to upload %{filename}"
@@ -295,6 +335,7 @@ en:
       invalid_json: "That isn't valid JSON."
       must_be_array: "The JSON must be an array of tasks."
       skipped_invalid_task: "Skipped — not a valid task: %{raw}"
+      markdown_delete_unsupported: "Removal markers aren't supported here — skipped: %{raw}"
     forms:
       adding: "Adding…"
       add_failed: "Couldn't add that — check your connection."

@@ -3,10 +3,12 @@ class HomeController < ApplicationController
     # Admin accounts manage logins only — they never see the notebook UI.
     return redirect_to admin_users_path if Current.user.admin?
 
-    # Organize is a third mode of the main pane, not a separate page —
-    # it needs the same context resolved below, to render and for its
-    # "back" link.
+    # Organize and Todos are both modes of the main pane, not separate
+    # pages — they need the same context resolved below, to render and
+    # for their "back" link.
     @organize = params[:organize].present?
+    @todos = params[:todos].present?
+    @todos_view = params[:view].in?(%w[project due]) ? params[:view] : "project"
 
     @notebooks = Current.user.notebooks
 
@@ -50,6 +52,17 @@ class HomeController < ApplicationController
     @palette_notes = Current.user.notes.recently_viewed
 
     @pinned_notes = Current.user.notes.pinned
+
+    # A normal page load pays nothing for this — only the Todos mode
+    # loads either query, and only the one its active view needs.
+    if @todos
+      if @todos_view == "due"
+        @todo_items = Current.user.open_todo_items_by_due
+      else
+        @todo_notes = Current.user.open_todo_notes
+      end
+      @excluded_todos_count = Current.user.excluded_todos_count
+    end
   end
 
   private

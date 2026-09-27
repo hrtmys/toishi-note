@@ -92,3 +92,9 @@ application.register("editor-shortcuts", EditorShortcutsController)
 
 import PaletteController from "./palette_controller"
 application.register("palette", PaletteController)
+
+import TodosCopyController from "./todos_copy_controller"
+application.register("todos-copy", TodosCopyController)
+
+import AiExcludedToggleController from "./ai_excluded_toggle_controller"
+application.register("ai-excluded-toggle", AiExcludedToggleController)

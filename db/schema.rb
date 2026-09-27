@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_21_024202) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -58,6 +58,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
   end
 
   create_table "notes", force: :cascade do |t|
+    t.boolean "ai_excluded", default: false, null: false
     t.text "content"
     t.datetime "created_at", null: false
     t.integer "folder_id", null: false
@@ -105,6 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_07_000000) do
   end
 
   create_table "users", force: :cascade do |t|
+    t.boolean "ai_handoff_enabled", default: false, null: false
     t.boolean "compare_enabled", default: false, null: false
     t.datetime "created_at", null: false
     t.boolean "editor_fab_enabled", default: false, null: false

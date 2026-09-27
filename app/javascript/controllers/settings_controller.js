@@ -51,6 +51,12 @@ export default class extends Controller {
     this.save("keep_original_images", event.target.checked)
   }
 
+  toggleAiHandoff(event) {
+    document.querySelectorAll(".ai-handoff-gated")
+      .forEach((el) => el.classList.toggle("d-none", !event.target.checked))
+    this.save("ai_handoff_enabled", event.target.checked)
+  }
+
   // The one setting that's *not* fade-in-place: already-rendered text
   // can't be live-translated, so a reload applies it. Waits for the save
   // to land first, or an immediate reload would cancel the request — and
