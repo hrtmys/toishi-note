@@ -51,6 +51,8 @@ class HomeController < ApplicationController
     # round trip.
     @palette_notes = Current.user.notes.recently_viewed
 
+    @pinned_notes = Current.user.notes.pinned
+
     # A normal page load pays nothing for this — only the Todos mode
     # loads either query, and only the one its active view needs.
     if @todos
