@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
 
+  # Rails' own PWA controller: the manifest is a browser-required document, not an API.
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+
   resource :setup, only: [ :new, :create ], controller: "setup"
   resource :session
   resources :passwords, param: :token

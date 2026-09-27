@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project doesn't yet follow Semantic Versioning strictly (pre-1.0 — see `docs/product/roadmap.md`'s versioning table for what each stage means).
 
+## [Unreleased]
+
+### Fixed
+- Installing the app from Chrome/Edge now always launches at the root and restores the last note, instead of reopening the page it was installed from. Existing installs need to be uninstalled and reinstalled once to pick this up.
+
 ## [0.1.0] — 2026-08-24
 
 The public beta — everything below shipped in the run-up to the first release strangers are invited to run.
