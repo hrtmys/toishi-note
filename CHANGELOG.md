@@ -2,7 +2,12 @@
 
 All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project doesn't yet follow Semantic Versioning strictly (pre-1.0 — see `docs/product/roadmap.md`'s versioning table for what each stage means).
 
-## [Unreleased]
+## [0.2.1] — 2026-09-28
+
+A new app icon, and the install button back in Chrome and Edge.
+
+### Changed
+- New app icon: an abstract mark of two stones with a bevelled blade between them, replacing the torii from the project's earlier name. Transparent background, with a padded maskable variant for Android. The favicon and touch icon use it too, and the 1.7MB original image is gone.
 
 ### Fixed
 - Chrome and Edge now offer "Install app" again. The manifest pointed at a single 1536px icon, which Chrome rejects as unsuitable, so the only option left was "install page as app", which pins the current URL. The manifest now lists standard 192px and 512px icons.
@@ -66,5 +71,6 @@ The public beta — everything below shipped in the run-up to the first release 
 - `db/seeds.rb` rewritten from Japanese demo business data into a locale-aware welcome/tutorial notebook.
 - `docs/engineering/deployment.md` rewritten as a generic self-hosting guide; maintainer-specific VPS topology moved out of the public repo entirely.
 
+[0.2.1]: https://github.com/hrtmys/toishi-note/releases/tag/v0.2.1
 [0.2.0]: https://github.com/hrtmys/toishi-note/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hrtmys/toishi-note/releases/tag/v0.1.0
