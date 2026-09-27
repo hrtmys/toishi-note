@@ -286,9 +286,18 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 - ✅ Remaining editor shortcuts; paste-URL-over-selection
 - ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
 - ✅ **Installable PWA fix** (merged 2026-09-27, #53) — linked manifest with `start_url`/`id` `"/"`, credentialed manifest fetch, mode params out of `lastPath` (§5 #17). *S–M, design* (small diff, but it has to be checked behind Cloudflare Access and on a real Chrome/Edge install). Do this first.
-- ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only). *S, delegable.*
-- ⬜ Flexible sidebar pane heights (still open — panes still fixed-height). *S, delegable.*
+- ✅ Global pinned section, cross-notebook (#54)
+- ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
 - Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
+
+### v0.2.x — Test suite reset (between v0.2.0 and v0.3)
+
+*Theme: a two-minute CI, so the plan → test → implement loop stops waiting on it.* No user-facing change. It goes here because v0.3's `[[links]]` will add many tests, and those should be written to the new rules from the start.
+
+- `docs/engineering/testing.md`: system tests are a named smoke set of about 10–15 cases covering what only a real browser can check (IME composition, paste and the undo stack, keyboard focus flows, viewport layout). Everything else is a controller/integration test, or a `node:test` unit test of a pure function in `app/javascript/lib/`.
+- Classify the ~130 current system tests against that rule, then convert them in batches. *L, design* for the rule and the classification; the conversions are *delegable*.
+- CI: cache the apt packages; shard the remaining system tests only if still needed. (The push trigger fix and cancelling superseded runs ship with v0.2.0.)
+- Target: CI wall time about 2 minutes, down from about 4.
 
 ### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
 
