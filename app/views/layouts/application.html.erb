@@ -19,6 +19,7 @@
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="manifest" href="<%= pwa_manifest_path(format: :json) %>" crossorigin="use-credentials">
 
     <%# :app bulk-includes every plain .css file under app/assets/**/*.css
         (Propshaft's stylesheet_link_tag override) — this is how
