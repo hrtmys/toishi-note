@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-21
+updated: 2026-09-26
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -18,6 +18,8 @@ This document fixes direction only. Implementation belongs in issues and PRs.
 **v0.1.0 shipped 2026-08-24** (see `CHANGELOG.md`): the fresh public `hrtmys/toishi-note` repository, command palette, editor list behaviors, Account tab, self-hosted assets + CSP, backup runbook, and docs. Two items this document had scheduled for v0.2 were already in that cut — optimistic locking + conflict prompt, and the seeded welcome notebook — so §8 below has been corrected to show them under v0.1.0.
 
 Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening wave**, then the first v0.2 slice: CRUD feedback toasts, TODO/Scrap form fixes, N+1 fixes, concurrent-reorder locking, upload/bulk-import caps, silent-save error toasts, preview/diagram rendering stability, IME-safe auto-title, Word-paste robustness, per-user last-notebook/folder memory, and a dev-environment refresh (`bin/d`) — followed by the v0.2 editor batch (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line) plus the mobile/sidebar bug insertions B1–B5 (instant offcanvas restore, undo-preserving paste with Shift opt-out, touch ellipsis menus, unreserved title width, `*` + space + Enter continuation). Then a **TODO-hub wave** (2026-09-21, issue #47, PRs #49–#51): `/todos` folded into the main pane with a project view, a Settings-gated Markdown handoff at `GET /todos.md`, and bulk apply of an AI's edited reply behind a confirm-gated preview. Still open from the post-v0.1 plan: global pins, resizable panes, body search, import, scratch pad, trash, PNG capture, URL title fetch.
+
+**Re-plan, 2026-09-26.** Three changes, each explained where it lands: a PWA install bug found in daily use is pulled into v0.2 (§5 #17); `[[links]]` and import swap places, so the graph ships as v0.3 and import as v0.5 (§8); and the PNG-capture approach is decided against the browser-native alternatives (§5 #6). §8 now also carries a size and a delegation label per item. v2.0 was re-checked against the code the same day and nothing in it has started — no encryption code, no citation fields, no `tags` table; the only trace is a comment in `settings/_modal.html.erb` reserving the "Integrations" tab.
 
 What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
 
@@ -45,7 +47,7 @@ Obsidian solved this with a quick switcher and links. Notion solved it with sear
 2. **Alternate (Ctrl/Cmd+Tab or Ctrl+P twice)** — bounce between the last two notes without reading a list. This is literally the "行き来する" case; it deserves its own zero-thought gesture. *(v0.1)*
 3. **Global pinned section** — `notes.is_pinned` already exists and is currently used only to sort within one folder. Surfacing pinned notes cross-notebook at the top of the sidebar is a few lines and turns an existing column into a favorites bar. *(v0.2)*
 4. **Search, folded into the same palette** — not a separate screen. *(v0.3)*
-5. **`[[Internal links]]` + backlinks** — structural jumps, and the thing that makes the graph of notes navigable rather than the tree. *(v0.5)*
+5. **`[[Internal links]]` + backlinks** — structural jumps, and the thing that makes the graph of notes navigable rather than the tree. *(v0.3 — moved up from v0.5 on 2026-09-26; see §8)*
 
 Everything in that list shares one UI. Do not build five entry points.
 
@@ -80,7 +82,7 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 4 | Markdown editor: continuous bullets | **Adopt** — plain-textarea behaviors, no CodeMirror | v0.1 (core) / v0.2 (rest) |
 | 5 | Bullets → TODO | **Adopt** — reuses the existing bulk-import endpoint | v0.3 |
 | 6 | Screenshot note → clipboard | **Adopt, rescoped** — preview pane → PNG, not the whole window | v0.4 |
-| 7 | Internal links (TODO→note, scrap→note) | **Adopt, promoted to a flagship epic** — `[[wikilinks]]` + backlinks | v0.5 |
+| 7 | Internal links (TODO→note, scrap→note) | **Adopt, promoted to a flagship epic** — `[[wikilinks]]` + backlinks | v0.3 (was v0.5) |
 | 8 | Proportional (P) font hurts full/half-width reading | **Adopt** — non-proportional UD font, self-hosted | v0.1 |
 | 9 | Ctrl+P to recently opened notes | **Adopt — highest priority item on this list** | v0.1 |
 | 10 | Search | **Adopt** — `LIKE` first, FTS5 when it's actually slow | v0.3 |
@@ -90,6 +92,7 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 | 14 | Local version (Ruby, not Electron) | **Adopt as two answers** — documented localhost Docker now, a `toishi-note` CLI gem at v1.5, encrypted notebooks at v2.0 | v0.1 / v1.5 / v2.0 |
 | 15 | Presentation mode (Rabbit compatible?) | **Adopt, redefined** — built-in slide mode, plus *export* to Rabbit rather than embedding it | v1.5 |
 | 16 | Paste a URL, fetch the title | **Split** — paste-over-selection client-side; title fetch opt-in and SSRF-guarded | v0.2 / v0.4 |
+| 17 | Installed app opens a stale note instead of the last one (bug, 2026-09-26) | **Adopt as a bug fix** — link the manifest so the install uses `start_url: "/"` | v0.2 |
 
 ### Status as of 2026-09-21
 
@@ -110,7 +113,27 @@ Two implementation constraints that must be honored or the feature is worse than
 
 Good extraction candidate: `@toishi/markdown-textarea`.
 
-**#6 — screenshot.** "The whole note screen" would include the sidebar and toolbar, which nobody wants in a LINE message. Capture the rendered preview pane only, as PNG, from the same FAB that already hosts "Copy for Word." Two constraints to plan around: `ClipboardItem` image writes need a secure context and are not universally available (Firefox in particular), so ship a "download PNG" fallback in the same action; and DOM-to-image rasterization only embeds fonts it can read, which is a second reason to self-host the font (pre-beta checklist Blocker 3) rather than pull it from Google.
+**#6 — screenshot.** "The whole note screen" would include the sidebar and toolbar, which nobody wants in a LINE message. Capture the rendered preview pane only, as PNG, from the same FAB that already hosts "Copy for Word," with a "download PNG" fallback in the same action.
+
+*How to rasterize — decided 2026-09-26: a lazy-loaded SVG-`foreignObject` library (`modern-screenshot`), with a browser-native path added behind feature detection once one exists in stable.* The native routes were checked first, since zero bytes beats any library:
+
+| Route | Bundle cost (gzip) | KaTeX / Mermaid | Verdict |
+|---|---|---|---|
+| HTML-in-Canvas (`drawElementImage`) | 0 | exact (native paint) | Origin trial in Chrome 148–150 only. Trial tokens are per origin, so every self-hosted instance would need its own registration — unusable here until it ships in stable. Chromium-only (Edge follows). **Preferred path later**, behind feature detection. |
+| `getDisplayMedia` + Element/Region Capture | 0 | exact, visible area only | A screen-share picker on every capture, and only the visible part of the pane, so a long note is cut off. Rejected. |
+| Print → PDF (`@media print`) | 0 | exact | Not a PNG and can't reach the clipboard. A print stylesheet for the preview is still cheap and answers "send this as a file" — worth doing on its own. |
+| html2canvas / html2canvas-pro | 45.6 / 67.6 KB | broken | Re-implements CSS layout: KaTeX's positioned spans misalign fractions and roots, and Mermaid's `foreignObject` HTML labels aren't drawn. Rejected. |
+| html-to-image 1.11 | 6.6 KB | good | Same approach as the pick, but last released 2025-04. |
+| **modern-screenshot 4.7** | **13.9 KB** | **good** | Maintained fork of html-to-image (released 2026-04). **Chosen.** |
+| @zumer/snapdom 3.1 | 84.3 KB | good | Fastest, at 6× the bytes for speed this use doesn't need. |
+
+Sizes are the minified ESM builds gzipped at `-9`, measured 2026-09-26.
+
+*Why the `foreignObject` route handles math and diagrams:* it serializes a clone of the pane into an SVG `<foreignObject>` and lets the browser's own layout engine paint it, so KaTeX's positioned spans and Mermaid's inline SVG (labels included) come out as they look on screen. Two things to verify at implementation with a real note holding Japanese text, math, and a diagram. KaTeX's fonts get embedded as data URLs: they're same-origin woff2 (20 files, ≈520 KB, ≈700 KB as base64), so embed only the families the pane actually uses. Body text uses OS-installed Japanese fonts rather than a webfont, so nothing heavy is embedded for CJK; a machine without BIZ UDPGothic renders its fallback in the PNG, same as on screen.
+
+*Bundle and memory:* loaded by dynamic `import()` on click, the same pattern as Mermaid and KaTeX, so the initial payload and its budget are untouched. Peak runtime memory is the cloned DOM, plus the serialized SVG string (low single-digit MB with fonts), plus the canvas bitmap at width × height × DPR² × 4 bytes. For an 800 × 3,000 CSS-px note that is ≈15 MB at DPR 1.25 (a typical 125% Windows laptop) and ≈38 MB at DPR 2, plus a short-lived PNG encode buffer, all freed after the copy. Canvas has hard limits (Chromium: ≈32,767 px per side, ≈268 M px of area), so scale down past a height cap and toast when a note is too long rather than fail silently.
+
+*Persona fit:* engineers and IT-ops staff on Chrome or Edge, pasting into LINE, Teams, or Slack — the `ClipboardItem` image path works on both. Two catches specific to this audience. `navigator.clipboard.write` needs a secure context, and an intranet install served over plain `http://192.168.x.x` isn't one, so for some IT-ops deployments the download fallback is the main path, not a Firefox nicety. A no-egress network is fine, because the library is bundled like everything else. The CSP already allows `img-src data:`, which this route needs, so no policy change.
 
 Consider also that the underlying want here is *sharing*, and a read-only public link is the other answer to it — see §7.
 
@@ -121,6 +144,7 @@ Consider also that the underlying want here is *sharing*, and a read-only public
 - Rendering happens in the shared markdown renderer, so TODO items and Scrap items get links with no extra work. That satisfies "TODO→ノート" and "scrap→ノート" in one change.
 - `[[` opens title autocomplete, backed by the same title index the Ctrl+P palette already needs.
 - An unresolved link renders differently and offers "create this note."
+- *To settle in the implementation plan:* titles are not unique across notebooks, so `[[Title]]` can match several notes. Recommended: prefer a match in the linking note's own notebook, then the most recently viewed; accept `[[Notebook/Title]]` to pin one explicitly; and have autocomplete insert the qualified form only when the bare title is ambiguous. Whatever is chosen has to be the same rule the v0.5 import uses.
 
 **#10 — search, decided rather than deferred.** Start with `LIKE '%q%'` over `notes.content` and `notes.title`, scoped through `Current.user`. On a personal notebook of a few thousand notes on SQLite this is fast enough, needs no migration, no gem, and no index to keep in sync. Ship that in v0.3 inside the palette.
 
@@ -149,11 +173,21 @@ Offline behavior (same feature): when offline is detected (`navigator.onLine` + 
 
 **#16 — URL titles.** Paste-a-URL-over-a-selection is pure client-side string work and belongs with the editor batch (v0.2). Fetching a page title is a server making an outbound request to a user-supplied URL, i.e. **SSRF**, on a box that in the target deployment sits inside a company network. Ship it opt-in and off by default, guarded: reject private, loopback, and link-local address ranges *after* DNS resolution, re-check on every redirect hop, cap at ~512KB and ~5 seconds, and use `Net::HTTP` rather than adding a gem. If that guard can't be written confidently, ship only the client-side half — it covers most of the actual want.
 
+**#17 — the installed app opens the wrong note.** Chrome and Edge's "install as app" uses the page's web app manifest if one is linked, and the current URL if not. `app/views/pwa/manifest.json.erb` exists with `start_url: "/"`, but `config/routes.rb` has no route for it and the layout has no `<link rel="manifest">`, so the install captured whatever was open — e.g. `/?folder_id=8&note_id=67&notebook_id=7&organize=true`. Every launch then reopens that note in Organize mode, and `navigation_controller.js` never restores the last-opened note, because it only does that on a bare `/`. Fix scope, v0.2:
+
+- Enable the Rails PWA manifest route and link it in the layout. Add `"id": "/"`, so a future `start_url` change doesn't fork installs into a second app, and replace the scaffold's `theme_color`/`background_color: "red"`.
+- Link the manifest with `crossorigin="use-credentials"`. Browsers fetch manifests without cookies by default, and a deployment behind Cloudflare Access (the maintainer's own) would get the Access login page instead of the JSON. Check the icon fetch the same way.
+- Stop `navigation_controller.js` from remembering mode params (`organize`, `todos`, `view`) in `lastPath`: a restore should bring back the note, not the mode you were in when you clicked it.
+- Don't register the service worker yet. Chromium no longer needs one to install, and caching belongs to v1.0's offline read-only work, not here.
+- Existing installs keep their captured URL: the release notes must say to uninstall and reinstall once.
+
+This is the "installable" half of v1.0's "PWA installable + offline read-only", pulled forward because the bug is live. Offline stays in v1.0.
+
 ---
 
 ## 6. Reversed decisions
 
-**Import is no longer out of scope.** The old roadmap says "Export only, one direction." The stated goal is winning over people currently in Obsidian and Notion, and nobody abandons three years of notes to retype them. Import a zip or folder of Markdown: directories become notebooks and folders, `.md` files become notes, front matter is preserved into the body, and `[[wikilinks]]` resolve once §5 #7 lands. Export already does the reverse mapping, so most of the thinking is done. **v0.3**, and it should be the headline of the launch post rather than an afterthought.
+**Import is no longer out of scope.** The old roadmap says "Export only, one direction." The stated goal is winning over people currently in Obsidian and Notion, and nobody abandons three years of notes to retype them. Import a zip or folder of Markdown: directories become notebooks and folders, `.md` files become notes, front matter is preserved into the body, and `[[wikilinks]]` resolve once §5 #7 lands. Export already does the reverse mapping, so most of the thinking is done. **v0.5** (was v0.3 — moved behind `[[links]]` on 2026-09-26 so an imported vault's links resolve on arrival instead of needing a re-import), and it should be the headline of that release's post rather than an afterthought.
 
 **Settings grows an "Account" tab now,** ahead of the old "don't build tab chrome before a feature needs it" rule — the sign-out relocation (#3) is that feature.
 
@@ -179,7 +213,7 @@ Ordered by how much they matter, not by size.
 ### Data safety (these are the v1.0 story)
 
 - **~~Multi-device overwrite is currently silent data loss.~~ — shipped in v0.1.0.** `notes.lock_version` (Rails optimistic locking): the autosave sends/stores the version, and on conflict a banner offers reload vs. keep-mine instead of last-write-wins. Polished post-beta (conflict dialog keep/cancel UX).
-- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a retention window (default 30 days, tunable via a constant/env from the console — never a hardcoded value) and an undo toast. Trash and Archive are separate lists, never mixed. **v0.4.** Still open.
+- **Deleting a notebook is irreversible and cascades to every folder and note under it,** behind one `confirm()`. A notes app needs a trash: soft-delete with a retention window (default 30 days, tunable via a constant/env from the console — never a hardcoded value) and an undo toast. Trash and Archive are separate lists, never mixed. **v0.4.** Still open. Trash introduces the `notes.status` column the archive below also uses (`active`/`trashed` now, `archived` added in v0.5). Designing the column once here avoids a second migration of the same field one release later. Notebooks and folders get their own soft-delete, since today they cascade with `dependent: :destroy`.
 - **Archive with expiry.** Normal Markdown notes and scrap-type notes can carry an optional archive expiry, set from a button left-aligned in the preview/edit toggle lane (toast popup: 1 hour / 1 day / 1 month / custom datetime; scrap editors get the same button next to Copy-all). Expiry is computed from the last-edited time (`updated_at`): each content update recomputes `expires_at`, reads never extend it. Past expiry the note moves from its folder into a **global Archive section** (one cross-notebook list with origin breadcrumbs — per-notebook nesting is rejected because a note whose folder is gone must still be findable) and becomes read-only: editable no more, deletable yes. Restore reparents to the original folder when it still exists, otherwise falls back to a picker (default: first folder, or create "Restored"). Data model: `notes.status` (`active`/`archived`/`trashed`) + `expires_at` + `original_folder_id`/`original_notebook_id`, swept by an hourly job. **v0.5.** Still open.
 - **Note revision history.** Autosave overwrites blindly, so one bad paste plus a reload is unrecoverable. Snapshot into a `note_versions` table on a coarse interval. Then wire it to the **Compare** view that already exists: "compare this note to how it looked yesterday" reuses a shipped feature and makes it the reason people trust the editor. **v1.0.** Still open.
 - **~~Backups are promised and don't exist.~~ — runbook shipped in v0.1.0** (`bin/backup` / `bin/restore`, SQLite-safe, verified round-trip with a real image blob; see [backup.md](../engineering/backup.md)). What remains is the Account-tab status line — still a **v1.0** item.
@@ -187,7 +221,7 @@ Ordered by how much they matter, not by size.
 ### Product
 
 - **~~A seeded welcome notebook on first run.~~ — shipped in v0.1.0.** `db/seeds.rb` creates a locale-aware welcome notebook whose first note *is* the tutorial (three note types, editor rendering, Ctrl+P).
-- **Daily note.** Obsidian's most-used feature, and it fits "self-learning notes" exactly: one keystroke opens today's note, created if absent. **v0.5.**
+- **Daily note.** Obsidian's most-used feature, and it fits "self-learning notes" exactly: one keystroke opens today's note, created if absent. **v0.3** (with `[[links]]`, since a daily note is mostly a place to link out from). Recommended home, to confirm in the implementation plan: an auto-created "Daily" notebook with one folder per month, titled `YYYY-MM-DD` so `[[2026-09-26]]` links resolve without a qualifier; no settings entry until someone asks to move it.
 - **Publish a note as a read-only link.** This is the other answer to the screenshot request, and a better one for anything longer than a paragraph. It does add an unauthenticated public endpoint, against design principle 2 — so: off by default, per-note, unguessable token, revocable, and never for a whole notebook. **v1.x**, deliberately after the PNG route, which needs no new attack surface.
 - **A `?` keyboard-shortcut cheatsheet,** once there are enough shortcuts to forget. **v0.4.**
 - **Tags (`#tag`) are deferred, not planned.** They add a whole second navigation dimension parallel to folders. Search plus backlinks may well cover the need; revisit at v1.x only if real use says otherwise.
@@ -243,12 +277,27 @@ No new roadmap features; stability and correctness for the beta audience:
 - IME-safe auto-title; Word-paste robustness (unformatted pastes, copy failures, pasted images)
 - Dev environment refresh (`.devcontainer` → `Dockerfile.dev` + `bin/d`); palette empty-state/keyboard and sidebar empty-state polish
 
+### Size and delegation labels (added 2026-09-26)
+
+Each open item from here to v0.5 carries two labels. **Size:** S = under half a day, M = about one focused session, L = several sessions (plan → tests first → implementation → review). **Delegation:** *delegable* means this document already pins the behavior, so a contributor or a less careful model can implement it from a short brief, with review after; *design* means it needs judgment this document doesn't settle (security, data model, state machines) and should go through a written plan first.
+
 ### v0.2.0 — The editor earns its keep (partially shipped 2026-09-11)
 
 - ✅ Remaining editor shortcuts; paste-URL-over-selection
 - ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
-- ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only)
-- ⬜ Flexible sidebar pane heights (still open — panes still fixed-height)
+- ✅ **Installable PWA fix** (merged 2026-09-27, #53) — linked manifest with `start_url`/`id` `"/"`, credentialed manifest fetch, mode params out of `lastPath` (§5 #17). *S–M, design* (small diff, but it has to be checked behind Cloudflare Access and on a real Chrome/Edge install). Do this first.
+- ✅ Global pinned section, cross-notebook (#54)
+- ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
+- Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
+
+### v0.2.x — Test suite reset (between v0.2.0 and v0.3)
+
+*Theme: a two-minute CI, so the plan → test → implement loop stops waiting on it.* No user-facing change. It goes here because v0.3's `[[links]]` will add many tests, and those should be written to the new rules from the start.
+
+- `docs/engineering/testing.md`: system tests are a named smoke set of about 10–15 cases covering what only a real browser can check (IME composition, paste and the undo stack, keyboard focus flows, viewport layout). Everything else is a controller/integration test, or a `node:test` unit test of a pure function in `app/javascript/lib/`.
+- Classify the ~130 current system tests against that rule, then convert them in batches. *L, design* for the rule and the classification; the conversions are *delegable*.
+- CI: cache the apt packages; shard the remaining system tests only if still needed. (The push trigger fix and cancelling superseded runs ship with v0.2.0.)
+- Target: CI wall time about 2 minutes, down from about 4.
 
 ### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
 
@@ -264,32 +313,39 @@ Issue #47, shipped as three PRs (#49, #50, #51). Not a release of its own — it
 
 Rejected along the way, and still rejected: a PAT-authenticated task API (grows the attack surface, design principle 2), a server-side LLM key (cost, secrets, and dead on a no-egress network), and a separate `Task` model (the Notion-database direction this project is deliberately not taking).
 
-### v0.3.0 — Getting your notes in and finding them again
+### v0.3.0 — The graph, and finding things again
 
-- Search (`LIKE`), inside the palette
-- **Import** from an Obsidian vault or folder of Markdown
+*Moved up from v0.5 on 2026-09-26.* `[[links]]` are the most keenly felt gap (§3), and import needs them anyway — an Obsidian vault is mostly wikilinks, and importing before they resolve would mean a second pass or a re-import.
+
+- `[[Internal links]]`: `note_links` table, shared-renderer support, `[[` autocomplete, unresolved-link creation (§5 #7, including the ambiguous-title rule). *L, design.*
+- Backlinks panel. *S, delegable* once `note_links` exists.
+- Search (`LIKE`) inside the palette, tested with Japanese content (§5 #10). *M, delegable* with a plan — it extends `Note.search_ranked`.
+- Daily note (§7). *S, delegable* once its home is confirmed.
 - ✅ Bullets → TODO — shipped 2026-09-21 inside the TODO-hub wave
 
 ### v0.4.0 — Comfort
 
-- Vanishing scratch pad (sessionStorage-only single pad + offline detection with reconnect prompt — see §5 #13)
-- Trash and undo (soft-delete, configurable retention defaulting to 30 days)
-- Copy preview as PNG
-- URL title fetch (opt-in, SSRF-guarded)
-- Resizable sidebar panes; `?` cheatsheet
+- Trash and undo: soft-delete for notebooks, folders, and notes, configurable retention defaulting to 30 days, introducing `notes.status` (§7). *L, design.*
+- Vanishing scratch pad (sessionStorage-only single pad). *S, delegable.*
+- Offline detection with the reconnect prompt (§5 #13). *M, design.*
+- Copy preview as PNG via lazy-loaded `modern-screenshot` (§5 #6). *M, delegable* with a plan — the verification list in §5 #6 is the brief.
+- URL title fetch (opt-in, SSRF-guarded). *M, design* — security-sensitive.
+- Resizable sidebar panes; `?` cheatsheet. *S + S, delegable.*
 
-### v0.5.0 — The graph
+### v0.5.0 — Getting your notes in, and letting them go
 
-- `[[Internal links]]`, autocomplete, unresolved-link creation
-- Backlinks panel
-- Daily note
-- Archive with expiry (global section, read-only, restore flow — see §7)
+- **Import** from an Obsidian vault or folder of Markdown, resolving `[[links]]` with v0.3's rule (§6). Has to cap zip size and entry count and reject path traversal in entry names. `rubyzip` is already a dependency. *L, design.*
+- Archive with expiry: global section, read-only, restore flow, hourly sweep on Solid Queue's `recurring.yml` (§7). *L, design.*
+
+### Effort to v0.5, estimated 2026-09-26
+
+Four L items (links, trash, import, archive) and three design-labelled S/M items (PWA fix, offline, URL fetch) need a written plan each: roughly 12–15 focused sessions. The nine delegable items can run in parallel with those, but still get reviewed before merge.
 
 ### v1.0.0 — Trust
 
 - Revision history, wired into Compare
 - Backup status in Account settings
-- PWA installable + offline read-only
+- PWA offline read-only (the installable half moved to v0.2 — §5 #17)
 - Full i18n pass, docs site, demo GIF
 - Extracted npm packages published
 - Performance pass with a realistic corpus (FTS5 if `LIKE` is no longer enough)
@@ -305,6 +361,8 @@ Rejected along the way, and still rejected: a PAT-authenticated task API (grows 
 - Client-side encrypted notebooks
 - Researcher tier from the archived roadmap: DOI/citation metadata, Zotero, BibTeX export
 - Reassess tags and a graph view on real usage, not speculation
+
+*Status 2026-09-26:* not started. Checked against the code rather than assumed: no encryption code, no citation/DOI fields, no Zotero or BibTeX code, and no `tags` table. The only trace is the reserved "Integrations" tab mentioned in a comment in `settings/_modal.html.erb`.
 
 ---
 
