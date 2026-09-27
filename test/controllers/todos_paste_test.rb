@@ -110,19 +110,22 @@ class TodosPasteTest < ActionDispatch::IntegrationTest
 
     # Forces one write in the batch to fail validation, to prove the
     # surrounding transaction rolls back rather than partially committing.
-    TodoItem.validates :content, exclusion: { in: [ "IMPOSSIBLE_CONTENT_SENTINEL" ] }
+    original_callbacks = TodoItem._validate_callbacks.map(&:filter)
+    TodoItem.define_method(:reject_test_sentinel) do
+      errors.add(:content, :exclusion) if content == "IMPOSSIBLE_CONTENT_SENTINEL"
+    end
+    TodoItem.validate :reject_test_sentinel
     begin
       assert_no_difference "TodoItem.count" do
         post "/todos/apply", params: { text: text, digest: digest }, as: :turbo_stream
       end
     ensure
-      TodoItem.clear_validators!
-      TodoItem.validates :content, presence: true
+      TodoItem.skip_callback(:validate, :reject_test_sentinel)
+      TodoItem.remove_method(:reject_test_sentinel)
     end
 
-    # Fails loudly if TodoItem ever gains a validator this restore doesn't replace,
-    # rather than quietly dropping it for every later test in the process.
-    assert_equal [ :content ], TodoItem.validators.flat_map(&:attributes).uniq
+    # Removing only what this test added keeps belongs_to's own validation intact.
+    assert_equal original_callbacks, TodoItem._validate_callbacks.map(&:filter)
 
     assert TodoItem.exists?(doomed_to_survive.id)
     assert_not TodoItem.exists?(content: "New task")
