@@ -285,7 +285,7 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 
 - ✅ Remaining editor shortcuts; paste-URL-over-selection
 - ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
-- ⬜ **Installable PWA fix** — linked manifest with `start_url`/`id` `"/"`, credentialed manifest fetch, mode params out of `lastPath` (§5 #17). *S–M, design* (small diff, but it has to be checked behind Cloudflare Access and on a real Chrome/Edge install). Do this first.
+- ✅ **Installable PWA fix** (merged 2026-09-27, #53) — linked manifest with `start_url`/`id` `"/"`, credentialed manifest fetch, mode params out of `lastPath` (§5 #17). *S–M, design* (small diff, but it has to be checked behind Cloudflare Access and on a real Chrome/Edge install). Do this first.
 - ⬜ Global pinned section, cross-notebook (still open — `is_pinned` still sorts within one folder only). *S, delegable.*
 - ⬜ Flexible sidebar pane heights (still open — panes still fixed-height). *S, delegable.*
 - Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
