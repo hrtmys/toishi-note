@@ -1,25 +1,24 @@
 import { Controller } from "@hotwired/stimulus"
-import { rememberablePath } from "../lib/last_path.js"
+import { rememberablePath, restoreDecision } from "../lib/last_path.js"
 
 // Restores the last visited notebook/note on reload, via localStorage.
 // Scoped to a bare "/" with no query string, since checking path alone
 // would clobber in-flight editor navigation.
 export default class extends Controller {
   connect() {
-    if (window.location.pathname === "/" && window.location.search === "") {
-      const last = localStorage.getItem("lastPath")
-      const cleaned = last ? rememberablePath(last, window.location.origin) : null
+    const decision = restoreDecision(window.location, localStorage.getItem("lastPath"))
 
-      if (cleaned) {
-        localStorage.setItem("lastPath", cleaned)
+    if (decision) {
+      if (decision.store) {
+        localStorage.setItem("lastPath", decision.store)
       } else {
         localStorage.removeItem("lastPath")
       }
 
-      if (cleaned && cleaned !== window.location.href) {
+      if (decision.visitUrl) {
         // Use Turbo to navigate without full reload.
         import("@hotwired/turbo-rails").then(({ Turbo }) => {
-          Turbo.visit(cleaned)
+          Turbo.visit(decision.visitUrl)
         }).catch(() => {})
       }
     }

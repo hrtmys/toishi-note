@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
+import { folderMoveRequest, noteMoveRequest, notebookReorderRequest } from "../lib/organize_moves"
 
 // Drag-and-drop for Organize — the one part pulling in SortableJS,
 // lazily loaded via connect(). esbuild's ".digested" chunk names keep
@@ -34,10 +35,12 @@ export default class extends Controller {
       handle: ".organize-drag-handle",
       forceFallback: true,
       onEnd: (event) => {
-        if (event.oldIndex === event.newIndex) return
-
-        const notebookIds = Array.from(element.children).map((li) => li.dataset.notebookId)
-        this.patch("/notebooks/reorder", { notebook_ids: notebookIds })
+        const request = notebookReorderRequest({
+          oldIndex: event.oldIndex,
+          newIndex: event.newIndex,
+          notebookIds: Array.from(element.children).map((li) => li.dataset.notebookId)
+        })
+        if (request) this.patch(request.url, request.body)
       }
     })
   }
@@ -52,17 +55,16 @@ export default class extends Controller {
       handle: ".organize-drag-handle",
       forceFallback: true,
       onEnd: (event) => {
-        if (event.to === event.from && event.oldIndex === event.newIndex) return
-
-        const folderId = event.item.dataset.folderId
-        const sourceNotebookId = event.from.dataset.notebookId
-        const targetNotebookId = event.to.dataset.notebookId
-        const folderIds = Array.from(event.to.children).map((li) => li.dataset.folderId)
-
-        this.patch(`/notebooks/${sourceNotebookId}/folders/${folderId}/move`, {
-          target_notebook_id: targetNotebookId,
-          folder_ids: folderIds
-        }, t("organize.folder_moved"))
+        const request = folderMoveRequest({
+          folderId: event.item.dataset.folderId,
+          sourceNotebookId: event.from.dataset.notebookId,
+          targetNotebookId: event.to.dataset.notebookId,
+          folderIds: Array.from(event.to.children).map((li) => li.dataset.folderId),
+          sameList: event.to === event.from,
+          oldIndex: event.oldIndex,
+          newIndex: event.newIndex
+        })
+        if (request) this.patch(request.url, request.body, t("organize.folder_moved"))
       }
     })
   }
@@ -75,15 +77,12 @@ export default class extends Controller {
       handle: ".organize-drag-handle",
       forceFallback: true,
       onEnd: (event) => {
-        // Reparent-only — a note's position within a folder is never
-        // persisted (pin + sort own that), so a same-folder drag is a
-        // pure no-op here even though Sortable visually reorders it.
-        if (event.to === event.from) return
-
-        const noteId = event.item.dataset.noteId
-        const targetFolderId = event.to.dataset.folderId
-
-        this.patch(`/notes/${noteId}/move`, { target_folder_id: targetFolderId }, t("organize.note_moved"))
+        const request = noteMoveRequest({
+          noteId: event.item.dataset.noteId,
+          targetFolderId: event.to.dataset.folderId,
+          sameList: event.to === event.from
+        })
+        if (request) this.patch(request.url, request.body, t("organize.note_moved"))
       }
     })
   }

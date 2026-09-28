@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
+import { saveOutcome } from "../lib/autosave"
 
 export default class extends Controller {
   static values = { url: String }
@@ -67,7 +68,9 @@ export default class extends Controller {
           lockVersionElement.dataset.noteLockVersion = newVersion
         }
 
-        if (response.status === 409) {
+        const outcome = saveOutcome(response.status)
+
+        if (outcome === "conflict") {
           // Another device/tab saved first. Never silently resolve by
           // retrying; note_conflict_controller.js shows the user a real
           // choice, and this field's pending edit stays as typed.
@@ -76,7 +79,7 @@ export default class extends Controller {
           return null
         }
 
-        if (!response.ok) {
+        if (outcome === "failed") {
           // A non-2xx, non-409 response (422, 500, ...) isn't a valid
           // turbo-stream body — rendering it as one would throw an obscure
           // JS error instead of telling the user anything useful.

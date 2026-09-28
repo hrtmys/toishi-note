@@ -18,6 +18,12 @@ export function renderDiffHtml(before, after) {
   return DOMPurify.sanitize(html, { ALLOWED_TAGS: [ "ins", "del" ], ALLOWED_ATTR: [ "class" ] })
 }
 
+// Exact comparison: a whitespace-only edit is still a change worth showing.
+export function compareState(before, after) {
+  if (!before && !after) return "empty"
+  return before === after ? "unchanged" : "changed"
+}
+
 function escapeHtml(text) {
   const div = document.createElement("div")
   div.textContent = text

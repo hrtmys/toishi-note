@@ -15,3 +15,12 @@ export function rememberablePath(href, origin) {
 
   return url.href
 }
+
+// Only a bare "/" restores: any query means in-flight navigation (e.g. the
+// new-note redirect), and restoring there would yank the user away.
+export function restoreDecision(location, stored) {
+  if (location.pathname !== "/" || location.search !== "") return null
+
+  const cleaned = stored ? rememberablePath(stored, location.origin) : null
+  return { store: cleaned, visitUrl: cleaned && cleaned !== location.href ? cleaned : null }
+}
