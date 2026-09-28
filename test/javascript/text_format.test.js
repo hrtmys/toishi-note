@@ -2,6 +2,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
+  TEXT_FORMAT_ORDER,
   applyTextTransforms,
   collapseNewlines,
   fullwidthToHalfwidth,
@@ -95,4 +96,24 @@ describe("applyTextTransforms", () => {
   it("ignores unknown option names", () => {
     assert.equal(applyTextTransforms("abc", ["not_a_real_option"]), "abc")
   })
+})
+
+describe("TEXT_FORMAT_ORDER", () => {
+  it("lists the five Quick Formatting options, collapsing newlines last", () => {
+    assert.deepEqual(TEXT_FORMAT_ORDER, [ "fullwidth_to_halfwidth", "punctuation_space", "number_jp_space", "remove_brackets", "collapse_newlines" ])
+  })
+
+  const samples = {
+    fullwidth_to_halfwidth: "１２３",
+    punctuation_space: "はい、 そうです。 次",
+    number_jp_space: "3 個",
+    remove_brackets: "本文[注]",
+    collapse_newlines: "a\n\n\nb"
+  }
+
+  for (const key of TEXT_FORMAT_ORDER) {
+    it(`${key} alone changes a sample holding its pattern`, () => {
+      assert.notEqual(applyTextTransforms(samples[key], [ key ]), samples[key])
+    })
+  }
 })

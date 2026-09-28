@@ -4,6 +4,8 @@ import "./helpers/jsdom_setup.js"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { renderDiffHtml } from "../../app/javascript/lib/text_diff.js"
+// Namespace import so a missing export fails only the tests that use it.
+import * as textDiff from "../../app/javascript/lib/text_diff.js"
 
 describe("renderDiffHtml", () => {
   it("highlights the word-level diff between two texts", () => {
@@ -29,5 +31,24 @@ describe("renderDiffHtml", () => {
       assert.doesNotMatch(result, /<[^>]*onerror/)
       assert.match(result, /&lt;img/)
     }
+  })
+})
+
+describe("compareState", () => {
+  it("is empty only when both sides are empty", () => {
+    assert.equal(textDiff.compareState("", ""), "empty")
+    assert.equal(textDiff.compareState("", "a"), "changed")
+    assert.equal(textDiff.compareState("a", ""), "changed")
+  })
+
+  it("is unchanged for identical text, including Japanese", () => {
+    assert.equal(textDiff.compareState("a", "a"), "unchanged")
+    assert.equal(textDiff.compareState("砥石\nノート", "砥石\nノート"), "unchanged")
+  })
+
+  it("counts whitespace-only edits as changes", () => {
+    assert.equal(textDiff.compareState("a", "b"), "changed")
+    assert.equal(textDiff.compareState("a", "a "), "changed")
+    assert.equal(textDiff.compareState("a\n", "a"), "changed")
   })
 })
