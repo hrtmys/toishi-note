@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { renderDiffHtml } from "../lib/text_diff"
+import { compareState, renderDiffHtml } from "../lib/text_diff"
 
 // The Compare modal's contents: two independent Before/After text boxes,
 // diffed live via `diffWordsWithSpace`. Content loads in either from the
@@ -38,10 +38,11 @@ export default class extends Controller {
   render() {
     const before = this.beforeTarget.value
     const after = this.afterTarget.value
-    const empty = !before && !after
+    const state = compareState(before, after)
+    const empty = state === "empty"
 
     this.emptyTarget.classList.toggle("d-none", !empty)
-    this.unchangedTarget.classList.toggle("d-none", empty || before !== after)
+    this.unchangedTarget.classList.toggle("d-none", state !== "unchanged")
 
     this.outputTarget.innerHTML = empty ? "" : renderDiffHtml(before, after)
   }

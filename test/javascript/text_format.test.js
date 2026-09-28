@@ -1,7 +1,7 @@
-// Unit tests for lib/text_format.js.
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
+  TEXT_FORMAT_ORDER,
   applyTextTransforms,
   collapseNewlines,
   fullwidthToHalfwidth,
@@ -79,7 +79,7 @@ describe("applyTextTransforms", () => {
     assert.doesNotMatch(result, /\[削除したい\]/)
     // NOTE: number_jp_space's \s+ also spans newlines, so "行1\n\n\n行2"
     // (digit before the blank lines, kanji after) joins into one line.
-    // That quirk predates this extraction — locked in here as-is.
+    // Locked in here as-is.
     assert.equal(result, "1234567890\n1000と 文字 の間 の 空白\n行1行2\n")
   })
 
@@ -95,4 +95,24 @@ describe("applyTextTransforms", () => {
   it("ignores unknown option names", () => {
     assert.equal(applyTextTransforms("abc", ["not_a_real_option"]), "abc")
   })
+})
+
+describe("TEXT_FORMAT_ORDER", () => {
+  it("lists the five Quick Formatting options, collapsing newlines last", () => {
+    assert.deepEqual(TEXT_FORMAT_ORDER, [ "fullwidth_to_halfwidth", "punctuation_space", "number_jp_space", "remove_brackets", "collapse_newlines" ])
+  })
+
+  const samples = {
+    fullwidth_to_halfwidth: "１２３",
+    punctuation_space: "はい、 そうです。 次",
+    number_jp_space: "3 個",
+    remove_brackets: "本文[注]",
+    collapse_newlines: "a\n\n\nb"
+  }
+
+  for (const key of TEXT_FORMAT_ORDER) {
+    it(`${key} alone changes a sample holding its pattern`, () => {
+      assert.notEqual(applyTextTransforms(samples[key], [ key ]), samples[key])
+    })
+  }
 })

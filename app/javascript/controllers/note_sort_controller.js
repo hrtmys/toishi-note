@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { DEFAULT_SORT, nextSortState, sortNoteEntries } from "../lib/note_sort"
 
 // Client-side only, on purpose. Nothing here is persisted (pin state
 // aside); switching folders or reloading always starts back at the
@@ -7,21 +8,12 @@ export default class extends Controller {
   static targets = [ "button", "caret", "list", "item" ]
 
   connect() {
-    this.mode = "updated"
-    this.direction = "desc"
+    this.sort = DEFAULT_SORT
     this.applySort()
   }
 
   setMode(event) {
-    const mode = event.currentTarget.dataset.mode
-
-    if (mode === this.mode) {
-      this.direction = this.direction === "desc" ? "asc" : "desc"
-    } else {
-      this.mode = mode
-      this.direction = mode === "title" ? "asc" : "desc"
-    }
-
+    this.sort = nextSortState(this.sort, event.currentTarget.dataset.mode)
     this.applySort()
   }
 
@@ -52,26 +44,21 @@ export default class extends Controller {
 
   applySort() {
     this.buttonTargets.forEach((button, index) => {
-      const active = button.dataset.mode === this.mode
+      const active = button.dataset.mode === this.sort.mode
       button.classList.toggle("active", active)
 
       const caret = this.caretTargets[index]
-      caret.className = active ? `bi ${this.direction === "desc" ? "bi-caret-down-fill" : "bi-caret-up-fill"}` : "bi"
+      caret.className = active ? `bi ${this.sort.direction === "desc" ? "bi-caret-down-fill" : "bi-caret-up-fill"}` : "bi"
     })
 
-    const key = this.mode === "title" ? "title" : `${this.mode}At`
-    const factor = this.direction === "asc" ? 1 : -1
-
-    const items = [ ...this.itemTargets ].sort((a, b) => {
-      const pinnedA = a.dataset.pinned === "true"
-      const pinnedB = b.dataset.pinned === "true"
-      if (pinnedA !== pinnedB) return pinnedA ? -1 : 1
-
-      if (this.mode === "title") {
-        return factor * a.dataset[key].localeCompare(b.dataset[key])
-      }
-      return factor * (Number(a.dataset[key]) - Number(b.dataset[key]))
-    })
+    const entries = this.itemTargets.map((item) => ({
+      pinned: item.dataset.pinned === "true",
+      title: item.dataset.title,
+      updatedAt: Number(item.dataset.updatedAt),
+      createdAt: Number(item.dataset.createdAt),
+      ref: item
+    }))
+    const items = sortNoteEntries(entries, this.sort).map((entry) => entry.ref)
 
     items.forEach((item) => this.listTarget.appendChild(item))
   }

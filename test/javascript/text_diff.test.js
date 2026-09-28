@@ -3,7 +3,7 @@
 import "./helpers/jsdom_setup.js"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { renderDiffHtml } from "../../app/javascript/lib/text_diff.js"
+import { compareState, renderDiffHtml } from "../../app/javascript/lib/text_diff.js"
 
 describe("renderDiffHtml", () => {
   it("highlights the word-level diff between two texts", () => {
@@ -29,5 +29,24 @@ describe("renderDiffHtml", () => {
       assert.doesNotMatch(result, /<[^>]*onerror/)
       assert.match(result, /&lt;img/)
     }
+  })
+})
+
+describe("compareState", () => {
+  it("is empty only when both sides are empty", () => {
+    assert.equal(compareState("", ""), "empty")
+    assert.equal(compareState("", "a"), "changed")
+    assert.equal(compareState("a", ""), "changed")
+  })
+
+  it("is unchanged for identical text, including Japanese", () => {
+    assert.equal(compareState("a", "a"), "unchanged")
+    assert.equal(compareState("砥石\nノート", "砥石\nノート"), "unchanged")
+  })
+
+  it("counts whitespace-only edits as changes", () => {
+    assert.equal(compareState("a", "b"), "changed")
+    assert.equal(compareState("a", "a "), "changed")
+    assert.equal(compareState("a\n", "a"), "changed")
   })
 })
