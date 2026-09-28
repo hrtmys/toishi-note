@@ -9,6 +9,7 @@ class SecurityTest < ApplicationSystemTestCase
     ```mermaid
     flowchart TD
       A["<img src=x onerror=window.__xss_fired=true>"] --> B
+      click B href "javascript:window.__xss_fired=true"
     ```
   MD
   KATEX_HREF = "$\\href{javascript:window.__xss_fired=true}{x}$".freeze
@@ -47,7 +48,8 @@ class SecurityTest < ApplicationSystemTestCase
       assert_selector ".markdown-content .mermaid svg"
       assert_selector ".markdown-content .katex"
       assert_no_selector ".markdown-content img[onerror]", visible: :all
-      assert_no_selector ".markdown-content a[href^='javascript:']", visible: :all
+      # [*|href] also matches a namespaced xlink:href on SVG links.
+      assert_no_selector ".markdown-content a[*|href^='javascript:']", visible: :all
       assert_not_fired
     end
 
