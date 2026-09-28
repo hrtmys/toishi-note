@@ -26,7 +26,24 @@ class EditorPreviewTest < ApplicationSystemTestCase
       assert_selector ".markdown-content", visible: true
     end
 
-    phase "2 KaTeX and mermaid render" do
+    # The first diagram in this document starts the Mermaid chunk import; network
+    # latency keeps it in flight past the next debounced render.
+    phase "2 burst typing during the lazy import" do
+      fill_in "note[content]", with: ""
+      textarea = find(TEXTAREA)
+      page.driver.browser.network_conditions = { offline: false, latency: 300, throughput: 0 }
+      textarea.send_keys("# Burst diagram\n\n")
+      textarea.send_keys("```mermaid\n")
+      textarea.send_keys("flowchart TD\n")
+      assert_selector ".markdown-content pre code.language-mermaid"
+      textarea.send_keys("  A[Start] --> B[End]\n")
+      textarea.send_keys("```\n")
+      assert_selector ".markdown-content .mermaid svg"
+    ensure
+      page.driver.browser.delete_network_conditions
+    end
+
+    phase "3 KaTeX and mermaid render" do
       fill_in "note[content]", with: <<~MD
         # 爆速プレビューテスト
 
@@ -49,18 +66,6 @@ class EditorPreviewTest < ApplicationSystemTestCase
       assert_selector ".markdown-content .mermaid svg", count: 1
     end
 
-    phase "3 burst typing" do
-      fill_in "note[content]", with: ""
-      assert_no_selector ".markdown-content .mermaid"
-      textarea = find(TEXTAREA)
-      textarea.send_keys("# Burst diagram\n\n")
-      textarea.send_keys("```mermaid\n")
-      textarea.send_keys("flowchart TD\n")
-      textarea.send_keys("  A[Start] --> B[End]\n")
-      textarea.send_keys("```\n")
-      assert_selector ".markdown-content .mermaid svg"
-    end
-
     phase "4a scroll kept across re-render" do
       execute_script(<<~JS, long_markdown)
         const ta = document.querySelector("#{TEXTAREA}")
@@ -68,6 +73,7 @@ class EditorPreviewTest < ApplicationSystemTestCase
         ta.dispatchEvent(new Event("input", { bubbles: true }))
       JS
       assert_selector ".markdown-content h2", text: "Section 0"
+      assert_selector ".markdown-content .mermaid svg"
       execute_script(<<~JS)
         const preview = document.querySelector("[data-editor-target='previewArea']")
         preview.scrollTop = (preview.scrollHeight - preview.clientHeight) * 0.5
@@ -80,6 +86,8 @@ class EditorPreviewTest < ApplicationSystemTestCase
         ta.dispatchEvent(new Event("input", { bubbles: true }))
       JS
       assert_selector ".markdown-content", text: "Appended scroll probe line"
+      # The re-rendered diagram grows the content above the viewport, the late insert that used to drift the view.
+      assert_selector ".markdown-content .mermaid svg"
       ratio_after = preview_ratio
       assert_in_delta ratio_before, ratio_after, 0.05, "re-render moved the preview"
       assert_operator ratio_after, :<, 0.75, "the preview drifted toward the bottom"
@@ -97,8 +105,11 @@ class EditorPreviewTest < ApplicationSystemTestCase
     find("button[title='#{I18n.t("editor.modes.#{mode}")}']").click
   end
 
+  # A tall diagram at the top, so its async render changes the height above a mid-document view.
   def long_markdown
-    Array.new(120) { |i| "## Section #{i}\n\nBody paragraph #{i} with some text to take vertical space.\n" }.join("\n")
+    diagram = "```mermaid\nflowchart TD\n  #{(1..12).map { |i| "N#{i}" }.join(" --> ")}\n```\n"
+    sections = Array.new(40) { |i| "## Section #{i}\n\nBody paragraph #{i} with some text to take vertical space.\n" }
+    ([ diagram ] + sections).join("\n")
   end
 
   # -1 means the preview is not scrollable at all, a setup failure rather than a pass.
