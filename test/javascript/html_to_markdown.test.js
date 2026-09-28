@@ -4,6 +4,19 @@ import "./helpers/jsdom_setup.js"
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { convertHtmlToMarkdown } from "../../app/javascript/lib/html_to_markdown.js"
+import { WORD_HTML } from "./helpers/office_paste_fixtures.js"
+
+describe("convertHtmlToMarkdown on a Word paste", () => {
+  it("keeps the formatting and drops Word's head and styles", () => {
+    const result = convertHtmlToMarkdown(WORD_HTML)
+    assert.match(result, /\*\*Bold text\*\*/)
+    assert.doesNotMatch(result, /Font Definitions|mso-|WordSection1|<!--/)
+  })
+
+  it("drops script content", () => {
+    assert.doesNotMatch(convertHtmlToMarkdown("<script>alert(1)</script><p><b>x</b></p>"), /alert/)
+  })
+})
 
 const basicTable = `<html xmlns:x="urn:schemas-microsoft-com:office:excel">
 <body>

@@ -38,6 +38,14 @@ export function looksLikeTable(html) {
   return /<table[\s>]/i.test(html)
 }
 
+// Shift opts out of conversion (native paste lands the text as-is); a paste
+// mid-composition would convert unconfirmed IME text.
+export function classifyPaste({ html, shiftHeld, isComposing }) {
+  if (shiftHeld || isComposing) return "passthrough"
+  if (!html || !looksLikeRichContent(html)) return "passthrough"
+  return looksLikeTable(html) ? "table" : "convert"
+}
+
 // Parsing through DOMParser and keeping only document.body's HTML drops
 // everything under <head> (Word's mso metadata etc.) structurally, before
 // Turndown ever sees it. A plain HTML fragment parses unchanged.
