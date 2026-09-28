@@ -66,7 +66,7 @@ System tests have a time budget, and CI enforces it. The numbers live in one pla
 
 - **What is measured.** Two things: the whole CI system-test job (setup included, since that's what a contributor waits for), and the system-test step alone, on CI and locally. The step thresholds are the job tiers minus the measured setup time; the local ones are the CI ones scaled for a slower machine.
 - **Tiers.** The job has an ideal line, then notice, warn, and fail. The CI test step has notice, warn, and fail. Local runs have notice and warn only: **a local run never fails on the budget**, because contributor machines vary too much. CI is the only arbiter.
-- **Enforcement.** `enforcement: warn` in the same file means CI reports `OVER (not enforced)` instead of failing. Switching it to `fail` is a deliberate change of its own.
+- **Enforcement.** `enforcement: fail` in the same file makes CI fail the system-test job past the fail tiers, and `system-test` is a required check on `master`. Local runs never fail on budget. Setting it back to `warn` (CI then reports `OVER (not enforced)`) is a deliberate change of its own.
 - **Where it shows up.** With `SYSTEM_BUDGET=1` (which `bin/ci` and CI set), the run prints a `System test budget` line with the total and status, plus the slowest tests. `bin/ci` adds that to the system-test summary line and shows ⚠️ for NOTICE, WARN or OVER. On CI, `bin/ci-job-report` applies the job tiers to the whole job and posts GitHub annotations.
 - **Retries count.** CI retries a failed system test (see `test/test_helper.rb`); retry time is part of the total, so a flaky test is also a slow test.
 - **Memory** is sampled on CI and reported, but not gated.
