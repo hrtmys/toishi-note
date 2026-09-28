@@ -9,6 +9,11 @@ class CiStepTest < ActiveSupport::TestCase
     )
   end
 
+  test "a step killed by a signal (no exit status) counts as failed instead of crashing bin/ci" do
+    step = build_step
+    assert_equal :fail, Ci::Step.status_for(step, exit_status: nil, log: "")
+  end
+
   test "env defaults to an empty hash" do
     assert_equal({}, build_step.env)
   end
