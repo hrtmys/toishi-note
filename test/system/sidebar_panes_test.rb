@@ -8,59 +8,50 @@ class SidebarPanesTest < ApplicationSystemTestCase
     40.times { |i| @notebook.folders.create!(name: "Folder #{i}") }
   end
 
-  test "long notebook and folder lists grow to their share of the sidebar, then scroll" do
-    open_busy_notebook
+  test "sidebar panes cap, shrink and scroll across window heights" do
+    page.driver.browser.manage.window.resize_to(1400, 1000)
+    sign_in_as(@user)
+    visit root_url(notebook_id: @notebook.id)
+    assert_selector "#folders-list li", count: 40
 
-    wrapper = sidebar_height
-    %w[notebooks folders].each do |pane|
-      height = pane_height(pane)
-      assert_operator height, :>=, wrapper * 0.33, "#{pane} pane stopped short of its cap"
-      assert_operator height, :<=, wrapper * 0.35 + 2, "#{pane} pane grew past its cap"
-      assert list_scrolls?("##{pane}-list"), "#{pane} list should scroll inside its pane"
+    phase "1 tall window: long lists fill their capped share, then scroll" do
+      wrapper = evaluate_script("document.querySelector('#sidebarMenu > div').clientHeight")
+      %w[notebooks folders].each do |pane|
+        height = pane_height(pane)
+        assert_operator height, :>=, wrapper * 0.33, "#{pane} pane stopped short of its cap"
+        assert_operator height, :<=, wrapper * 0.35 + 2, "#{pane} pane grew past its cap"
+        assert scrolls?("##{pane}-list"), "#{pane} list should scroll inside its pane"
+      end
     end
-  end
 
-  test "on a short window the capped panes shrink first and Files keeps a usable height" do
-    page.driver.browser.manage.window.resize_to(1400, 600)
-    open_busy_notebook
+    phase "2 short window: capped panes shrink first, Files keeps a usable height" do
+      resize_height(600)
+      assert_operator pane_height("files"), :>=, 160
+      assert_operator pane_height("notebooks"), :>=, 63
+      assert_operator pane_height("folders"), :>=, 63
+    end
 
-    assert_operator pane_height("files"), :>=, 160
-    assert_operator pane_height("notebooks"), :>=, 63
-    assert_operator pane_height("folders"), :>=, 63
-  end
-
-  test "when even the minimums don't fit, the sidebar itself scrolls" do
-    page.driver.browser.manage.window.resize_to(1400, 300)
-    open_busy_notebook
-
-    assert list_scrolls?("#sidebarMenu > div"), "the sidebar wrapper should scroll"
-    assert_operator pane_height("files"), :>=, 160
+    phase "3 minimums don't fit: the sidebar itself scrolls" do
+      resize_height(300)
+      assert scrolls?("#sidebarMenu > div"), "the sidebar wrapper should scroll"
+      assert_operator pane_height("files"), :>=, 160
+    end
   end
 
   private
 
-    def open_busy_notebook
-      sign_in_as(@user)
-      visit root_url(notebook_id: @notebook.id)
-      assert_selector "#folders-list li", count: 40
+    def resize_height(height)
+      page.driver.browser.manage.window.resize_to(1400, height)
+      wait_until("the window never reached #{height}px") { evaluate_script("window.outerHeight") <= height }
     end
 
     def pane_height(name)
-      height = page.evaluate_script(<<~JS)
-        (() => {
-          const pane = document.querySelector('[data-sidebar-pane="#{name}"]')
-          return pane ? pane.getBoundingClientRect().height : null
-        })()
-      JS
+      height = evaluate_script("document.querySelector('[data-sidebar-pane=\"#{name}\"]')?.getBoundingClientRect().height")
       assert height, "no [data-sidebar-pane=#{name}] element"
       height
     end
 
-    def sidebar_height
-      page.evaluate_script("document.querySelector('#sidebarMenu > div').clientHeight")
-    end
-
-    def list_scrolls?(selector)
-      page.evaluate_script("(el => el.scrollHeight > el.clientHeight)(document.querySelector('#{selector}'))")
+    def scrolls?(selector)
+      evaluate_script("(el => el.scrollHeight > el.clientHeight)(document.querySelector('#{selector}'))")
     end
 end
