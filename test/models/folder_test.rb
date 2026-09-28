@@ -88,4 +88,23 @@ class FolderTest < ActiveSupport::TestCase
       folder.move_to!(@notebook)
     end
   end
+
+  test "move_to! into a notebook with a folder at the same position appends it and closes the source gap" do
+    [ "Movable", "フォルダ移動" ].each do |name|
+      source = users(:one).notebooks.create!(name: "Source #{name}")
+      stays = source.folders.create!(name: "Stays", position: 1)
+      folder = source.folders.create!(name: name, position: 2)
+      after = source.folders.create!(name: "After", position: 3)
+      target = users(:one).notebooks.create!(name: "Target #{name}")
+      target_first = target.folders.create!(name: "T1", position: 1)
+      target_second = target.folders.create!(name: "T2", position: 2)
+
+      folder.move_to!(target)
+
+      assert_equal [ target_first, target_second, folder ], target.folders.reload.to_a
+      assert_equal [ 1, 2, 3 ], target.folders.pluck(:position)
+      assert_equal [ stays, after ], source.folders.reload.to_a
+      assert_equal [ 1, 2 ], source.folders.pluck(:position)
+    end
+  end
 end

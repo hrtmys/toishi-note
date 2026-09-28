@@ -95,4 +95,22 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller=flash-toast][data-flash-toast-message-value=?]", I18n.t("home.folders.flash.renamed")
     assert_select "#folders-list", text: /改名フォルダ/
   end
+
+  test "move into a notebook whose folder shares the moved folder's position lands at the requested slot" do
+    { "Movable" => :first, "移動するフォルダ" => :last }.each do |name, slot|
+      source = users(:one).notebooks.create!(name: "Source #{name}")
+      moved = source.folders.create!(name: name, position: 1)
+      left_behind = source.folders.create!(name: "Left behind", position: 2)
+      target = users(:one).notebooks.create!(name: "Target #{name}")
+      existing = [ target.folders.create!(name: "T1", position: 1), target.folders.create!(name: "T2", position: 2) ]
+      order = slot == :first ? [ moved, *existing ] : [ *existing, moved ]
+
+      patch move_notebook_folder_url(source, moved), params: { target_notebook_id: target.id, folder_ids: order.map(&:id) }
+
+      assert_response :success
+      assert_equal order, target.folders.reload.to_a
+      assert_equal [ 1, 2, 3 ], target.folders.pluck(:position)
+      assert_equal [ [ left_behind.id, 1 ] ], source.folders.pluck(:id, :position)
+    end
+  end
 end
