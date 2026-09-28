@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Samples job-wide memory use once a second (plan-opus.md §2.4). Not
-# `/usr/bin/time -v`: that reports one process's max RSS, and the system
-# tests exercise many Chrome processes at once. Run with `nohup ... &` so
-# it survives across steps; the job-report step reads its output files.
+# Samples whole-machine memory once a second, not `/usr/bin/time -v`: that sees
+# one process, and the system tests run many Chrome processes. Started with
+# `nohup ... &` so it outlives its step; bin/ci-job-report reads the files.
 
 out_dir="$1"
 mkdir -p "$out_dir"

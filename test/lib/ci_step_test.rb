@@ -1,9 +1,6 @@
 require "test_helper"
 
-# Pins lib/ci/step.rb (plan-opus.md §17.2.4): Step's env: default and the
-# status decision, extracted from bin/ci so it's requirable without running
-# the real steps. bin/ci itself is never loaded here — only checked as text
-# below, since requiring it would run the whole CI gauntlet.
+# bin/ci is only read as text below: requiring it would run every CI step.
 class CiStepTest < ActiveSupport::TestCase
   def build_step(warn_if: nil)
     Ci::Step.new(

@@ -1,12 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Reports the system-test job's total wall time and peak memory against
-# test/system_budget.yml's job tiers (plan-opus.md §2.4, tiers per §17.1).
-# Plain Ruby, no bundler: it runs as the job's last step (`if: always()`),
-# so it must not depend on the app's gem environment surviving whatever
-# broke an earlier step. Paths are resolved relative to the current
-# directory (§17.2.2); JOB_NOW overrides Time.now for exact tests (§17.2.3).
+# Reports the system-test job's wall time and memory against test/system_budget.yml.
+# Plain Ruby, no bundler: it runs with `if: always()`, after whatever broke an
+# earlier step. JOB_NOW (epoch seconds) stands in for the clock in tests.
 require "yaml"
 require "json"
 
@@ -62,8 +59,7 @@ peak_path = File.join("tmp", "ci_memory", "peak_kb")
 if File.exist?(baseline_path) && File.exist?(peak_path)
   baseline_mib = Integer(File.read(baseline_path).strip) / 1024.0
   peak_mib = Integer(File.read(peak_path).strip) / 1024.0
-  # Memory is tracked, never gated (plan-opus.md §2.4): Chrome's RSS
-  # varies a lot with page content, not with code quality.
+  # Tracked, never gated: Chrome's memory varies with page content, not code quality.
   lines << format("Memory: baseline %.1f MiB, peak %.1f MiB, delta %.1f MiB (tracked, not gated)",
                   baseline_mib, peak_mib, peak_mib - baseline_mib)
 else

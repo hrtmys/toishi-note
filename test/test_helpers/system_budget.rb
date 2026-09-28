@@ -1,9 +1,6 @@
 require "yaml"
 
-# The system test budget gate (plan-opus.md §2, tiers per the maintainer's
-# §17.1 amendment). `install!` wires the timing + reporting; `load_config`,
-# `status_for` and `format_report` are the pure, directly-tested API
-# (§17.2.1).
+# Times each system test and reports the total against test/system_budget.yml.
 module SystemBudget
   class ConfigError < StandardError; end
 
@@ -135,11 +132,8 @@ module SystemBudget
     end
   end
 
-  # Minitest 6's `Minitest.register_plugin` accepts only a symbol, a
-  # string, or a Module (see vendor/.../minitest-6.0.6/lib/minitest.rb's
-  # `init_plugins`) — never a plain object. `Plugin.build` returns a
-  # fresh, singleton-extended Module per install! call, so it can still
-  # carry this run's config/records without any class-level state.
+  # Minitest 6's register_plugin takes only a symbol, string, or Module, so
+  # each install! builds a fresh Module that closes over this run's state.
   module Plugin
     def self.build(config:, enforcement:, profile:, parallel_workers:, records:, retried:, io:)
       Module.new do

@@ -1,8 +1,7 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  # Only under the CI/bin/ci-driven serial run: a scoped
-  # `bin/rails test test/system/x_test.rb` stays quiet (plan-opus.md §2.2).
+  # Only for full serial runs (CI, bin/ci), so a scoped run stays quiet.
   SystemBudget.install!(test_case: self) if ENV["SYSTEM_BUDGET"] == "1"
 
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |driver_options|

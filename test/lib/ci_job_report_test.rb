@@ -3,11 +3,8 @@ require "tmpdir"
 require "fileutils"
 require "yaml"
 
-# Pins bin/ci-job-report's contract (plan-opus.md §2.4, tiers/behavior per
-# §17.1 and §17.2). Runs it with a tmpdir as cwd (its own test/system_budget.yml,
-# never the real repo's) since §17.2.2 says it resolves paths relative to cwd.
-# JOB_START/JOB_NOW (§17.2.3) make the job total exactly controllable, so tier
-# boundaries are asserted at the exact edges instead of with margins.
+# Runs bin/ci-job-report in a tmpdir with its own budget file, never the repo's.
+# JOB_START/JOB_NOW pin the job total so tier edges are tested exactly.
 class CiJobReportTest < ActiveSupport::TestCase
   SCRIPT = File.expand_path("../../bin/ci-job-report", __dir__)
   JOB_START = 1_000_000_000.0

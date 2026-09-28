@@ -1,11 +1,7 @@
 require "test_helper"
 require "tmpdir"
 
-# Pins the SystemBudget contract described in plan-opus.md §2.2/§2.3, with
-# tiers/status words overridden by the maintainer decision in §17.1
-# (notice/warn/fail on CI, notice/warn-only on local, no path override given
-# by the spec, so config is loaded from an explicit path each call to make
-# these tests possible without touching test/system_budget.yml).
+# Config comes from a tmpdir file on every call, never test/system_budget.yml.
 class SystemBudgetTest < ActiveSupport::TestCase
   CI_CONFIG = {
     enforcement: "warn",
