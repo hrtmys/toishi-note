@@ -8,8 +8,7 @@ const DUE_TAG = /^(.*?)\s*\(due:\s*([^)]*)\)$/
 const VALID_ID_BODY = /^([0-9a-z]+)(;delete!)?$/
 const VALID_DUE_VALUE = /^(none|\d{4}-\d{2}-\d{2})$/
 
-// Returns { status, error, entries, validCount }. Convenience only: the
-// server re-parses and re-validates independently.
+// Convenience only: the server re-parses and re-validates independently.
 export function previewBulkEntries(raw) {
   const text = raw.trim()
   if (text === "") return result("empty")

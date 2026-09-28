@@ -49,6 +49,11 @@ describe("sortNoteEntries", () => {
     assert.deepEqual(refs(sortNoteEntries(list, { mode: "title", direction: "asc" })), [ "blank", "a" ])
   })
 
+  it("orders titles case-insensitively and accent-aware, not by code point", () => {
+    const list = [ entry("b", { title: "b" }), entry("B", { title: "B" }), entry("Ä", { title: "Ä" }), entry("a", { title: "a" }) ]
+    assert.deepEqual(refs(sortNoteEntries(list, { mode: "title", direction: "asc" })), [ "a", "Ä", "b", "B" ])
+  })
+
   it("returns a new array and leaves the input order alone", () => {
     const input = [ ...entries ]
     const result = sortNoteEntries(input, DEFAULT_SORT)

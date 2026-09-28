@@ -1,4 +1,3 @@
-// Unit tests for lib/text_format.js.
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
@@ -80,7 +79,7 @@ describe("applyTextTransforms", () => {
     assert.doesNotMatch(result, /\[削除したい\]/)
     // NOTE: number_jp_space's \s+ also spans newlines, so "行1\n\n\n行2"
     // (digit before the blank lines, kanji after) joins into one line.
-    // That quirk predates this extraction — locked in here as-is.
+    // Locked in here as-is.
     assert.equal(result, "1234567890\n1000と 文字 の間 の 空白\n行1行2\n")
   })
 

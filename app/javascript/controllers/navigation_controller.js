@@ -2,8 +2,6 @@ import { Controller } from "@hotwired/stimulus"
 import { rememberablePath, restoreDecision } from "../lib/last_path.js"
 
 // Restores the last visited notebook/note on reload, via localStorage.
-// Scoped to a bare "/" with no query string, since checking path alone
-// would clobber in-flight editor navigation.
 export default class extends Controller {
   connect() {
     const decision = restoreDecision(window.location, localStorage.getItem("lastPath"))
