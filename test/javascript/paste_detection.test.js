@@ -1,11 +1,10 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { looksLikeRichContent, looksLikeTable } from "../../app/javascript/lib/html_to_markdown.js"
-import * as htmlToMarkdown from "../../app/javascript/lib/html_to_markdown.js"
+import { classifyPaste, looksLikeRichContent, looksLikeTable } from "../../app/javascript/lib/html_to_markdown.js"
 import { EXCEL_HTML, WORD_HTML } from "./helpers/office_paste_fixtures.js"
 
 const classify = (html, extra = {}) =>
-  htmlToMarkdown.classifyPaste({ html, hasImage: false, shiftHeld: false, isComposing: false, ...extra })
+  classifyPaste({ html, hasImage: false, shiftHeld: false, isComposing: false, ...extra })
 
 describe("classifyPaste", () => {
   it("converts Word and styled rich content", () => {

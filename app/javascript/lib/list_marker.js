@@ -78,3 +78,71 @@ export function renumberFollowingLines(value, lineEnd, indent, firstNumber) {
   if (end === lineEnd) return null
   return { end, text }
 }
+
+// Enter on a list line: continue the marker, or exit when the line is the
+// empty marker this continuation just inserted (armedMarker). null leaves
+// Enter to the browser.
+export function enterAction({ value, selectionStart, selectionEnd, armedMarker, isComposing, shiftKey, ctrlKey, metaKey, altKey }) {
+  if (isComposing || shiftKey || ctrlKey || metaKey || altKey) return null
+  // Replacing a real selection isn't "continue the list here" in any
+  // well-defined sense.
+  if (selectionStart !== selectionEnd) return null
+
+  const { lineStart, lineEnd, line } = currentLine(value, selectionStart)
+  const marker = parseListMarker(line)
+  if (!marker) return null
+
+  // A freshly typed "* " + Enter continues (B5); only an armed one exits.
+  if (marker.rest.trim() === "" && armedMarker !== null) {
+    return {
+      edit: { start: lineStart, end: lineEnd, text: "", selectionStart: lineStart, selectionEnd: lineStart },
+      armedMarker: null
+    }
+  }
+
+  const caret = selectionStart + 1 + marker.continued.length
+  const renumbered = marker.ordered
+    ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
+    : null
+  const edit = renumbered
+    ? {
+        start: selectionStart,
+        end: renumbered.end,
+        text: `\n${marker.continued}${value.slice(selectionStart, lineEnd)}${renumbered.text}`,
+        selectionStart: caret,
+        selectionEnd: caret
+      }
+    : { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret }
+  return { edit, armedMarker: marker.continued }
+}
+
+// Tab/Shift+Tab on a list line. null leaves Tab to the browser (focus
+// moves); { edit: null } means swallow the key without editing.
+export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isComposing }) {
+  if (isComposing) return null
+  const { lineStart, line } = currentLine(value, selectionStart)
+  if (!parseListMarker(line)) return null
+
+  if (!shiftKey) {
+    return { edit: { start: lineStart, end: lineStart, text: "  ", selectionStart: selectionStart + 2, selectionEnd: selectionEnd + 2 } }
+  }
+
+  const leading = line.match(/^(\t|  )/)
+  if (!leading) return { edit: null }
+  const removed = leading[0].length
+  return {
+    edit: {
+      start: lineStart,
+      end: lineStart + removed,
+      text: "",
+      selectionStart: Math.max(lineStart, selectionStart - removed),
+      selectionEnd: Math.max(lineStart, selectionEnd - removed)
+    }
+  }
+}
+
+// Real typing ends the pristine continued marker, so Enter continues
+// from there instead of exiting. Navigation keys leave it armed.
+export function disarmsContinuation(key) {
+  return key?.length === 1 || key === "Backspace" || key === "Delete"
+}

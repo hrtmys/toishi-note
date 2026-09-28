@@ -2,8 +2,9 @@
 // from list_continuation_test.rb (now dash-wiring only).
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { currentLine, parseListMarker, renumberFollowingLines } from "../../app/javascript/lib/list_marker.js"
-import * as listMarker from "../../app/javascript/lib/list_marker.js"
+import {
+  currentLine, disarmsContinuation, enterAction, parseListMarker, renumberFollowingLines, tabAction
+} from "../../app/javascript/lib/list_marker.js"
 
 describe("parseListMarker", () => {
   it("continues a dash bullet unchanged", () => {
@@ -124,12 +125,11 @@ describe("currentLine", () => {
   })
 })
 
-// Namespace access so the cases above keep running while these exports are missing.
-const enter = (value, caret, extra = {}) => listMarker.enterAction({
+const enter = (value, caret, extra = {}) => enterAction({
   value, selectionStart: caret, selectionEnd: caret, armedMarker: null,
   isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false, ...extra
 })
-const tab = (value, caret, extra = {}) => listMarker.tabAction({
+const tab = (value, caret, extra = {}) => tabAction({
   value, selectionStart: caret, selectionEnd: caret, shiftKey: false, isComposing: false, ...extra
 })
 const apply = (value, edit) => value.slice(0, edit.start) + edit.text + value.slice(edit.end)
@@ -172,7 +172,7 @@ describe("enterAction", () => {
 
   it("leaves plain lines and selections to the browser", () => {
     assert.equal(enter("hello", 5), null)
-    assert.equal(listMarker.enterAction({
+    assert.equal(enterAction({
       value: "- first", selectionStart: 2, selectionEnd: 7, armedMarker: null,
       isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false
     }), null)
@@ -187,11 +187,11 @@ describe("enterAction", () => {
 
 describe("disarmsContinuation", () => {
   it("disarms on typed characters and deletions", () => {
-    for (const key of ["a", "あ", "Backspace", "Delete"]) assert.equal(listMarker.disarmsContinuation(key), true, key)
+    for (const key of ["a", "あ", "Backspace", "Delete"]) assert.equal(disarmsContinuation(key), true, key)
   })
 
   it("keeps the marker armed on navigation and modifiers", () => {
-    for (const key of ["ArrowLeft", "Shift", "Enter"]) assert.equal(listMarker.disarmsContinuation(key), false, key)
+    for (const key of ["ArrowLeft", "Shift", "Enter"]) assert.equal(disarmsContinuation(key), false, key)
   })
 })
 

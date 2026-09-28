@@ -38,6 +38,14 @@ export function looksLikeTable(html) {
   return /<table[\s>]/i.test(html)
 }
 
+// What a paste into the editor should do. Shift and IME composition keep
+// the browser's native paste; spreadsheet ranges go to the table prompt.
+export function classifyPaste({ html, shiftHeld, isComposing }) {
+  if (shiftHeld || isComposing) return "passthrough"
+  if (!html || !looksLikeRichContent(html)) return "passthrough"
+  return looksLikeTable(html) ? "table" : "convert"
+}
+
 // Parsing through DOMParser and keeping only document.body's HTML drops
 // everything under <head> (Word's mso metadata etc.) structurally, before
 // Turndown ever sees it. A plain HTML fragment parses unchanged.

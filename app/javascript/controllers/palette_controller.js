@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import * as bootstrap from "bootstrap"
 import { hideModal, installModalHideQueue, showModal } from "../lib/modal"
+import { isPaletteShortcut, paletteKeyAction, wrapIndex } from "../lib/palette_keys"
 
 // The Ctrl+P / Cmd+P command palette. The initial list needs no fetch:
 // HomeController#index already renders recently-viewed notes into the
@@ -33,8 +34,7 @@ export default class extends Controller {
   }
 
   globalKeydown(event) {
-    if (event.isComposing) return
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p") {
+    if (isPaletteShortcut(event)) {
       event.preventDefault()
       this.open()
     }
@@ -74,22 +74,20 @@ export default class extends Controller {
   }
 
   keydown(event) {
-    if (event.isComposing) return
-
-    switch (event.key) {
-      case "ArrowDown":
+    switch (paletteKeyAction(event)) {
+      case "next":
         event.preventDefault()
         this.move(1)
         break
-      case "ArrowUp":
+      case "previous":
         event.preventDefault()
         this.move(-1)
         break
-      case "Enter":
+      case "visit":
         event.preventDefault()
         this.visitSelected()
         break
-      case "Escape":
+      case "close":
         hideModal(this.modalState, this.modal)
         break
     }
@@ -117,11 +115,9 @@ export default class extends Controller {
     const items = this.itemTargets
     if (items.length === 0) return
 
-    let index = items.findIndex(item => item.classList.contains("palette-result-selected"))
-    if (index === -1) index = 0
-
-    this.markUnselected(items[index])
-    index = (index + delta + items.length) % items.length
+    const current = items.findIndex(item => item.classList.contains("palette-result-selected"))
+    this.markUnselected(items[current === -1 ? 0 : current])
+    const index = wrapIndex(current, delta, items.length)
     this.markSelected(items[index])
     items[index].scrollIntoView({ block: "nearest" })
   }

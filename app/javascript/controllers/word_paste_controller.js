@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { convertHtmlToMarkdown, looksLikeRichContent, looksLikeTable } from "../lib/html_to_markdown"
+import { classifyPaste, convertHtmlToMarkdown } from "../lib/html_to_markdown"
 import { t } from "../lib/translations"
 
 // Detects real clipboard HTML and auto-converts Word's rich text to
@@ -25,17 +25,13 @@ export default class extends Controller {
   }
 
   paste(event) {
-    // Holding Shift while pasting opts out of the conversion — the
-    // browser's native paste lands the clipboard text as-is.
-    if (event.shiftKey || this.shiftHeld) return
-    // A paste landing mid-composition would convert (and toast) while
-    // Japanese IME text is still unconfirmed — stay out of the way.
-    if (event.isComposing) return
-
+    // Holding Shift opts out of the conversion (native paste lands the
+    // text as-is); a paste mid-composition would convert unconfirmed IME text.
     const html = event.clipboardData?.getData("text/html")
-    if (!html || !looksLikeRichContent(html)) return
-
-    if (looksLikeTable(html)) {
+    const hasImage = hasImageItem(event)
+    const kind = classifyPaste({ html, hasImage, shiftHeld: event.shiftKey || this.shiftHeld, isComposing: event.isComposing })
+    if (kind === "passthrough") return
+    if (kind === "table") {
       this.dispatch("table-pasted", { detail: { html }, bubbles: true })
       return
     }
@@ -48,7 +44,7 @@ export default class extends Controller {
     // Let image-upload's handler run too so the picture is uploaded
     // instead of silently dropped; with no image aboard there is nothing
     // left for it to do, so stop the event there.
-    if (!hasImageItem(event)) event.stopImmediatePropagation()
+    if (!hasImage) event.stopImmediatePropagation()
     this.insertAtCursor(markdown)
     window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("converted_to_markdown") } }))
   }
