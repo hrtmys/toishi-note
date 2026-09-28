@@ -269,4 +269,184 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#pinned-list", count: 0
   end
+
+  test "the palette's blank-query list preselects the note viewed just before the open one, as a listbox" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    first = folder.notes.create!(notebook: notebook, title: "First Viewed", note_type: "md")
+    second = folder.notes.create!(notebook: notebook, title: "Second Viewed", note_type: "md")
+
+    travel_to(2.minutes.ago) { get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: first.id) }
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: second.id)
+
+    assert_response :success
+    assert_select "ul#palette-listbox[role=listbox]" do
+      assert_select "li[role=option]", minimum: 2
+      assert_select "li[role=option][aria-selected=true]", count: 1
+      assert_select "li[role=option][aria-selected=true].palette-result-selected", text: /First Viewed/
+      assert_select "li[role=option][aria-selected=false]", text: /Second Viewed/
+    end
+  end
+
+  test "the palette's blank-query list with a single note selects that note" do
+    users(:one).notes.each(&:destroy!)
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    only = folder.notes.create!(notebook: notebook, title: "Only Note", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: only.id)
+
+    assert_response :success
+    assert_select "ul#palette-listbox li[role=option]", count: 1
+    assert_select "ul#palette-listbox li[role=option][aria-selected=true].palette-result-selected", text: /Only Note/
+  end
+
+  test "a folder with no notes shows the Files empty state" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Empty Folder")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id)
+
+    assert_response :success
+    assert_select "#notes-list", text: I18n.t("home.files.empty")
+  end
+
+  test "a notebook with no folders shows the folders empty state and the no-folder prompt" do
+    notebook = users(:one).notebooks.create!(name: "Bare Notebook")
+
+    get root_url(notebook_id: notebook.id)
+
+    assert_response :success
+    assert_select "#folders-list", text: I18n.t("home.folders.empty")
+    assert_select "p", text: I18n.t("home.files.no_folder_selected")
+  end
+
+  test "a user with no notebooks gets guidance in the folders pane, in their locale" do
+    users(:one).notebooks.destroy_all
+
+    get root_url
+    assert_response :success
+    assert_select "#folders-list", text: I18n.t("home.folders.no_notebook_selected", locale: :en)
+
+    users(:one).update!(locale: "ja")
+    get root_url
+    assert_response :success
+    assert_select "#folders-list", text: I18n.t("home.folders.no_notebook_selected", locale: :ja)
+  end
+
+  test "a pinned note from another notebook links to its own notebook, folder and note" do
+    open_notebook = users(:one).notebooks.create!(name: "Open Notebook")
+    open_folder = open_notebook.folders.create!(name: "Open Folder")
+    other_notebook = users(:one).notebooks.create!(name: "Other Notebook")
+    other_folder = other_notebook.folders.create!(name: "Other Folder")
+    pinned = other_folder.notes.create!(notebook: other_notebook, title: "Far Pinned", note_type: "md", is_pinned: true)
+    href = root_path(notebook_id: other_notebook.id, folder_id: other_folder.id, note_id: pinned.id)
+
+    get root_url(notebook_id: open_notebook.id, folder_id: open_folder.id)
+    assert_response :success
+    assert_select "#pinned-list a[href=?]", href
+
+    get href
+    assert_response :success
+    assert_select "input[value=?]", "Far Pinned"
+  end
+
+  test "the editor FAB and its sections render only for enabled features" do
+    sections = { editor_fab_enabled: "ai-formatting", compare_enabled: "compare", table_paste_enabled: "table-paste" }
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Note", note_type: "md")
+    open_note = -> { get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id) }
+
+    users(:one).update!(sections.keys.index_with(false))
+    open_note.call
+    assert_select "[data-editor-fab].d-none", count: 1
+
+    sections.each do |flag, section|
+      users(:one).update!(sections.keys.index_with(false).merge(flag => true))
+      open_note.call
+      assert_select "[data-editor-fab]:not(.d-none)", count: 1
+      assert_select "[data-editor-fab] button.btn-outline-secondary[data-editor-fab-target=button]"
+      sections.each_value do |other|
+        selector = "[data-editor-fab-section=?]:not(.d-none)"
+        assert_select selector, other, count: other == section ? 1 : 0
+      end
+    end
+
+    users(:one).update!(sections.keys.index_with(true))
+    open_note.call
+    assert_select "[data-editor-fab-section]:not(.d-none)", count: 3
+  end
+
+  test "the FAB never renders on todo or scrap notes" do
+    users(:one).update!(editor_fab_enabled: true, compare_enabled: true, table_paste_enabled: true)
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+
+    %w[todo scrap].each do |type|
+      note = folder.notes.create!(notebook: notebook, title: "#{type} note", note_type: type)
+      get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+      assert_response :success
+      assert_select "[data-editor-fab]", count: 0
+    end
+  end
+
+  test "Quick Formatting offers exactly the five transforms, wired to their keys" do
+    users(:one).update!(editor_fab_enabled: true)
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Note", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+
+    assert_response :success
+    assert_select "[data-text-format-target=option]", count: 5
+    {
+      "fmtFullwidth" => "fullwidth_to_halfwidth",
+      "fmtPunct" => "punctuation_space",
+      "fmtNumJp" => "number_jp_space",
+      "fmtNewlines" => "collapse_newlines",
+      "fmtBrackets" => "remove_brackets"
+    }.each do |id, value|
+      assert_select "input##{id}[type=checkbox][value=?][data-text-format-target=option]", value
+      assert_select "label[for=?]", id, text: I18n.t("editor.fab.format.#{value}")
+    end
+  end
+
+  test "add-form fields and the note title carry accessible labels, in the user's locale" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    todo = folder.notes.create!(notebook: notebook, title: "Todo", note_type: "todo")
+    scrap = folder.notes.create!(notebook: notebook, title: "Scrap", note_type: "scrap")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: todo.id)
+    assert_response :success
+    assert_select "input[type=text][aria-label=?]", I18n.t("home.todo.content_placeholder")
+    assert_select "input[type=date][aria-label=?]", I18n.t("home.todo.due_date_label")
+    assert_select "#note_title_input[aria-label=?]", I18n.t("notes.title_placeholder")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: scrap.id)
+    assert_response :success
+    assert_select "textarea[aria-label=?]", I18n.t("home.scrap.content_placeholder")
+
+    users(:one).update!(locale: "ja")
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: todo.id)
+    assert_response :success
+    assert_select "input[type=date][aria-label=?]", I18n.t("home.todo.due_date_label", locale: :ja)
+    assert_select "#note_title_input[aria-label=?]", I18n.t("notes.title_placeholder", locale: :ja)
+  end
+
+  test "the Settings modal renders in Japanese for a ja user, except the Language label" do
+    users(:one).update!(locale: "ja")
+
+    get root_url
+
+    assert_response :success
+    assert_select "#settingsModal" do
+      assert_select "button[role=tab]", text: I18n.t("settings.tabs.account", locale: :ja)
+      assert_select "button[role=tab]", text: "Language"
+      assert_select "button", text: I18n.t("home.sign_out", locale: :ja)
+      assert_select "input#localeJa[checked]"
+    end
+  end
 end

@@ -270,4 +270,27 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
       ActionController::Base.allow_forgery_protection = original
     end
   end
+
+  test "deleting a note sets the deleted toast" do
+    delete note_url(@note)
+    follow_redirect!
+
+    assert_select "[data-controller=flash-toast][data-flash-toast-message-value=?]", I18n.t("home.notes.flash.deleted")
+  end
+
+  test "export is an attachment whose filename survives Japanese and header-injection titles" do
+    @note.update!(title: "議事録/2026")
+    get export_note_url(@note)
+    assert_response :success
+    disposition = response.headers["Content-Disposition"]
+    assert_match(/\Aattachment;/, disposition)
+    assert_match(/filename\*=UTF-8''\S+/, disposition)
+
+    @note.update!(title: "evil\"\r\nX-Injected: 1")
+    get export_note_url(@note)
+    assert_response :success
+    assert_match(/\Aattachment;/, response.headers["Content-Disposition"])
+    assert_no_match(/[\r\n]/, response.headers["Content-Disposition"])
+    assert_nil response.headers["X-Injected"]
+  end
 end

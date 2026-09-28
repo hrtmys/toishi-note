@@ -110,4 +110,31 @@ class NotebooksControllerTest < ActionDispatch::IntegrationTest
     end
     entries
   end
+
+  test "create and rename set success toasts; a blank or whitespace-only rename sets the failure toast and keeps the name" do
+    toast = "[data-controller=flash-toast][data-flash-toast-message-value=?]"
+
+    post notebooks_url, params: { name: "新しいノート" }
+    follow_redirect!
+    assert_select toast, I18n.t("home.notebooks.flash.created")
+
+    patch notebook_url(@notebook), params: { name: "改名後" }
+    follow_redirect!
+    assert_select toast, I18n.t("home.notebooks.flash.renamed")
+
+    [ "", "   " ].each do |blank|
+      patch notebook_url(@notebook), params: { name: blank }
+      follow_redirect!
+      assert_select toast, I18n.t("home.notebooks.flash.rename_failed")
+      assert_equal "改名後", @notebook.reload.name
+    end
+  end
+
+  test "a notebook renamed to markup shows it as literal text" do
+    patch notebook_url(@notebook), params: { name: "<b>x</b>" }
+    follow_redirect!
+
+    assert_select "#notebooks-list", text: /<b>x<\/b>/
+    assert_select "#notebooks-list b", count: 0
+  end
 end

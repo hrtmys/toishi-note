@@ -1,8 +1,8 @@
 require "test_helper"
 
-# Assumed contract (neither endpoint exists yet — see report): POST
-# /todos/preview {text:} renders a hidden `digest` field; POST /todos/apply
-# {text:, digest:} applies or aborts on mismatch. Both gated like /todos.md.
+# POST /todos/preview {text:} renders a hidden `digest` field; POST
+# /todos/apply {text:, digest:} applies or aborts on mismatch. Both gated
+# like /todos.md.
 class TodosPasteTest < ActionDispatch::IntegrationTest
   setup do
     sign_in_as users(:one)
@@ -154,5 +154,41 @@ class TodosPasteTest < ActionDispatch::IntegrationTest
 
     post "/todos/preview", params: { text: huge }, as: :turbo_stream
     assert_operator @response.status, :<, 500
+  end
+
+  test "the paste box renders only when ai_handoff_enabled" do
+    users(:one).update!(ai_handoff_enabled: false)
+    get root_url(todos: true)
+    assert_response :success
+    assert_select "#todos_paste_form", count: 0
+
+    users(:one).update!(ai_handoff_enabled: true)
+    get root_url(todos: true)
+    assert_response :success
+    assert_select "#todos_paste_form", count: 1
+  end
+
+  test "preview lists an add under the adds block" do
+    post "/todos/preview", params: { text: "## Groceries\n- [ ] Buy milk\n- [ ] 牛乳を買う" }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "#todos_paste_adds li", text: "Buy milk"
+    assert_select "#todos_paste_adds li", text: "牛乳を買う"
+    assert_select "#todos_paste_deletes", count: 0
+  end
+
+  test "preview lists a bound delete with the irreversible warning; another user's id never appears there" do
+    own = @note.todo_items.create!(content: "卵を捨てる")
+    foreign = notes(:two).todo_items.create!(content: "Foreign secret")
+
+    post "/todos/preview", params: { text: "## Groceries\n- [ ] 卵を捨てる (id: #{own.id.to_s(36)};delete!)" }, as: :turbo_stream
+    assert_response :success
+    assert_select "#todos_paste_deletes li", text: "卵を捨てる"
+    assert_select "#todos_paste_deletes", text: /#{Regexp.escape(I18n.t("home.todos.paste.irreversible"))}/
+
+    post "/todos/preview", params: { text: "## Groceries\n- [ ] Foreign secret (id: #{foreign.id.to_s(36)};delete!)" }, as: :turbo_stream
+    assert_response :success
+    assert_select "#todos_paste_deletes li", count: 0
+    assert TodoItem.exists?(foreign.id)
   end
 end

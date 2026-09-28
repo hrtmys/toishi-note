@@ -183,4 +183,36 @@ class HomeTodosTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "#sidebarMenu"
   end
+
+  test "an overdue open item is badged danger in the due view; one due today is not" do
+    overdue = @note.todo_items.create!(content: "Overdue", due_date: Date.current - 2)
+    today = @note.todo_items.create!(content: "Due today", due_date: Date.current)
+
+    get root_url(todos: true, view: "due")
+
+    assert_response :success
+    assert_select "#all_todos_item_#{overdue.id} .badge.text-bg-danger", count: 1
+    assert_select "#all_todos_item_#{today.id} .badge", minimum: 1
+    assert_select "#all_todos_item_#{today.id} .badge.text-bg-danger", count: 0
+  end
+
+  test "the sidebar's all-open-TODOs link and the pane's back link round-trip to the open note" do
+    scope = { notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id }
+
+    get root_url(**scope)
+    assert_response :success
+    hub_path = root_path(todos: true, **scope)
+    assert_select "a[title=?][href=?]", I18n.t("home.header.all_open_todos"), hub_path
+
+    get hub_path
+    assert_response :success
+    back_path = root_path(**scope)
+    assert_select "a[title=?][href=?]", I18n.t("home.todos.back"), back_path
+    assert_select "a[href=?]", root_path(todos: true, view: "due", **scope)
+    assert_select "a[href=?]", root_path(todos: true, view: "project", **scope)
+
+    get back_path
+    assert_response :success
+    assert_select "#note_title_input[value=?]", "Todo Note"
+  end
 end

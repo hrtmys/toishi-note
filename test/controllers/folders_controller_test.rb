@@ -87,4 +87,11 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert_equal @notebook, @folder.reload.notebook
   end
+
+  test "renaming a folder sets the renamed toast" do
+    patch notebook_folder_url(@notebook, @folder), params: { name: "改名フォルダ" }
+    follow_redirect!
+
+    assert_select "[data-controller=flash-toast][data-flash-toast-message-value=?]", I18n.t("home.folders.flash.renamed")
+  end
 end

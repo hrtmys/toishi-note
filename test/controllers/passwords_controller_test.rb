@@ -10,6 +10,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     # to an HTML5 email_field that blocked "@"-less input client-side — lock
     # the plain text field here so the system test doesn't have to.
     assert_select "input[type='text'][name='email_address']"
+    assert_select "a[href=?]", new_session_path, text: I18n.t("passwords.back_to_sign_in")
   end
 
   test "create" do
