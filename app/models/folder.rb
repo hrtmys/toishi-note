@@ -24,8 +24,13 @@ class Folder < ApplicationRecord
       lock!
       return if notebook_id == notebook.id
 
-      update!(notebook: notebook)
+      source = self.notebook
+      # Take the target's next free slot in the same UPDATE: keeping the old
+      # position would collide on the unique (notebook_id, position) index.
+      notebook.lock!
+      update!(notebook: notebook, position: (notebook.folders.maximum(:position) || 0) + 1)
       notes.update_all(notebook_id: notebook.id)
+      Positioned.reposition!(source.folders, source.folders.ids)
     end
   end
 
