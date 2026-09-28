@@ -92,7 +92,7 @@ export function enterAction({ value, selectionStart, selectionEnd, armedMarker, 
   const marker = parseListMarker(line)
   if (!marker) return null
 
-  // A freshly typed "* " + Enter continues (B5); only an armed one exits.
+  // A freshly typed "* " + Enter continues; only an armed one exits.
   if (marker.rest.trim() === "" && armedMarker !== null) {
     return {
       edit: { start: lineStart, end: lineEnd, text: "", selectionStart: lineStart, selectionEnd: lineStart },

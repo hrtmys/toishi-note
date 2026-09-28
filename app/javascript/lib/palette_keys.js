@@ -1,5 +1,3 @@
-// Command palette key decisions; the controller owns the modal and DOM.
-
 export function isPaletteShortcut(event) {
   if (event.isComposing) return false
   return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p"

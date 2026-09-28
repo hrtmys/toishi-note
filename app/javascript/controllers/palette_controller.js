@@ -116,7 +116,7 @@ export default class extends Controller {
     if (items.length === 0) return
 
     const current = items.findIndex(item => item.classList.contains("palette-result-selected"))
-    this.markUnselected(items[current === -1 ? 0 : current])
+    if (current !== -1) this.markUnselected(items[current])
     const index = wrapIndex(current, delta, items.length)
     this.markSelected(items[index])
     items[index].scrollIntoView({ block: "nearest" })

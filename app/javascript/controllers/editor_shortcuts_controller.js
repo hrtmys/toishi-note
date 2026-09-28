@@ -1,9 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { deleteLineEdit, linkEdit, performEdit, shortcutCommand, urlPasteEdit, wrapEdit } from "../lib/markdown_edits"
 
-// v0.2 editor batch (bold/italic/link/delete-line/URL-paste).
-// Plain-textarea behaviors; every edit uses execCommand("insertText")
-// so Ctrl+Z keeps working, and handlers bail while isComposing.
+// Every edit goes through execCommand("insertText") so Ctrl+Z keeps working.
 export default class extends Controller {
   keydown(event) {
     const command = shortcutCommand(event)

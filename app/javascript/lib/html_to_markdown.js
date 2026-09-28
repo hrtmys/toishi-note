@@ -38,8 +38,8 @@ export function looksLikeTable(html) {
   return /<table[\s>]/i.test(html)
 }
 
-// What a paste into the editor should do. Shift and IME composition keep
-// the browser's native paste; spreadsheet ranges go to the table prompt.
+// Shift opts out of conversion (native paste lands the text as-is); a paste
+// mid-composition would convert unconfirmed IME text.
 export function classifyPaste({ html, shiftHeld, isComposing }) {
   if (shiftHeld || isComposing) return "passthrough"
   if (!html || !looksLikeRichContent(html)) return "passthrough"

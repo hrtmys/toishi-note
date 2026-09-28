@@ -25,8 +25,6 @@ export default class extends Controller {
   }
 
   paste(event) {
-    // Holding Shift opts out of the conversion (native paste lands the
-    // text as-is); a paste mid-composition would convert unconfirmed IME text.
     const html = event.clipboardData?.getData("text/html")
     const hasImage = hasImageItem(event)
     const kind = classifyPaste({ html, hasImage, shiftHeld: event.shiftKey || this.shiftHeld, isComposing: event.isComposing })
