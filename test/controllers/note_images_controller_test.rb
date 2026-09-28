@@ -24,6 +24,17 @@ class NoteImagesControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{\A!\[\]\(/rails/active_storage/blobs/}, body["markdown"]
   end
 
+  test "an upload leaves the note's lock_version alone, so the editor's next autosave doesn't conflict" do
+    before = @note.reload.lock_version
+
+    post note_images_url(@note), params: { image: fixture_file_upload("sample_image.png", "image/png") }
+    assert_response :success
+
+    assert_equal before, @note.reload.lock_version
+    patch note_url(@note), params: { note: { content: "画像のあと", lock_version: before } }, as: :json
+    assert_response :success
+  end
+
   test "keeps the original file when the uploader opted out of compression" do
     users(:one).update!(keep_original_images: true)
     file = fixture_file_upload("sample_image.png", "image/png")

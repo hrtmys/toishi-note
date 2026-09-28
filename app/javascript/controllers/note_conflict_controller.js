@@ -1,4 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
+import { t } from "../lib/translations"
+import { noteSaveQueue } from "./autosave_controller"
 
 // Owns the "changed on another device" banner, shown on a 409 (see
 // autosave_controller.js's note:conflict event). Never auto-resolves —
@@ -17,68 +19,67 @@ export default class extends Controller {
     // never be removed later (see the navigation_controller.js lesson).
     this.showBound = this.show.bind(this)
     this.element.addEventListener("note:conflict", this.showBound)
+    this.warnBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ""
+    }
   }
 
   disconnect() {
     this.element.removeEventListener("note:conflict", this.showBound)
+    this.stopWarning()
   }
 
   show() {
     this.bannerTarget.classList.remove("d-none")
+    // Held edits exist only in this tab until the user decides; closing
+    // or reloading it now would lose them without a word.
+    const queue = this.queue()
+    if (queue?.held && queue.hasUnsaved) window.addEventListener("beforeunload", this.warnBeforeUnload)
+  }
+
+  stopWarning() {
+    window.removeEventListener("beforeunload", this.warnBeforeUnload)
+  }
+
+  queue() {
+    return noteSaveQueue(this.element)
   }
 
   // Discards whatever's in progress and shows the server's current
-  // state — the safe default when the user doesn't know or care what
-  // changed on the other device. Confirmed first: this is the one action
-  // here that throws real unsaved edits away.
+  // state. Confirmed first: this throws real unsaved edits away.
   reload() {
     if (!window.confirm(this.reloadConfirmValue)) return
 
+    this.queue()?.discard()
+    this.stopWarning()
     window.location.reload()
   }
 
-  // Resubmits every autosave field's current value. The 409 response
-  // already refreshed data-note-lock-version, so this retry uses the
-  // version the server actually has now.
-  //
-  // The banner used to hide immediately, before any of those resubmits
-  // had actually landed — if one then failed, the user was left with no
-  // banner and no error, just silence. Now it stays up (button disabled,
-  // as an in-progress cue) until every autosave field's resubmission has
-  // actually resolved, and only hides once they've all succeeded; a
-  // failure keeps the banner open and raises the normal save-failed toast
-  // (autosave_controller.js already does that on its own).
+  // Resubmits every autosave field's current value over the other
+  // device's version. The banner stays up (button disabled) until every
+  // resubmission has landed; a failure keeps it open with a toast.
   keepMine() {
+    const queue = this.queue()
+    if (!queue) return
     if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.disabled = true
 
-    const fields = Array.from(this.element.querySelectorAll("[data-controller~='autosave']"))
+    const fields = Array.from(this.element.querySelectorAll("[data-controller~='autosave'][name]"))
+    const saves = fields.map((field) => queue.request(field.getAttribute("name").match(/\[(.*)\]/)[1], field.value))
+    queue.keepMine()
+    this.stopWarning()
 
-    Promise.all(fields.map((field) => this.resubmit(field)))
-      .then((results) => {
-        if (results.every(Boolean)) {
+    Promise.all(saves)
+      .then((outcomes) => {
+        this.element.dataset.noteLockVersion = queue.version
+        if (outcomes.every((outcome) => outcome === "saved")) {
           this.bannerTarget.classList.add("d-none")
+        } else if (outcomes.includes("failed")) {
+          window.dispatchEvent(new CustomEvent("toast:show", { detail: { message: t("autosave.save_failed") } }))
         }
       })
       .finally(() => {
         if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.disabled = false
       })
-  }
-
-  // Dispatches the same "input" event autosave already listens for, then
-  // waits for that same field's own "autosave:settled" (see
-  // autosave_controller.js) to know whether this particular resubmit
-  // actually succeeded — scoped to the field itself so one field's
-  // failure can't be mistaken for another's on a note with more than one
-  // autosaved field (title + content).
-  resubmit(field) {
-    return new Promise((resolve) => {
-      const onSettled = (event) => {
-        field.removeEventListener("autosave:settled", onSettled)
-        resolve(!!event.detail?.ok)
-      }
-
-      field.addEventListener("autosave:settled", onSettled)
-      field.dispatchEvent(new Event("input", { bubbles: true }))
-    })
   }
 }

@@ -1,6 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
 import { saveOutcome } from "../lib/autosave"
+import { SaveQueue } from "../lib/save_queue"
+
+// Keyed by the note wrapper element, so a queue (and its hold after a
+// conflict) outlives any one controller's connect/disconnect.
+const saveQueues = new WeakMap()
+
+export function noteSaveQueue(wrapper) {
+  return saveQueues.get(wrapper)
+}
 
 export default class extends Controller {
   static values = { url: String }
@@ -38,77 +47,69 @@ export default class extends Controller {
       if (!fieldName) return
 
       const key = fieldName.match(/\[(.*)\]/)[1]
-      const payload = { note: {} }
-      payload.note[key] = this.element.value
+      const wrapper = this.lockVersionElement()
+      const queue = this.queueFor(wrapper)
 
-      // Title and content autosave independently but share one
-      // lock_version on their common note wrapper, so editing one then
-      // the other doesn't conflict with itself.
-      const lockVersionElement = this.lockVersionElement()
-      if (lockVersionElement) {
-        payload.note.lock_version = lockVersionElement.dataset.noteLockVersion
-      }
-
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-
-      fetch(this.urlValue, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "text/vnd.turbo-stream.html, application/json",
-          "X-CSRF-Token": csrfToken
-        },
-        body: JSON.stringify(payload)
-      })
-      .then(response => {
-        // Told on every response, success or conflict, so the next save
-        // always submits the version the server actually has now.
-        const newVersion = response.headers.get("X-Note-Lock-Version")
-        if (newVersion !== null && lockVersionElement) {
-          lockVersionElement.dataset.noteLockVersion = newVersion
-        }
-
-        const outcome = saveOutcome(response.status)
+      queue.request(key, this.element.value).then((outcome) => {
+        if (wrapper) wrapper.dataset.noteLockVersion = queue.version
 
         if (outcome === "conflict") {
           // Another device/tab saved first. Never silently resolve by
           // retrying; note_conflict_controller.js shows the user a real
-          // choice, and this field's pending edit stays as typed.
+          // choice, and the queue holds this note's saves until then.
           this.element.dispatchEvent(new CustomEvent("note:conflict", { bubbles: true }))
-          this.notifySettled(false)
-          return null
-        }
-
-        if (outcome === "failed") {
-          // A non-2xx, non-409 response (422, 500, ...) isn't a valid
-          // turbo-stream body — rendering it as one would throw an obscure
-          // JS error instead of telling the user anything useful.
+        } else if (outcome === "failed") {
           this.notifySaveFailed()
-          this.notifySettled(false)
-          return null
         }
-
-        return response.text()
-      })
-      .then(html => {
-        if (html) {
-          window.Turbo.renderStreamMessage(html)
-        }
-        // A 2xx with an empty body (e.g. NotesController#update answering
-        // `head :ok` when a resubmitted value changed nothing visible) is
-        // still a landed save — it must settle too. Gating this on `html`
-        // left note_conflict_controller.js's keepMine waiting forever on an
-        // unchanged field's resubmission, so the banner never hid.
-        this.notifySettled(true)
-      })
-      .catch(error => {
-        // Network failure, CORS, etc. — the fetch itself rejected before
-        // any response came back.
-        console.error("Failed to autosave", error)
-        this.notifySaveFailed()
-        this.notifySettled(false)
+        this.notifySettled(outcome === "saved")
       })
     }, 500)
+  }
+
+  // Title and content share one queue (and one lock_version) on their
+  // common note wrapper, so neither ever sends a version the other's
+  // in-flight save is about to replace.
+  queueFor(wrapper) {
+    const owner = wrapper || this.element
+    let queue = saveQueues.get(owner)
+    if (!queue) {
+      queue = new SaveQueue({ version: wrapper?.dataset.noteLockVersion ?? 0, send: (save) => this.send(save) })
+      saveQueues.set(owner, queue)
+    }
+    return queue
+  }
+
+  async send({ field, value, version }) {
+    const payload = { note: { [field]: value } }
+    if (this.lockVersionElement()) payload.note.lock_version = version
+
+    let response
+    try {
+      response = await fetch(this.urlValue, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "text/vnd.turbo-stream.html, application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content
+        },
+        body: JSON.stringify(payload)
+      })
+    } catch (error) {
+      console.error("Failed to autosave", error)
+      throw error
+    }
+
+    const header = response.headers.get("X-Note-Lock-Version")
+    const result = { status: response.status, version: header === null ? null : Number(header) }
+
+    // Only a 2xx body is a turbo stream; a 422/500 page rendered as one
+    // would throw an obscure JS error instead of the save-failed toast.
+    // A 2xx with an empty body (`head :ok`) is still a landed save.
+    if (saveOutcome(response.status) === "saved") {
+      const html = await response.text()
+      if (html) window.Turbo.renderStreamMessage(html)
+    }
+    return result
   }
 
   notifySaveFailed() {

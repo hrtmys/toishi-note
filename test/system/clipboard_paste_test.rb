@@ -155,10 +155,6 @@ class ClipboardPasteTest < ApplicationSystemTestCase
     end
 
     phase "7 failed then successful drop" do
-      # A successful upload bumps the note's lock_version, so the earlier
-      # autosaves conflict; a fresh load starts from the saved version.
-      visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: @note.id)
-      record_toasts
       links_before = textarea_value.scan(BLOB_LINK).size
       uploading = I18n.t("js.image_upload.uploading", filename: "photo.png")
       force_fetch_rejection(only: "/images")
@@ -179,6 +175,11 @@ class ClipboardPasteTest < ApplicationSystemTestCase
       drop_image("photo.png")
       wait_until("the dropped image never uploaded") { textarea_value.scan(BLOB_LINK).size == links_before + 1 }
       assert_equal "image/webp", @note.reload.images.last.blob.content_type
+
+      find(TEXTAREA).send_keys(:end, "\n画像のあと")
+      final = textarea_value
+      wait_until("the edit after the uploads never saved") { @note.reload.content == final }
+      assert_selector "[data-note-conflict-target='banner'].d-none", visible: :all
     end
   end
 

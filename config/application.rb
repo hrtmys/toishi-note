@@ -28,6 +28,10 @@ module ToishiNote
     # fallback when no preference/cookie/Accept-Language points at :ja.
     config.i18n.available_locales = %i[en ja]
     config.i18n.default_locale = :en
+
+    # Attaching an image would otherwise touch the note and bump its
+    # lock_version, so the editor's next autosave 409s against itself.
+    config.active_storage.touch_attachment_records = false
     # config.eager_load_paths << Rails.root.join("extras")
   end
 end

@@ -73,6 +73,23 @@ class TextareaEditingTest < ApplicationSystemTestCase
       textarea.send_keys("second", :enter, :enter, "plain")
       assert_equal "- first\n- second\nplain", textarea.value
     end
+
+    phase "6 list typing on a slow connection never conflicts with itself" do
+      clear(textarea)
+      wait_until("the cleared note never saved") { @note.reload.content == "" }
+      # Each save takes longer than the pause between bursts, so on a single
+      # device a later save always starts while an earlier one is in flight.
+      delay_fetch(1500)
+      textarea.send_keys("- 一つ目", :enter)
+      sleep 0.7
+      textarea.send_keys("二つ目", :enter)
+      sleep 0.7
+      textarea.send_keys("三つ目")
+      final = textarea.value
+      wait_until("the last burst never saved") { @note.reload.content == final }
+      assert_selector "[data-note-conflict-target='banner'].d-none", visible: :all
+      restore_fetch
+    end
   end
 
   private
