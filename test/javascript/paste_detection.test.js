@@ -1,6 +1,37 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { looksLikeRichContent, looksLikeTable } from "../../app/javascript/lib/html_to_markdown.js"
+import * as htmlToMarkdown from "../../app/javascript/lib/html_to_markdown.js"
+import { EXCEL_HTML, WORD_HTML } from "./helpers/office_paste_fixtures.js"
+
+const classify = (html, extra = {}) =>
+  htmlToMarkdown.classifyPaste({ html, hasImage: false, shiftHeld: false, isComposing: false, ...extra })
+
+describe("classifyPaste", () => {
+  it("converts Word and styled rich content", () => {
+    assert.equal(classify(WORD_HTML), "convert")
+    assert.equal(classify("<p class=MsoNormal>hi<o:p></o:p></p>"), "convert")
+    assert.equal(classify('<span style="font-weight:bold">x</span>'), "convert")
+  })
+
+  it("passes plain HTML and image-only pastes through", () => {
+    assert.equal(classify("<span>plain</span>"), "passthrough")
+    assert.equal(classify("", { hasImage: true }), "passthrough")
+  })
+
+  it("routes spreadsheet HTML to the table prompt instead of converting", () => {
+    assert.equal(classify(EXCEL_HTML), "table")
+  })
+
+  it("lets Shift and IME composition keep the browser's paste", () => {
+    assert.equal(classify(WORD_HTML, { shiftHeld: true }), "passthrough")
+    assert.equal(classify(WORD_HTML, { isComposing: true }), "passthrough")
+  })
+
+  it("still converts Word HTML that carries a rendered image", () => {
+    assert.equal(classify(WORD_HTML, { hasImage: true }), "convert")
+  })
+})
 
 describe("looksLikeRichContent", () => {
   it("matches explicit rich tags", () => {

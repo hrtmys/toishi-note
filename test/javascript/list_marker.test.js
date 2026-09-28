@@ -3,6 +3,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { currentLine, parseListMarker, renumberFollowingLines } from "../../app/javascript/lib/list_marker.js"
+import * as listMarker from "../../app/javascript/lib/list_marker.js"
 
 describe("parseListMarker", () => {
   it("continues a dash bullet unchanged", () => {
@@ -120,5 +121,98 @@ describe("currentLine", () => {
 
   it("finds the last line without a trailing newline", () => {
     assert.deepEqual(currentLine("aaa\nbbb", 6), { lineStart: 4, lineEnd: 7, line: "bbb" })
+  })
+})
+
+// Namespace access so the cases above keep running while these exports are missing.
+const enter = (value, caret, extra = {}) => listMarker.enterAction({
+  value, selectionStart: caret, selectionEnd: caret, armedMarker: null,
+  isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false, ...extra
+})
+const tab = (value, caret, extra = {}) => listMarker.tabAction({
+  value, selectionStart: caret, selectionEnd: caret, shiftKey: false, isComposing: false, ...extra
+})
+const apply = (value, edit) => value.slice(0, edit.start) + edit.text + value.slice(edit.end)
+
+describe("enterAction", () => {
+  it("continues a bullet and arms the inserted marker", () => {
+    const result = enter("- first", 7)
+    assert.equal(apply("- first", result.edit), "- first\n- ")
+    assert.equal(result.edit.selectionStart, 10)
+    assert.equal(result.edit.selectionEnd, 10)
+    assert.equal(result.armedMarker, "- ")
+  })
+
+  it("removes an armed, still-empty marker line and disarms", () => {
+    const value = "- first\n- "
+    const result = enter(value, 10, { armedMarker: "- " })
+    assert.equal(apply(value, result.edit), "- first\n")
+    assert.equal(result.edit.selectionStart, 8)
+    assert.equal(result.armedMarker, null)
+  })
+
+  it("continues a typed-in empty marker that was never armed", () => {
+    assert.equal(apply("* ", enter("* ", 2).edit), "* \n* ")
+  })
+
+  it("renumbers the following ordered items", () => {
+    const value = "1. first\n2. second"
+    const { edit } = enter(value, 8)
+    assert.equal(apply(value, edit), "1. first\n2. \n3. second")
+    assert.equal(edit.selectionStart, "1. first\n2. ".length)
+  })
+
+  it("continues each marker style", () => {
+    assert.equal(apply("1) a", enter("1) a", 4).edit), "1) a\n2) ")
+    assert.equal(apply("- [x] done", enter("- [x] done", 10).edit), "- [x] done\n- [ ] ")
+    assert.equal(apply("> q", enter("> q", 3).edit), "> q\n> ")
+    assert.equal(apply("  - a", enter("  - a", 5).edit), "  - a\n  - ")
+    assert.equal(apply("- 項目", enter("- 項目", 4).edit), "- 項目\n- ")
+  })
+
+  it("leaves plain lines and selections to the browser", () => {
+    assert.equal(enter("hello", 5), null)
+    assert.equal(listMarker.enterAction({
+      value: "- first", selectionStart: 2, selectionEnd: 7, armedMarker: null,
+      isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false
+    }), null)
+  })
+
+  it("ignores modified Enter and IME confirmation", () => {
+    for (const mod of ["shiftKey", "ctrlKey", "metaKey", "altKey", "isComposing"]) {
+      assert.equal(enter("- first", 7, { [mod]: true }), null, mod)
+    }
+  })
+})
+
+describe("disarmsContinuation", () => {
+  it("disarms on typed characters and deletions", () => {
+    for (const key of ["a", "あ", "Backspace", "Delete"]) assert.equal(listMarker.disarmsContinuation(key), true, key)
+  })
+
+  it("keeps the marker armed on navigation and modifiers", () => {
+    for (const key of ["ArrowLeft", "Shift", "Enter"]) assert.equal(listMarker.disarmsContinuation(key), false, key)
+  })
+})
+
+describe("tabAction", () => {
+  it("indents a list line by two spaces and shifts the caret", () => {
+    const { edit } = tab("- a", 3)
+    assert.equal(apply("- a", edit), "  - a")
+    assert.equal(edit.selectionStart, 5)
+    assert.equal(edit.selectionEnd, 5)
+  })
+
+  it("outdents two spaces or a tab on Shift+Tab", () => {
+    assert.equal(apply("  - a", tab("  - a", 5, { shiftKey: true }).edit), "- a")
+    assert.equal(apply("\t- a", tab("\t- a", 4, { shiftKey: true }).edit), "- a")
+  })
+
+  it("swallows Shift+Tab on an unindented list line", () => {
+    assert.deepEqual(tab("- a", 3, { shiftKey: true }), { edit: null })
+  })
+
+  it("leaves Tab on plain lines to the browser", () => {
+    assert.equal(tab("hello", 5), null)
   })
 })
