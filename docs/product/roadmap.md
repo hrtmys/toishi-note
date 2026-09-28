@@ -2,7 +2,7 @@
 title: Product Roadmap (v0.1 → v2.0)
 description: What ships when, from the public beta through v2.0, and why each requested feature was accepted, rescoped, or dropped
 status: living
-updated: 2026-09-26
+updated: 2026-09-28
 ---
 
 # Roadmap — v0.1 to v2.0
@@ -22,6 +22,8 @@ Since then (2026-08-24 → 2026-09-11) the work has been a **post-beta hardening
 **Re-plan, 2026-09-26.** Three changes, each explained where it lands: a PWA install bug found in daily use is pulled into v0.2 (§5 #17); `[[links]]` and import swap places, so the graph ships as v0.3 and import as v0.5 (§8); and the PNG-capture approach is decided against the browser-native alternatives (§5 #6). §8 now also carries a size and a delegation label per item. v2.0 was re-checked against the code the same day and nothing in it has started — no encryption code, no citation fields, no `tags` table; the only trace is a comment in `settings/_modal.html.erb` reserving the "Integrations" tab.
 
 What has *still* not shipped is anything beyond the palette that makes the app fast to **move around in** — global pins, body search, `[[links]]` — and that remains the most keenly felt gap in daily use.
+
+**2026-09-28.** v0.2.0 (2026-09-27) and v0.2.1 (2026-09-28, new icon and the install fix) are released. A bug hunt the same day filed #87–#104. The P1 and P2 ones hit ordinary writing — autosave, leaving a list, TODO ticks — so they become a v0.2.2 stage before the graph (§8); the P3 polish goes to v0.4.
 
 ## 2. Version numbering — and one correction to release-process.md
 
@@ -98,6 +100,8 @@ The last row is the one to lead with on Zenn/Qiita. The others are table stakes 
 
 Shipped in v0.1.0: #1 (README quickstart, `README.ja.md`, `CHANGELOG.md`), #2 (public repo cut), #3 (Account tab; trusted-header sign-out hidden), #4 core (list continuation + Tab indent), #8 (BIZ UDGothic self-hosted), #9 (palette), #12 (scroll-active-into-view). #14's localhost answer shipped as docs (self-contained `docker-compose.yml` on `127.0.0.1:3000`); the CLI gem and encrypted notebooks remain v1.5 / v2.0. Shipped in the v0.2 slice: #4's v0.2 half (Ctrl+B / Ctrl+I / Ctrl+K, paste-URL-over-selection, auto-renumbering, `Ctrl+Shift+K` delete line, all undo-preserving and IME-safe) and #16's client-side half (paste-URL-over-selection). #11 is partial — the sidebar now shows more than two rows, no longer snaps on click, restores the offcanvas without a replayed animation, has touch ellipsis menus, and the title input fills the freed header width, but panes are still fixed-height, not flexible or resizable. **#5 shipped 2026-09-21**, inside the TODO-hub wave rather than on its own: the per-note bulk-add modal now takes `- [ ]` Markdown as well as JSON, and carries due dates through, which is what "bullets → TODO" was asking for. Not started: #6, #7, #10 (palette searches titles only — no body search yet), #13, #15, #16's server-side title fetch, and global pins.
 
+*2026-09-28:* v0.2.0 is released, carrying everything listed above as the v0.2 slice plus global pins and flexible pane heights (#11's v0.2 half); #17 shipped in v0.2.0 and its icon follow-up in v0.2.1.
+
 ### Notes on the non-obvious calls
 
 **#3 — hide the email and sign-out.** The right fix is not a solo-only conditional. The sidebar header is prime real estate spent on information you already know (your own email) and an action you take once a month. Move both into the Settings modal's "Account" tab — a tab the old roadmap had designed but that shipped only with v0.1.0. Then, separately: when `TRUSTED_HEADER_AUTH_HEADER` is active, hide sign-out entirely, because it currently signs you out and the very next request signs you straight back in. That is a real bug hiding inside a cosmetic request.
@@ -108,6 +112,8 @@ Scope, in two batches:
 
 - *v0.1:* Enter continues `-`, `*`, `1.`, `- [ ]`, `>`; Enter on an empty marker removes it; Tab/Shift+Tab indent and outdent inside a list.
 - *v0.2:* Ctrl+B / Ctrl+I / Ctrl+K, paste-a-URL-over-a-selection → `[selection](url)`, auto-renumbering, `Ctrl+Shift+K` delete line.
+
+Markers stay CommonMark: `-`, `*`, `+`, `1.`, `1)`. Japanese bullets such as `・` or `ー` are not converted into list markers, since the preview wouldn't render them as a list anyway ([#104](https://github.com/hrtmys/toishi-note/issues/104)).
 
 Two implementation constraints that must be honored or the feature is worse than nothing: **use `document.execCommand("insertText")` (or an equivalent that preserves the native undo stack)** — assigning `textarea.value` destroys Ctrl+Z, which is a far bigger regression than the feature is a win; and **suppress every handler while `isComposing` is true**, or Japanese input breaks on the first Enter that confirms a conversion.
 
@@ -281,14 +287,14 @@ No new roadmap features; stability and correctness for the beta audience:
 
 Each open item from here to v0.5 carries two labels. **Size:** S = under half a day, M = about one focused session, L = several sessions (plan → tests first → implementation → review). **Delegation:** *delegable* means this document already pins the behavior, so a contributor or a less careful model can implement it from a short brief, with review after; *design* means it needs judgment this document doesn't settle (security, data model, state machines) and should go through a written plan first.
 
-### v0.2.0 — The editor earns its keep (partially shipped 2026-09-11)
+### v0.2.0 — The editor earns its keep ✅ released 2026-09-27
 
 - ✅ Remaining editor shortcuts; paste-URL-over-selection
 - ✅ Mobile/sidebar bug insertions: FILES-only offcanvas close with no re-show animation on notebook/folder navigation (B1); paste keeps its broad HTML detector but preserves the undo stack via `execCommand("insertText")`, with Shift+Enter passthrough and an extended "converted to Markdown" toast (B2); per-row tap-to-open vertical ellipsis on touch, hover reveal kept on desktop (B3); title input no longer reserves button space (B4); `*` + space + Enter continues the bullet instead of deleting it (B5)
 - ✅ **Installable PWA fix** (merged 2026-09-27, #53) — linked manifest with `start_url`/`id` `"/"`, credentialed manifest fetch, mode params out of `lastPath` (§5 #17). *S–M, design* (small diff, but it has to be checked behind Cloudflare Access and on a real Chrome/Edge install). Do this first.
 - ✅ Global pinned section, cross-notebook (#54)
 - ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
-- Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
+- ✅ Cut 2026-09-27, carrying the TODO-hub wave below; the release notes tell existing PWA installs to reinstall once. v0.2.1 (2026-09-28) followed with a new icon and standard 192/512px manifest icons, so Chrome and Edge offer "Install app" again.
 
 ### v0.2.x — Test suite reset ✅ done 2026-09-29
 
@@ -309,11 +315,11 @@ Shipped so far:
 - ✅ 135 system tests consolidated into a 15-file smoke set (#77, #79).
 - Result on CI: system test time about 207s → 51–77s, the system-test job about 248s → 89–121s. Product bugs found along the way: #78, #80; a grammar mismatch: #75.
 
-### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
+### TODO hub and the AI handoff loop ✅ merged 2026-09-21, released in v0.2.0
 
 *Theme: TODOs scatter across notebooks by design; managing them shouldn't mean walking the tree, and handing them to an AI shouldn't mean retyping them.*
 
-Issue #47, shipped as three PRs (#49, #50, #51). Not a release of its own — it rides whichever cut comes next.
+Issue #47, shipped as three PRs (#49, #50, #51). Not a release of its own — it rode the v0.2.0 cut.
 
 - `/todos` stops being a standalone page and becomes a mode of the main pane, so the sidebar survives. Two stateless views: grouped by `Notebook / Folder / Note`, or the existing global due-first list. Fixes a real bug on the way — the old view dropped the folder name entirely.
 - A Settings-gated AI handoff, off by default per design principle 1: a per-note `ai_excluded` flag, copy buttons, and `GET /todos.md` — session-authenticated Markdown, scoped by notebook/folder/note, with a preamble, a `## Structure` tree, and a collapsed recently-done block. No public API, no server-side LLM key, no egress requirement; the loop is copy-paste, which is what an IT-ops network can actually do.
@@ -322,6 +328,28 @@ Issue #47, shipped as three PRs (#49, #50, #51). Not a release of its own — it
 **Two rules did most of the design work, and are worth keeping in mind for anything else that mutates from pasted text.** Removal is never inferred — an item missing from the paste is untouched, and a missing `(due:)` never clears a date, because a chat reply gets truncated and a partial paste must not wipe what it omitted. And removal therefore has to be sayable out loud: `(id: <base36>;delete!)` deletes, `(due: none)` clears. The delete marker lives *inside* the id tag rather than standing alone as `(delete)`, because a task can genuinely read "Clean up old backup files (delete)" — and because embedding it makes an unbound delete syntactically impossible rather than a rule the parser has to remember. The cost is that an AI may garble the marker; every way it can do so ends in no deletion, which is the right direction to fail.
 
 Rejected along the way, and still rejected: a PAT-authenticated task API (grows the attack surface, design principle 2), a server-side LLM key (cost, secrets, and dead on a no-egress network), and a separate `Task` model (the Notion-database direction this project is deliberately not taking).
+
+### v0.2.2 — Editing correctness
+
+*Theme: before adding the graph, fix what ordinary daily writing trips over.* From the 2026-09-28 bug hunt, in priority order. **Exit rule:** v0.3 starts once every P1 is closed and every P2 is closed or explicitly deferred.
+
+P1 — hits most users in normal use, or loses data:
+
+- [#87](https://github.com/hrtmys/toishi-note/issues/87) Autosave: the title is overwritten while typing, a single tab gets a false conflict, the last keystrokes are lost on reload. *L, design.*
+- [#88](https://github.com/hrtmys/toishi-note/issues/88) TODO: adding then ticking (or ticking twice) quickly cancels the first request — failure toast, duplicate on retry, lost check. *M, design.*
+- [#89](https://github.com/hrtmys/toishi-note/issues/89) Leaving a list: an empty marker always exits (an empty nested item outdents one level), and exiting leaves a blank line so the next paragraph doesn't merge into the last item or quote. *M, delegable.*
+- [#90](https://github.com/hrtmys/toishi-note/issues/90) The caret and preview don't follow typing: the new line is hidden after Enter, the preview gets stuck. *M, delegable.*
+
+P2 — hits common workflows:
+
+- [#91](https://github.com/hrtmys/toishi-note/issues/91) The preview turns into a black box when a list is indented too deep: Tab goes at most one level deeper than the previous item, and code blocks get a light highlight theme. *S, delegable.*
+- [#92](https://github.com/hrtmys/toishi-note/issues/92) A full-width space or NBSP after a marker, or as indentation, makes the editor and preview disagree; normalize it to an ASCII space. *M, delegable.*
+- [#93](https://github.com/hrtmys/toishi-note/issues/93) List continuation edge cases (fenced code, caret before the marker, quotes, renumbering, Home+Enter, multi-line Tab), and Tab on a non-list line indents instead of leaving the field. *M, delegable.*
+- [#94](https://github.com/hrtmys/toishi-note/issues/94) Enter in a long numbered list freezes the tab for seconds. *S, delegable.*
+- [#95](https://github.com/hrtmys/toishi-note/issues/95) Round-tripping `todos.md` through the hub deletes and re-creates items that have a due date. *S, delegable.*
+- [#96](https://github.com/hrtmys/toishi-note/issues/96) Bulk add: preview and server disagree, common task syntaxes are silently dropped, over 500 fails silently. Unparsed lines show as skipped. #75 is folded in here. *M, delegable.*
+- [#97](https://github.com/hrtmys/toishi-note/issues/97) Settings modal: the palette opens on top of it and breaks focus/Esc; the gear from the phone sidebar leaves focus behind. *S, delegable.*
+- [#98](https://github.com/hrtmys/toishi-note/issues/98) TODO rows: long words push × out of view, × is unreachable by keyboard, the phone header is clipped. *S, delegable.*
 
 ### v0.3.0 — The graph, and finding things again
 
@@ -348,6 +376,13 @@ Rejected along the way, and still rejected: a PAT-authenticated task API (grows 
   - It waits for v0.4 and doesn't jump ahead of the test suite reset.
 - URL title fetch (opt-in, SSRF-guarded). *M, design* — security-sensitive.
 - Resizable sidebar panes; `?` cheatsheet. *S + S, delegable.*
+- Polish found by the 2026-09-28 bug hunt (P3). Kept as a group here rather than a "fix when touching the area" note, so each one has a release that owns it instead of waiting on an unrelated change. *S each, delegable.*
+  - [#99](https://github.com/hrtmys/toishi-note/issues/99) The AI handoff toggle only applies after a reload; paste Preview then 404s silently.
+  - [#100](https://github.com/hrtmys/toishi-note/issues/100) Todos hub: Copy reports success on errors, stats don't refresh on tick, the toast covers Copy.
+  - [#101](https://github.com/hrtmys/toishi-note/issues/101) Preview: long URLs overflow sideways; Mermaid flickers on every render.
+  - [#102](https://github.com/hrtmys/toishi-note/issues/102) Settings saves: rapid toggles race, failures don't roll back, a stale locale cookie, null → 500, long emails.
+  - [#103](https://github.com/hrtmys/toishi-note/issues/103) Phone layout: split mode's default is too narrow, the FAB covers the last lines, split → preview shifts the scroll.
+  - [#104](https://github.com/hrtmys/toishi-note/issues/104) Document the supported list markers (§5 #4) in the user-facing docs.
 
 ### v0.5.0 — Getting your notes in, and letting them go
 
