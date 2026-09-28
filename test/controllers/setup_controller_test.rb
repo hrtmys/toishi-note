@@ -65,6 +65,34 @@ class SetupControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+
+    post setup_path, params: { user: { email_address: "owner@example.com", password: "password", password_confirmation: "passw0rd" } }
+
+    assert_response :unprocessable_entity
+    assert_select ".alert li", text: User.new.errors.full_message(:password_confirmation, I18n.t("errors.messages.confirmation", attribute: User.human_attribute_name(:password)))
+  end
+
+  test "solo setup lands in the notebook UI" do
+    User.destroy_all
+
+    post setup_path, params: { mode: "solo", user: { email_address: "solo@example.com", password: "password", password_confirmation: "password" } }
+
+    assert_redirected_to root_path
+    follow_redirect!
+    assert_response :success
+    assert_select "#sidebarMenuLabel"
+  end
+
+  test "the Cloudflare Access choice renders only when trusted-header auth is configured" do
+    User.destroy_all
+
+    get new_setup_path
+    assert_no_match I18n.t("setup.auth_method"), response.body
+
+    with_trusted_header_auth do
+      get new_setup_path
+      assert_match I18n.t("setup.auth_method"), response.body
+    end
   end
 
   test "auth_mode: trusted_header, mode: solo creates the owner-flagged account from the request header, no password form needed" do
@@ -99,6 +127,7 @@ class SetupControllerTest < ActionDispatch::IntegrationTest
       end
 
       assert_response :unprocessable_entity
+      assert_match I18n.t("setup.trusted_header_missing"), response.body
     end
   end
 

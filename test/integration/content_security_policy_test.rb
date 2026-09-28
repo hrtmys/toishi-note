@@ -26,6 +26,24 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     assert_match "style-src 'self' 'unsafe-inline'", policy
   end
 
+  test "the policy is enforced, and script-src allows no inline, eval, nonce, hash or wildcard source" do
+    get root_url
+
+    assert_nil response.headers["Content-Security-Policy-Report-Only"]
+    script_src = response.headers["Content-Security-Policy"][/script-src ([^;]*)/, 1]
+    assert_not_nil script_src
+    [ "'unsafe-inline'", "'unsafe-eval'", "'strict-dynamic'", "'nonce-", "'sha256-", "*", "data:", "https:" ].each do |source|
+      assert_not_includes script_src, source
+    end
+  end
+
+  test "the CSP header is also sent on the palette frame response" do
+    get palette_url(q: "x")
+
+    assert_response :success
+    assert_match(/script-src 'self'(;|\z)/, response.headers["Content-Security-Policy"])
+  end
+
   test "the CSP header is sent even on the sign-in page, before authentication" do
     sign_out
     get new_session_url

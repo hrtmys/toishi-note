@@ -60,9 +60,38 @@ class PaletteControllerTest < ActionDispatch::IntegrationTest
     assert_match @folder.name, response.body
   end
 
+  test "a Japanese title query matches, and its top result is the selected option" do
+    create_note("議事録 9月", last_viewed_at: 2.days.ago)
+    create_note("Recent unrelated", last_viewed_at: 1.hour.ago)
+    create_note("Another recent", last_viewed_at: 2.hours.ago)
+    create_foreign_note
+
+    get palette_url, params: { q: "議事録" }
+
+    assert_response :success
+    assert_select "li[role=option]", count: 1
+    assert_no_match "議事録 他人", response.body
+    assert_select "li[role=option]:first-child[aria-selected=true]", text: /議事録 9月/
+  end
+
+  test "another user's notes never appear in the blank-query list" do
+    create_note("Mine", last_viewed_at: 1.hour.ago)
+    create_foreign_note
+
+    get palette_url
+
+    assert_response :success
+    assert_match "Mine", response.body
+    assert_no_match "議事録 他人", response.body
+  end
+
   private
 
     def create_note(title, last_viewed_at: nil)
       @folder.notes.create!(notebook: @notebook, title: title, note_type: "md", last_viewed_at: last_viewed_at)
+    end
+
+    def create_foreign_note
+      notes(:two).update!(title: "議事録 他人", title_customized: true, last_viewed_at: 1.minute.ago)
     end
 end
