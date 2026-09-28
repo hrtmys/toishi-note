@@ -2,6 +2,7 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "test_helpers/session_test_helper"
+require_relative "test_helpers/system_budget"
 
 # CI-only: retries a failed system test in place once before giving up.
 # Gated on ENV["CI"] so a genuinely broken test still fails immediately

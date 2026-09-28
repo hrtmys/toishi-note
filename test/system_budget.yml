@@ -1,0 +1,5 @@
+# Changing any value is its own PR with fresh measurements (docs/engineering/testing.md).
+enforcement: warn        # warn | fail — PR10 flips this to fail (CI only; local never fails)
+job:   { ideal_seconds: 60, notice_seconds: 120, warn_seconds: 150, fail_seconds: 180, outside_steps_seconds: 3 }
+ci:    { notice_seconds: 80, warn_seconds: 110, fail_seconds: 140 }   # job tiers minus ~40s measured setup
+local: { notice_seconds: 90, warn_seconds: 123 }                      # ci x ~1.12; no fail tier by design
