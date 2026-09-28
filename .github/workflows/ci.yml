@@ -88,7 +88,7 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips node-gyp
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -109,7 +109,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-          cache: yarn
+
+      - name: Cache node_modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('.node-version', 'yarn.lock') }}
 
       - name: Run tests
         env:
@@ -129,7 +134,7 @@ jobs:
         run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
 
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips node-gyp
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips
 
       - name: Checkout code
         uses: actions/checkout@v7
@@ -143,7 +148,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-          cache: yarn
+
+      - name: Cache node_modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('.node-version', 'yarn.lock') }}
 
       - name: Start memory sampler
         # Chrome is many processes, not one — `/usr/bin/time -v` only
