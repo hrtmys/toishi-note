@@ -169,8 +169,7 @@ jobs:
           # fix — see dev-environment.md for what didn't work on its own
           # before this.
           PARALLEL_WORKERS: 1
-          # Turns on the budget gate's per-test timing and report
-          # (test/test_helpers/system_budget.rb) — warn-only until PR8.
+          # Turns on the system test budget report; test/system_budget.yml says whether it can fail.
           SYSTEM_BUDGET: "1"
         run: bin/rails db:test:prepare test:system
 
