@@ -27,7 +27,7 @@ class TodoNoteTest < ApplicationSystemTestCase
       fill_in "due_date", with: due.strftime("%m/%d/%Y")
       delay_fetch(300)
       click_on I18n.t("home.common.add")
-      assert_selector "input[type=submit][disabled]"
+      assert_selector "input[type=submit][disabled][value='#{I18n.t("js.forms.adding")}']"
       assert_no_selector "input[type=submit][disabled]"
       within "#todo_list_#{@note.id}" do
         assert_text "パスポート更新"
