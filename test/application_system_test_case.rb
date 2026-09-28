@@ -47,9 +47,78 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # the form instead, waiting for it to disappear before the next `visit`.
   def sign_in_as(user, password: "password")
     visit new_session_path
+    # editorMode, lastPath and scroll positions otherwise leak between tests
+    # through the shared Chrome profile.
+    execute_script("localStorage.clear(); sessionStorage.clear()")
     fill_in I18n.t("auth.email_or_username"), with: user.email_address
     fill_in I18n.t("activerecord.attributes.user.password"), with: password
     click_on I18n.t("sessions.sign_in")
     assert_no_selector "input[name='email_address']"
+  end
+
+  # Smoke tests run many steps in one browser session; prefixing a failure
+  # with its phase says where the run stopped.
+  def phase(name)
+    yield
+  rescue Exception => error # rubocop:disable Lint/RescueException -- Minitest::Assertion is not a StandardError
+    raise error.exception("phase #{name}: #{error.message}")
+  end
+
+  # Toasts fade out on their own, so assert on the event log rather than the
+  # DOM. Call again after every full page load.
+  def record_toasts
+    execute_script(<<~JS)
+      window.__toasts = []
+      window.addEventListener("toast:show", (e) => window.__toasts.push(e.detail.message))
+    JS
+  end
+
+  # Consumes the matched entry, so an earlier identical toast can't satisfy
+  # a later assertion.
+  def assert_toast(message)
+    wait_until("toast never shown: #{message}") do
+      evaluate_script("(window.__toasts || []).includes(#{message.to_json})")
+    end
+    execute_script("window.__toasts.splice(window.__toasts.indexOf(#{message.to_json}), 1)")
+  end
+
+  # Immediate check: only meaningful after an already-awaited outcome.
+  def assert_no_toast(message)
+    assert_not evaluate_script("(window.__toasts || []).includes(#{message.to_json})"),
+      "unexpected toast: #{message}"
+  end
+
+  def force_fetch_rejection(only: nil)
+    execute_script(<<~JS, only)
+      const only = arguments[0]
+      window.__realFetch ||= window.fetch.bind(window)
+      window.fetch = (url, ...rest) => {
+        if (only === null || String(url).includes(only)) return Promise.reject(new TypeError("Failed to fetch"))
+        return window.__realFetch(url, ...rest)
+      }
+    JS
+  end
+
+  def restore_fetch
+    execute_script("if (window.__realFetch) window.fetch = window.__realFetch")
+  end
+
+  def delay_fetch(ms)
+    execute_script(<<~JS, ms)
+      const ms = arguments[0]
+      window.__realFetch ||= window.fetch.bind(window)
+      window.fetch = (...args) => new Promise((resolve) => setTimeout(resolve, ms)).then(() => window.__realFetch(...args))
+    JS
+  end
+
+  def spy_exec_command
+    execute_script(<<~JS)
+      window.__execCommandCalls = []
+      window.__realExecCommand ||= document.execCommand.bind(document)
+      document.execCommand = (...args) => {
+        window.__execCommandCalls.push([ args[0], args[2] ])
+        return window.__realExecCommand(...args)
+      }
+    JS
   end
 end
