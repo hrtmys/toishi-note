@@ -7,9 +7,6 @@ class OrganizeTest < ApplicationSystemTestCase
     @old = user.notebooks.create!(name: "Old Name")
     source = user.notebooks.create!(name: "Source Notebook")
     @movable_folder = source.folders.create!(name: "Movable Folder")
-    # Folder#move_to! keeps the source position, and a collision with a target
-    # folder's position raises on the unique index (known bug, reported separately).
-    @movable_folder.update_column(:position, 99)
     @carried_note = @movable_folder.notes.create!(notebook: source, title: "Carried Note", note_type: "md")
     @target = user.notebooks.create!(name: "Target Notebook")
     @target_folder = @target.folders.create!(name: "Target Folder")
