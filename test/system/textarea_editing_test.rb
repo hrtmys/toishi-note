@@ -23,6 +23,9 @@ class TextareaEditingTest < ApplicationSystemTestCase
           return realFetch(url, ...rest)
         }
         for (const field of [document.querySelector("#{TEXTAREA}"), document.querySelector("#note_title_input")]) {
+          // A plain keystroke just before the composition leaves a debounced save pending.
+          field.value = "k"
+          field.dispatchEvent(new InputEvent("input", { bubbles: true }))
           field.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }))
           field.value = "か"
           field.dispatchEvent(new InputEvent("input", { bubbles: true, isComposing: true }))
