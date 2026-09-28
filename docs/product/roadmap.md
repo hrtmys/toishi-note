@@ -290,7 +290,7 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 - ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
 - Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
 
-### v0.2.x — Test suite reset (between v0.2.0 and v0.3) — in progress
+### v0.2.x — Test suite reset ✅ done 2026-09-29
 
 *Theme: a two-minute CI, so the plan → test → implement loop stops waiting on it.* No user-facing change. It goes here because v0.3's `[[links]]` will add many tests, and those should be written to the new rules from the start.
 
@@ -301,11 +301,13 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 
 Shipped so far:
 
-- ✅ A system test budget gate: tiers in `test/system_budget.yml`, a report on every `bin/ci` and CI run, and a whole-job report on CI. It warns for now; failing CI on it comes with the smoke set (#70).
+- ✅ A system test budget gate: tiers in `test/system_budget.yml`, a report on every `bin/ci` and CI run, and a whole-job report on CI (#70). CI now fails past the fail tiers, and `system-test` is a required check (#81).
 - ✅ Controller decisions moved into pure, unit-tested functions in `app/javascript/lib/`, editor edits included (#73, #74).
 - ✅ Server-rendered behavior moved from system tests to integration tests (#71).
 - ✅ The policy itself: [testing.md](../engineering/testing.md).
-- Still to come: the 15-file smoke set, then the measured CI numbers.
+- ✅ CI setup cuts: no apt `node-gyp`, cached `node_modules` (#72).
+- ✅ 135 system tests consolidated into a 15-file smoke set (#77, #79).
+- Result on CI: system test time about 207s → 51–77s, the system-test job about 248s → 89–121s. Product bugs found along the way: #78, #80; a grammar mismatch: #75.
 
 ### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
 
