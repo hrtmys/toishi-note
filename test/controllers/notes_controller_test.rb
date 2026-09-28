@@ -272,10 +272,12 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "deleting a note sets the deleted toast" do
+    @note.update!(title: "削除するノート")
     delete note_url(@note)
     follow_redirect!
 
     assert_select "[data-controller=flash-toast][data-flash-toast-message-value=?]", I18n.t("home.notes.flash.deleted")
+    assert_select "#notes-list", text: /削除するノート/, count: 0
   end
 
   test "export is an attachment whose filename survives Japanese and header-injection titles" do
@@ -284,7 +286,7 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     disposition = response.headers["Content-Disposition"]
     assert_match(/\Aattachment;/, disposition)
-    assert_match(/filename\*=UTF-8''\S+/, disposition)
+    assert_equal "議事録_2026.md", exported_filename(disposition)
 
     @note.update!(title: "evil\"\r\nX-Injected: 1")
     get export_note_url(@note)
@@ -292,5 +294,12 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\Aattachment;/, response.headers["Content-Disposition"])
     assert_no_match(/[\r\n]/, response.headers["Content-Disposition"])
     assert_nil response.headers["X-Injected"]
+    assert_no_match(%r{[/"]}, exported_filename(response.headers["Content-Disposition"]))
   end
+
+  private
+
+    def exported_filename(disposition)
+      CGI.unescape(disposition[/filename\*=UTF-8''(\S+)/, 1])
+    end
 end

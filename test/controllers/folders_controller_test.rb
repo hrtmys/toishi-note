@@ -93,5 +93,6 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     follow_redirect!
 
     assert_select "[data-controller=flash-toast][data-flash-toast-message-value=?]", I18n.t("home.folders.flash.renamed")
+    assert_select "#folders-list", text: /改名フォルダ/
   end
 end

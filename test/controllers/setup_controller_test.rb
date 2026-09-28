@@ -69,7 +69,7 @@ class SetupControllerTest < ActionDispatch::IntegrationTest
     post setup_path, params: { user: { email_address: "owner@example.com", password: "password", password_confirmation: "passw0rd" } }
 
     assert_response :unprocessable_entity
-    assert_select ".alert li", text: "Password confirmation doesn't match Password"
+    assert_select ".alert li", text: User.new.errors.full_message(:password_confirmation, I18n.t("errors.messages.confirmation", attribute: User.human_attribute_name(:password)))
   end
 
   test "solo setup lands in the notebook UI" do

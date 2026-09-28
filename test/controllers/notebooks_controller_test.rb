@@ -117,10 +117,12 @@ class NotebooksControllerTest < ActionDispatch::IntegrationTest
     post notebooks_url, params: { name: "新しいノート" }
     follow_redirect!
     assert_select toast, I18n.t("home.notebooks.flash.created")
+    assert_select "#notebooks-list", text: /新しいノート/
 
     patch notebook_url(@notebook), params: { name: "改名後" }
     follow_redirect!
     assert_select toast, I18n.t("home.notebooks.flash.renamed")
+    assert_select "#notebooks-list", text: /改名後/
 
     [ "", "   " ].each do |blank|
       patch notebook_url(@notebook), params: { name: blank }

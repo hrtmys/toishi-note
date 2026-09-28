@@ -1,8 +1,5 @@
 require "test_helper"
 
-# POST /todos/preview {text:} renders a hidden `digest` field; POST
-# /todos/apply {text:, digest:} applies or aborts on mismatch. Both gated
-# like /todos.md.
 class TodosPasteTest < ActionDispatch::IntegrationTest
   setup do
     sign_in_as users(:one)

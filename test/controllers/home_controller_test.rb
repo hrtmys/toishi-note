@@ -283,7 +283,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "ul#palette-listbox[role=listbox]" do
       assert_select "li[role=option]", minimum: 2
       assert_select "li[role=option][aria-selected=true]", count: 1
-      assert_select "li[role=option][aria-selected=true].palette-result-selected", text: /First Viewed/
+      assert_select "li[role=option][aria-selected=true]", text: /First Viewed/
       assert_select "li[role=option][aria-selected=false]", text: /Second Viewed/
     end
   end
@@ -298,7 +298,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "ul#palette-listbox li[role=option]", count: 1
-    assert_select "ul#palette-listbox li[role=option][aria-selected=true].palette-result-selected", text: /Only Note/
+    assert_select "ul#palette-listbox li[role=option][aria-selected=true]", text: /Only Note/
   end
 
   test "a folder with no notes shows the Files empty state" do
@@ -340,11 +340,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     other_notebook = users(:one).notebooks.create!(name: "Other Notebook")
     other_folder = other_notebook.folders.create!(name: "Other Folder")
     pinned = other_folder.notes.create!(notebook: other_notebook, title: "Far Pinned", note_type: "md", is_pinned: true)
+    notes(:two).update!(title: "議事録 他人", title_customized: true, is_pinned: true)
     href = root_path(notebook_id: other_notebook.id, folder_id: other_folder.id, note_id: pinned.id)
 
     get root_url(notebook_id: open_notebook.id, folder_id: open_folder.id)
     assert_response :success
     assert_select "#pinned-list a[href=?]", href
+    assert_no_match "議事録 他人", css_select("#pinned-list").text
 
     get href
     assert_response :success
@@ -366,7 +368,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       users(:one).update!(sections.keys.index_with(false).merge(flag => true))
       open_note.call
       assert_select "[data-editor-fab]:not(.d-none)", count: 1
-      assert_select "[data-editor-fab] button.btn-outline-secondary[data-editor-fab-target=button]"
+      assert_select "[data-editor-fab] button[data-editor-fab-target=button]"
       sections.each_value do |other|
         selector = "[data-editor-fab-section=?]:not(.d-none)"
         assert_select selector, other, count: other == section ? 1 : 0
