@@ -78,7 +78,7 @@ STEPS = [
     command: "bin/rails test:system",
     # Serial, like CI: PARALLEL_WORKERS=1 avoids the multi-Chrome
     # contention CI hit (see test/test_helper.rb); SYSTEM_BUDGET=1 turns
-    # on the budget gate's timing and report (docs/engineering/testing.md).
+    # on the budget gate's timing and report (docs/engineering/verification.md).
     env: { "PARALLEL_WORKERS" => "1", "SYSTEM_BUDGET" => "1" },
     warn_if: /^System test budget .* — (NOTICE|WARN|OVER)/,
     summarize: ->(log) {

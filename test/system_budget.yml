@@ -1,4 +1,4 @@
-# Changing any value is its own PR with fresh measurements (docs/engineering/testing.md).
+# Changing any value is its own PR, with fresh CI measurements in its description.
 enforcement: warn        # warn | fail; fail applies on CI only, local runs never fail
 job:   { ideal_seconds: 60, notice_seconds: 120, warn_seconds: 150, fail_seconds: 180, outside_steps_seconds: 3 }
 ci:    { notice_seconds: 80, warn_seconds: 110, fail_seconds: 140 }   # job tiers minus ~40s measured setup

@@ -16,7 +16,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     path
   end
 
-  # --- 1. Config loading fails loudly ---
 
   test "load_config raises for a missing file" do
     assert_raises(SystemBudget::ConfigError) do
@@ -35,7 +34,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     assert_raises(SystemBudget::ConfigError) { SystemBudget.load_config(path) }
   end
 
-  # --- 1. Tier classification, CI profile, enforcement: warn ---
 
   test "ci profile: exactly at notice is OK" do
     assert_equal :ok, SystemBudget.status_for(80.0, profile: :ci, config: CI_CONFIG, enforcement: :warn)
@@ -65,7 +63,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     assert_equal :fail, SystemBudget.status_for(140.01, profile: :ci, config: CI_CONFIG, enforcement: :fail)
   end
 
-  # --- 1. Tier classification, local profile: never FAIL/OVER ---
 
   test "local profile: exactly at notice is OK" do
     assert_equal :ok, SystemBudget.status_for(90.0, profile: :local, config: CI_CONFIG, enforcement: :warn)
@@ -83,7 +80,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     assert_equal :warn, SystemBudget.status_for(10_000.0, profile: :local, config: CI_CONFIG, enforcement: :fail)
   end
 
-  # --- 2. Output shape ---
 
   test "first line matches the exact specified shape" do
     records = [ { name: "FooTest#test_a", seconds: 3.0 } ]
@@ -114,7 +110,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     assert_match(/retried: none/, report)
   end
 
-  # --- 3. Retries counted in the total ---
 
   test "a retried test's full wall time (spanning every attempt) counts toward the total" do
     records = [
@@ -126,7 +121,6 @@ class SystemBudgetTest < ActiveSupport::TestCase
     assert_match(/\ASystem test budget \(ci\): 8\.12?s — /, report.lines.first)
   end
 
-  # --- 4. Serial guard ---
 
   test "PARALLEL_WORKERS != 1 fails the gate in CI enforcement fail mode" do
     status = SystemBudget.status_for(1.0, profile: :ci, config: CI_CONFIG, enforcement: :fail, parallel_workers: "4")
