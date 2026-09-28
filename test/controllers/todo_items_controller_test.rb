@@ -97,6 +97,14 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert @note.todo_items.exists?(content: "Buy milk")
   end
 
+  test "bulk_create skips Markdown lines with no text once their tags are stripped" do
+    text = "- [ ] (due: 2026-10-01)\n- [ ]    (id: abc)\n- [ ] \n- [ ] 牛乳 (due: 2026-10-01)"
+    assert_difference("TodoItem.count", 1) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: text }, as: :turbo_stream
+    end
+    assert_equal [ "牛乳", Date.new(2026, 10, 1) ], @note.todo_items.order(:id).last.slice(:content, :due_date).values
+  end
+
   test "bulk_create honors a due date pasted on a Markdown checklist line" do
     post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Renew passport (due: 2026-09-01)" }, as: :turbo_stream
 

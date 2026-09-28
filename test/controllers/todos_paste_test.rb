@@ -165,6 +165,18 @@ class TodosPasteTest < ActionDispatch::IntegrationTest
     assert_select "#todos_paste_form", count: 1
   end
 
+  test "tag-only task lines are listed as skipped and applying them creates no empty item" do
+    text = "## Groceries\n- [ ] (due: 2026-10-01)\n- [ ]    (id: abc)\n- [ ] \n- [ ] 牛乳 (due: 2026-10-01)"
+    digest = preview_digest(text)
+    assert_select "#todos_paste_adds li", count: 1
+    assert_select "#todos_paste_skipped li", count: 3, text: I18n.t("home.todos.paste.skip_reasons.empty_content")
+
+    assert_difference "TodoItem.count", 1 do
+      post "/todos/apply", params: { text: text, digest: digest }, as: :turbo_stream
+    end
+    assert_equal [ "牛乳" ], @note.todo_items.pluck(:content)
+  end
+
   test "preview lists an add under the adds block" do
     post "/todos/preview", params: { text: "## Groceries\n- [ ] Buy milk\n- [ ] 牛乳を買う" }, as: :turbo_stream
 
