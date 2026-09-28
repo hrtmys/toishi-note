@@ -1,84 +1,81 @@
 require "application_system_test_case"
 
 class SidebarScrollTest < ApplicationSystemTestCase
+  LIST = "#notes-list".freeze
+
   setup do
     page.driver.browser.manage.window.resize_to(1400, 1000)
     sign_in_as users(:one)
-
     @notebook = users(:one).notebooks.create!(name: "Test Notebook")
     @folder = @notebook.folders.create!(name: "Test Folder")
-
-    # Enough notes to overflow the notes-list's fixed height, so the
-    # active row starts off-screen. Default sort is "Updated" desc, so
-    # @notes.last (oldest) genuinely lands at the bottom of the list.
+    # Enough rows to overflow the list; newest-updated first puts the oldest at the bottom.
     @notes = Array.new(50) { |i| @folder.notes.create!(notebook: @notebook, title: "Note #{i}", note_type: "md", updated_at: i.days.ago) }
   end
 
-  test "opening a note far down the list scrolls it into view" do
-    last_note = @notes.last
+  test "the notes list keeps the active row and scroll position in view and sorts and pins client-side" do
+    oldest = @notes.last
 
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: last_note.id)
-
-    within "#notes-list" do
-      assert_selector ".bg-secondary", text: last_note.title
+    phase "1 the active row is scrolled into view" do
+      visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: oldest.id)
+      within(LIST) { assert_selector ".bg-secondary", text: oldest.title }
+      assert active_row_visible?(oldest), "the active row is outside the list viewport"
     end
 
-    assert row_visible_within_container?("#notes-list", active_row_id(last_note))
-  end
+    phase "2 deleting the open note restores the saved scroll position" do
+      # Scroll past where scrollIntoView lands, so only the saved position can explain the result.
+      execute_script(<<~JS)
+        const list = document.querySelector("#{LIST}")
+        list.scrollTop = list.scrollHeight
+        list.dispatchEvent(new Event("scroll"))
+      JS
+      wait_until("the notes list never scrolled") { scroll_top.positive? }
+      saved = scroll_top
 
-  test "deleting the currently-open note preserves the list's previous scroll position" do
-    target_note = @notes.last
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: target_note.id)
+      find("#note_editor_header").hover
+      within("#note_editor_header") { accept_confirm { click_on I18n.t("home.common.delete") } }
+      assert_no_selector "#{LIST} .bg-secondary"
 
-    # Scroll further than opening the note alone would land, so the
-    # restored value can only be the saved position, not scrollIntoView.
-    page.execute_script(<<~JS)
-      const list = document.querySelector("#notes-list")
-      list.scrollTop = list.scrollHeight
-      list.dispatchEvent(new Event("scroll"))
-    JS
-    wait_until("the notes list never scrolled — is it overflowing?") do
-      page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i.positive?
-    end
-    scrolled_to = page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i
-
-    # Deleted via the note editor header's delete button, which needs
-    # turbo_frame: "_top" to reach the sidebar with its redirect — without
-    # it, the sidebar would never find out the note is gone.
-    find("#note_editor_header").hover
-    within "#note_editor_header" do
-      accept_confirm { click_on I18n.t("home.common.delete") }
+      max = evaluate_script("(l => l.scrollHeight - l.clientHeight)(document.querySelector('#{LIST}'))").to_i
+      # Offsets round per devicePixelRatio, so allow 2px.
+      assert_in_delta [ saved, max ].min, scroll_top, 2
     end
 
-    # NotesController#destroy redirects with no note_id — no active row —
-    # exactly the case that has to fall back to the saved position.
-    assert_no_selector "#notes-list .bg-secondary"
+    phase "3 A-Z sorts by title and flips on a second click" do
+      titles = @notes[0..-2].map(&:title)
+      click_on "A-Z"
+      assert_equal titles.sort, note_titles
+      click_on "A-Z"
+      assert_equal titles.sort.reverse, note_titles
+    end
 
-    # Clamped to the post-delete ceiling, within 2px — scroll offsets
-    # round per devicePixelRatio, so exact integers flake across Chrome.
-    max_scroll_top = page.evaluate_script(<<~JS).to_i
-      document.querySelector('#notes-list').scrollHeight - document.querySelector('#notes-list').clientHeight
-    JS
-    assert_in_delta [ scrolled_to, max_scroll_top ].min, page.evaluate_script("document.querySelector('#notes-list').scrollTop").to_i, 2
+    phase "4 a pinned note stays first across sort modes" do
+      row = find("#note_#{@notes[5].id}_title").ancestor("li")
+      row.hover
+      row.find(".hover-target-icon[title='#{I18n.t("home.notes.pin")}']").click
+      wait_until("the pinned note never moved to the top") { note_titles.first == "Note 5" }
+      wait_until("pin PATCH never landed") { @notes[5].reload.is_pinned? }
+      click_on "A-Z"
+      assert_equal "Note 5", note_titles.first
+    end
   end
 
   private
 
-  def active_row_id(note)
-    "note_#{note.id}_title"
-  end
+    def scroll_top
+      evaluate_script("document.querySelector('#{LIST}').scrollTop").to_i
+    end
 
-  # Confirms the active row's bounding box falls inside the scrollable
-  # container's viewport — a direct DOM check, not a scrollTop inference.
-  def row_visible_within_container?(container_selector, active_title_id)
-    page.evaluate_script(<<~JS)
-      (function() {
-        const container = document.querySelector(#{container_selector.to_json})
-        const activeRow = document.querySelector(#{"##{active_title_id}".to_json}).closest("li")
-        const containerRect = container.getBoundingClientRect()
-        const rowRect = activeRow.getBoundingClientRect()
-        return rowRect.top >= containerRect.top && rowRect.bottom <= containerRect.bottom
-      })()
-    JS
-  end
+    def note_titles
+      all("#{LIST} li span[id^='note_']").map(&:text)
+    end
+
+    def active_row_visible?(note)
+      evaluate_script(<<~JS)
+        (() => {
+          const list = document.querySelector("#{LIST}").getBoundingClientRect()
+          const row = document.querySelector("#note_#{note.id}_title").closest("li").getBoundingClientRect()
+          return row.top >= list.top && row.bottom <= list.bottom
+        })()
+      JS
+    end
 end
