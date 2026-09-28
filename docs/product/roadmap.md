@@ -296,7 +296,7 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 - ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
 - ✅ Cut 2026-09-27, carrying the TODO-hub wave below; the release notes tell existing PWA installs to reinstall once. v0.2.1 (2026-09-28) followed with a new icon and standard 192/512px manifest icons, so Chrome and Edge offer "Install app" again.
 
-### v0.2.x — Test suite reset ✅ done 2026-09-29
+### v0.2.x — Test suite reset ✅ done 2026-09-28
 
 *Theme: a two-minute CI, so the plan → test → implement loop stops waiting on it.* No user-facing change. It goes here because v0.3's `[[links]]` will add many tests, and those should be written to the new rules from the start.
 
@@ -391,7 +391,7 @@ P2 — hits common workflows:
 
 ### Effort to v0.5, estimated 2026-09-26
 
-Four L items (links, trash, import, archive) and three design-labelled S/M items (PWA fix, offline, URL fetch) need a written plan each: roughly 12–15 focused sessions. The ten delegable items can run in parallel with those, but still get reviewed before merge.
+Four L items (links, trash, import, archive) and three design-labelled S/M items (PWA fix, offline, URL fetch) need a written plan each: roughly 12–15 focused sessions. The v0.2.2 stage adds about 4–6 more ahead of them (2026-09-28): #87 and #88 need a plan each; the list and preview fixes can share one. The ten delegable items can run in parallel with those, but still get reviewed before merge.
 
 ### v1.0.0 — Trust
 
