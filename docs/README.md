@@ -26,6 +26,7 @@ Every file starts with YAML frontmatter (`title` / `description` / `status` / `u
   - [asset-strategy.md](engineering/asset-strategy.md) — why front-end dependencies are vendored and never CDN-loaded, and where the Node toolchain stands
   - [git-workflow.md](engineering/git-workflow.md) — commit message format, branch naming, merge strategy
   - [verification.md](engineering/verification.md) — what `bin/ci` runs and why, how to read its output, OSS-specific checks beyond the day-to-day suite
+  - [testing.md](engineering/testing.md) — which level a test belongs at, the system test budget, how tests are written, bisecting a failed combined PR
   - [release-process.md](engineering/release-process.md) — the move to a fresh repository, and how releases are cut
   - [pre-beta-checklist.md](engineering/pre-beta-checklist.md) — what has to be true before that move happens
 

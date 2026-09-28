@@ -290,7 +290,7 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 - ✅ Flexible sidebar pane heights: content-sized panes capped relative to the sidebar, Files keeps at least 10rem (#57). Drag handles stay in v0.4.
 - Cut: v0.2.0 also carries the TODO-hub wave below. The release notes must tell existing PWA installs to reinstall once.
 
-### v0.2.x — Test suite reset (between v0.2.0 and v0.3)
+### v0.2.x — Test suite reset (between v0.2.0 and v0.3) — in progress
 
 *Theme: a two-minute CI, so the plan → test → implement loop stops waiting on it.* No user-facing change. It goes here because v0.3's `[[links]]` will add many tests, and those should be written to the new rules from the start.
 
@@ -298,6 +298,14 @@ Each open item from here to v0.5 carries two labels. **Size:** S = under half a 
 - Classify the ~130 current system tests against that rule, then convert them in batches. *L, design* for the rule and the classification; the conversions are *delegable*.
 - CI: cache the apt packages; shard the remaining system tests only if still needed. (The push trigger fix and cancelling superseded runs ship with v0.2.0.)
 - Target: CI wall time about 2 minutes, down from about 4.
+
+Shipped so far:
+
+- ✅ A system test budget gate: tiers in `test/system_budget.yml`, a report on every `bin/ci` and CI run, and a whole-job report on CI. It warns for now; failing CI on it comes with the smoke set (#70).
+- ✅ Controller decisions moved into pure, unit-tested functions in `app/javascript/lib/`, editor edits included (#73, #74).
+- ✅ Server-rendered behavior moved from system tests to integration tests (#71).
+- ✅ The policy itself: [testing.md](../engineering/testing.md).
+- Still to come: the 15-file smoke set, then the measured CI numbers.
 
 ### TODO hub and the AI handoff loop ✅ merged 2026-09-21, awaiting a cut
 
@@ -329,6 +337,13 @@ Rejected along the way, and still rejected: a PAT-authenticated task API (grows 
 - Vanishing scratch pad (sessionStorage-only single pad). *S, delegable.*
 - Offline detection with the reconnect prompt (§5 #13). *M, design.*
 - Copy preview as PNG via lazy-loaded `modern-screenshot` (§5 #6). *M, delegable* with a plan — the verification list in §5 #6 is the brief.
+- **Save as Word (.docx), and "Copy for Word" becomes "Copy for email".** *M, delegable* with a plan. Decided 2026-09-28:
+  - HTML pasted into Word always lands as 標準 (Normal), whatever the clipboard carries. That's a Word limitation, confirmed across six clipboard variants, so no paste can give real headings. MathML in pasted HTML does become Word equations.
+  - A real .docx does. `markdown-docx` (npm, MIT) writes one with native equations and table alignment, about 139KB gzip as a lazy chunk that shares the app's marked and KaTeX. It's generated in the browser, so there's no server load.
+  - Its own `Md*` styles (English names, colors, doubled heading styles) get post-processed to Word's built-in styles only: 見出し 1–4, 標準, 引用文, 表 (格子). That way the document fits whatever template the reader's workplace uses. A built-in-styles option is to be proposed upstream later.
+  - "Copy for email" keeps the paste path for what it's good at: black text, a Meiryo/Yu Gothic stack, 10.5pt, math left as LaTeX text.
+  - Rejected: a VBA macro that restyles the paste. Corporate environments block macros, "paste this code into Word" is the shape of a phishing instruction, and it still couldn't convert math.
+  - It waits for v0.4 and doesn't jump ahead of the test suite reset.
 - URL title fetch (opt-in, SSRF-guarded). *M, design* — security-sensitive.
 - Resizable sidebar panes; `?` cheatsheet. *S + S, delegable.*
 
@@ -339,7 +354,7 @@ Rejected along the way, and still rejected: a PAT-authenticated task API (grows 
 
 ### Effort to v0.5, estimated 2026-09-26
 
-Four L items (links, trash, import, archive) and three design-labelled S/M items (PWA fix, offline, URL fetch) need a written plan each: roughly 12–15 focused sessions. The nine delegable items can run in parallel with those, but still get reviewed before merge.
+Four L items (links, trash, import, archive) and three design-labelled S/M items (PWA fix, offline, URL fetch) need a written plan each: roughly 12–15 focused sessions. The ten delegable items can run in parallel with those, but still get reviewed before merge.
 
 ### v1.0.0 — Trust
 

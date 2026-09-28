@@ -11,6 +11,7 @@ This repo has a single entry point for "is this branch good to merge": `bin/ci` 
 Practical notes carried over from hard-won experience in this repo:
 - `bin/ci full` takes several minutes, mostly `test:system`. Run it via Bash with `run_in_background: true`, then wait for the completion notification rather than polling every 60-120s — each poll that re-enters the conversation costs a full turn for no new information.
 - A non-zero `bundler-audit`/`yarn audit` result is reported as a non-blocking advisory (⚠️), not a failure — it can be a pre-existing upstream CVE with no fixed release yet. Check whether it also appears on `main` before treating it as this branch's problem (see `docs/engineering/verification.md`).
+- New tests follow `docs/engineering/testing.md`: the lowest level that can check the behavior; system tests are a budgeted smoke set for browser-only behavior.
 - For a genuinely new regression test, do a one-time discrimination check by hand (revert the fix, confirm the test fails, restore it, confirm it passes) — this isn't something `bin/ci` can automate, since it requires knowing which change to revert.
 
 ### Verifying several branches at once
