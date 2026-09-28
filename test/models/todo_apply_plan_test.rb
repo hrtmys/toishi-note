@@ -196,6 +196,14 @@ class TodoApplyPlanTest < ActiveSupport::TestCase
     assert TodoItem.exists?(item.id)
   end
 
+  test "a task line with no text once its tags are stripped is reported as empty, never added" do
+    plan = plan_for("## Groceries\n- [ ] (due: 2026-10-01)\n- [ ]    (id: abc)\n- [ ] \n- [ ] 牛乳 (due: 2026-10-01)")
+
+    assert_equal [ "牛乳" ], plan.operations.map(&:content)
+    assert_equal Date.new(2026, 10, 1), plan.operations.sole.new_due
+    assert_equal [ :empty_content ] * 3, plan.skipped.map(&:reason)
+  end
+
   test "content that becomes empty once tags are stripped produces no add" do
     plan = plan_for("## Groceries\n- [ ] (id: zzzzzz)")
 
