@@ -158,6 +158,10 @@ module SystemBudget
       @io = io
     end
 
+    def start
+      @started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
+
     def report
       @status = SystemBudget.status_for(total_seconds, profile: @profile, config: @config,
                                          enforcement: @enforcement, parallel_workers: @parallel_workers)
@@ -187,6 +191,12 @@ module SystemBudget
 
     private
 
+    def suite_wall_seconds
+      return nil unless @started_at
+
+      (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @started_at).round(1)
+    end
+
     def total_seconds
       @records.sum { |r| r[:seconds] }.round(1)
     end
@@ -195,8 +205,11 @@ module SystemBudget
       require "json"
       require "fileutils"
       FileUtils.mkdir_p(Rails.root.join("tmp"))
+      band = @profile == :local ? @config.fetch(:local) : @config.fetch(:ci)
       File.write(Rails.root.join("tmp/system_budget.json"), {
         profile: @profile, enforcement: @enforcement, total_seconds: total_seconds,
+        suite_wall_seconds: suite_wall_seconds, notice_seconds: band[:notice_seconds],
+        warn_seconds: band[:warn_seconds], fail_seconds: band[:fail_seconds],
         status: @status.to_s, tests: @records.size,
         slowest: @records.sort_by { |r| -r[:seconds] }.first(10),
         retried: @retried

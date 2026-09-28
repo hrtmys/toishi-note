@@ -8,7 +8,8 @@ module Ci
     # bin/ci downgrades a non-blocking step's :fail to :warn itself; warn_if lets
     # a passing step (the system test budget) still show as :warn.
     def self.status_for(step, exit_status:, log:)
-      return :fail unless exit_status.zero?
+      # nil means the process was killed by a signal, e.g. a hung Chrome.
+      return :fail unless exit_status&.zero?
       return :warn if step.warn_if && step.warn_if.match?(log)
 
       :ok
