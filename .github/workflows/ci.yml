@@ -125,6 +125,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Record job start
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libvips node-gyp
 
@@ -141,6 +144,13 @@ jobs:
         with:
           node-version-file: .node-version
           cache: yarn
+
+      - name: Start memory sampler
+        # Chrome is many processes, not one — `/usr/bin/time -v` only
+        # reports a single process's max RSS, so this samples job-wide
+        # memory instead (bin/ci-memory-sampler). Backgrounded so it
+        # survives across steps; cleaned up with the job's runner.
+        run: nohup bin/ci-memory-sampler tmp/ci_memory >/dev/null 2>&1 &
 
       - name: Run System Tests
         env:
@@ -159,6 +169,8 @@ jobs:
           # fix — see dev-environment.md for what didn't work on its own
           # before this.
           PARALLEL_WORKERS: 1
+          # Turns on the system test budget report; test/system_budget.yml says whether it can fail.
+          SYSTEM_BUDGET: "1"
         run: bin/rails db:test:prepare test:system
 
       - name: Keep screenshots from failed system tests
@@ -168,3 +180,7 @@ jobs:
           name: screenshots
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
+
+      - name: Report budget and memory
+        if: always()
+        run: bin/ci-job-report

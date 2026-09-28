@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Samples whole-machine memory once a second, not `/usr/bin/time -v`: that sees
+# one process, and the system tests run many Chrome processes. Started with
+# `nohup ... &` so it outlives its step; bin/ci-job-report reads the files.
+
+out_dir="$1"
+mkdir -p "$out_dir"
+baseline_file="$out_dir/baseline_kb"
+peak_file="$out_dir/peak_kb"
+peak=0
+
+while true; do
+  read -r total available <<< "$(awk '/^MemTotal:/ { t = $2 } /^MemAvailable:/ { a = $2 } END { print t, a }' /proc/meminfo)"
+  used=$((total - available))
+
+  [ -f "$baseline_file" ] || echo "$used" > "$baseline_file"
+
+  if [ "$used" -gt "$peak" ]; then
+    peak=$used
+    echo "$peak" > "$peak_file"
+  fi
+
+  sleep 1
+done

@@ -1,0 +1,84 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Reports the system-test job's wall time and memory against test/system_budget.yml.
+# Plain Ruby, no bundler: it runs with `if: always()`, after whatever broke an
+# earlier step. JOB_NOW (epoch seconds) stands in for the clock in tests.
+require "yaml"
+require "json"
+
+STATUS_WORDS = {
+  ok: "OK", notice: "NOTICE", warn: "WARN", fail: "FAIL", over: "OVER (not enforced)"
+}.freeze
+
+def now_seconds
+  ENV["JOB_NOW"] ? Float(ENV["JOB_NOW"]) : Time.now.to_f
+end
+
+def tier_status(seconds, notice:, warn:, fail_at:, enforcement:)
+  if seconds > fail_at
+    enforcement == "fail" ? :fail : :over
+  elsif seconds > warn
+    :warn
+  elsif seconds > notice
+    :notice
+  else
+    :ok
+  end
+end
+
+config = YAML.load_file(File.join("test", "system_budget.yml"))
+enforcement = config.fetch("enforcement")
+job_cfg = config.fetch("job")
+
+job_start = Float(ENV.fetch("JOB_START"))
+job_total = (now_seconds - job_start) + job_cfg.fetch("outside_steps_seconds").to_f
+job_status = tier_status(
+  job_total,
+  notice: job_cfg.fetch("notice_seconds"), warn: job_cfg.fetch("warn_seconds"),
+  fail_at: job_cfg.fetch("fail_seconds"), enforcement: enforcement
+)
+
+lines = []
+lines << format(
+  "Job total: %.1fs (ideal %ds, notice %ds, warn %ds, fail %ds) — %s",
+  job_total, job_cfg.fetch("ideal_seconds"), job_cfg.fetch("notice_seconds"),
+  job_cfg.fetch("warn_seconds"), job_cfg.fetch("fail_seconds"), STATUS_WORDS.fetch(job_status)
+)
+
+budget_json_path = File.join("tmp", "system_budget.json")
+if File.exist?(budget_json_path)
+  data = JSON.parse(File.read(budget_json_path))
+  lines << format("Test budget: %ss (%s profile) — %s", data["total_seconds"], data["profile"], data["status"]&.upcase)
+else
+  lines << "Test budget: no budget data (tmp/system_budget.json missing)"
+end
+
+baseline_path = File.join("tmp", "ci_memory", "baseline_kb")
+peak_path = File.join("tmp", "ci_memory", "peak_kb")
+if File.exist?(baseline_path) && File.exist?(peak_path)
+  baseline_mib = Integer(File.read(baseline_path).strip) / 1024.0
+  peak_mib = Integer(File.read(peak_path).strip) / 1024.0
+  # Tracked, never gated: Chrome's memory varies with page content, not code quality.
+  lines << format("Memory: baseline %.1f MiB, peak %.1f MiB, delta %.1f MiB (tracked, not gated)",
+                  baseline_mib, peak_mib, peak_mib - baseline_mib)
+else
+  lines << "Memory: no samples (tmp/ci_memory missing)"
+end
+
+report = lines.join("\n")
+puts report
+
+if ENV["GITHUB_STEP_SUMMARY"]
+  File.open(ENV["GITHUB_STEP_SUMMARY"], "a") do |f|
+    f.puts("## CI job report\n\n```\n#{report}\n```\n")
+  end
+end
+
+case job_status
+when :notice then puts "::notice title=CI job total::#{lines.first}"
+when :warn, :over then puts "::warning title=CI job total::#{lines.first}"
+when :fail then puts "::error title=CI job total::#{lines.first}"
+end
+
+exit(job_status == :fail ? 1 : 0)

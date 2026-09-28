@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "fileutils"
 require "time"
+require_relative "../lib/ci/step"
 
 # The single entry point for "is this branch good to merge" — runs every
 # check this project's PRs are expected to pass, once, and reports the
@@ -14,7 +15,7 @@ require "time"
 # 250-test run that's all green costs one line instead of thousands.
 APP_ROOT = File.expand_path("..", __dir__)
 
-Step = Struct.new(:name, :label, :blocking, :command, :summarize, keyword_init: true)
+Step = Ci::Step
 Result = Struct.new(:step, :status, :summary, :seconds, :log_path, :failure_detail, keyword_init: true)
 
 MODE = ARGV.first || "full"
@@ -75,7 +76,16 @@ STEPS = [
     label: "rails test:system",
     blocking: true,
     command: "bin/rails test:system",
-    summarize: ->(log) { minitest_summary(log) }
+    # Serial, like CI: PARALLEL_WORKERS=1 avoids the multi-Chrome
+    # contention CI hit (see test/test_helper.rb); SYSTEM_BUDGET=1 turns
+    # on the budget gate's timing and report (docs/engineering/verification.md).
+    env: { "PARALLEL_WORKERS" => "1", "SYSTEM_BUDGET" => "1" },
+    warn_if: /^System test budget .* — (NOTICE|WARN|OVER)/,
+    summarize: ->(log) {
+      budget_line = log[/^System test budget.*$/]
+      budget_summary = budget_line ? budget_line.sub(/^System test budget \([a-z]+\): /, "budget ") : nil
+      [ minitest_summary(log), budget_summary ].compact.join(" | ")
+    }
   ),
   Step.new(
     name: "rubocop",
@@ -142,21 +152,21 @@ def run_step(step, log_dir)
     # Multi-line commands are Ruby snippets, run in-process via `ruby -e`
     # so they share bundler's already-resolved gem set instead of paying
     # for a second `bundle exec` boot.
-    output = IO.popen([ "ruby", "-e", step.command ], chdir: APP_ROOT, err: [ :child, :out ], &:read)
+    output = IO.popen(step.env, [ "ruby", "-e", step.command ], chdir: APP_ROOT, err: [ :child, :out ], &:read)
   else
-    output = IO.popen(step.command, chdir: APP_ROOT, err: [ :child, :out ], &:read)
+    output = IO.popen(step.env, step.command, chdir: APP_ROOT, err: [ :child, :out ], &:read)
   end
-  succeeded = $?.success?
+  exit_status = $?.exitstatus
   elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
 
   File.write(log_path, output)
 
-  status = if succeeded
-    :ok
-  elsif step.blocking
-    :fail
-  else
+  # A non-blocking step's failure is a pre-existing advisory (⚠️), not this
+  # branch's problem — only a blocking step's failure is ever :fail.
+  status = if exit_status != 0 && !step.blocking
     :warn
+  else
+    Ci::Step.status_for(step, exit_status: exit_status, log: output)
   end
 
   Result.new(
@@ -199,12 +209,30 @@ end
 failed = results.select { |r| r.status == :fail }
 warned = results.select { |r| r.status == :warn }
 
+def print_budget_block(result)
+  log = File.read(result.log_path)
+  block = log[/^System test budget.*?(?=^\S|\z)/m]
+  puts block if block
+end
+
+# The budget gate's first line + slowest list, on either icon for this
+# step: ⚠️ has no other detail printed below, and ❌'s "last 15 lines"
+# fallback would show it anyway but not call it out by name.
+warned.select { |r| r.step.name == "rails_test_system" }.each do |r|
+  puts
+  puts "-- #{r.step.label} budget --"
+  print_budget_block(r)
+end
+
 if failed.any?
   puts
   puts "FAILED: #{failed.map { |r| r.step.label }.join(", ")}"
   failed.each do |r|
     puts
     puts "-- #{r.step.label} (full log: #{r.log_path.sub("#{APP_ROOT}/", "")}) --"
+    if r.step.name == "rails_test_system"
+      print_budget_block(r)
+    end
     if r.failure_detail&.any?
       r.failure_detail.each { |name| puts "  #{name}" }
     else

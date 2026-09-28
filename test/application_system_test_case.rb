@@ -1,6 +1,9 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  # Only for full serial runs (CI, bin/ci), so a scoped run stays quiet.
+  SystemBudget.install!(test_case: self) if ENV["SYSTEM_BUDGET"] == "1"
+
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |driver_options|
     driver_options.add_argument("--no-sandbox")
     driver_options.add_argument("--disable-dev-shm-usage")
