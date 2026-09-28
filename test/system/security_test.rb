@@ -1,66 +1,76 @@
 require "application_system_test_case"
 
-# End-to-end proof that user-typed content can't execute as script, and
-# that the CSP header is present. Tests behavior, not implementation:
-# "did the payload actually fire", not "was DOMPurify.sanitize called".
+# Behavior, not implementation: "did the payload run", not "was DOMPurify called".
 class SecurityTest < ApplicationSystemTestCase
-  setup do
-    page.driver.browser.manage.window.resize_to(1400, 1000)
-    sign_in_as users(:one)
+  # <script> never executes via innerHTML, so an <img onerror> is the probe.
+  XSS_PAYLOAD = %(<img src="x" onerror="window.__xss_fired = true">).freeze
+  JAVASCRIPT_LINK = "[click](javascript:window.__xss_fired=true)".freeze
+  MERMAID_LABEL = <<~MD.freeze
+    ```mermaid
+    flowchart TD
+      A["<img src=x onerror=window.__xss_fired=true>"] --> B
+      click B href "javascript:window.__xss_fired=true"
+    ```
+  MD
+  KATEX_HREF = "$\\href{javascript:window.__xss_fired=true}{x}$".freeze
 
+  setup do
+    sign_in_as users(:one)
     @notebook = users(:one).notebooks.create!(name: "Test Notebook")
     @folder = @notebook.folders.create!(name: "Test Folder")
   end
 
-  # <script> tags never execute via innerHTML (browser platform behavior),
-  # so this uses an <img onerror> instead — fires as soon as it's
-  # inserted if content was rendered unsanitized.
-  XSS_PAYLOAD = %(<img src="x" onerror="window.__xss_fired = true">).freeze
+  test "untrusted content never executes, and CSP blocks injected inline script" do
+    phase "1 persisted scrap item" do
+      scrap = @folder.notes.create!(title: "Scrap Note", note_type: "scrap", notebook: @notebook)
+      scrap.scrap_items.create!(content: XSS_PAYLOAD)
+      visit_note scrap
+      # The sanitized <img> itself proves the item was rendered.
+      assert_selector "#scrap_list_#{scrap.id} img", visible: :all
+      assert_no_selector "img[onerror]", visible: :all
+      assert_not_fired
+    end
 
-  test "a scrap item's content can't execute script when rendered" do
-    note = @folder.notes.create!(title: "Scrap Note", note_type: "scrap", notebook: @notebook)
-    note.scrap_items.create!(content: XSS_PAYLOAD)
+    note = @folder.notes.create!(title: "MD Note", note_type: "md", notebook: @notebook,
+      content: [ XSS_PAYLOAD, JAVASCRIPT_LINK ].join("\n\n"))
 
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
+    phase "2 persisted md note" do
+      visit_note note
+      assert_selector ".markdown-content a", text: "click"
+      assert_selector ".markdown-content img", visible: :all
+      assert_no_selector ".markdown-content img[onerror]", visible: :all
+      assert_no_selector "a[href^='javascript:']"
+      assert_not_fired
+    end
 
-    assert_no_selector "img[onerror]"
-    assert_nil page.evaluate_script("window.__xss_fired")
+    phase "3 live preview" do
+      fill_in "note[content]", with: [ XSS_PAYLOAD, JAVASCRIPT_LINK, MERMAID_LABEL, KATEX_HREF ].join("\n\n")
+      assert_selector ".markdown-content .mermaid svg"
+      assert_selector ".markdown-content .katex"
+      assert_no_selector ".markdown-content img[onerror]", visible: :all
+      # [*|href] also matches a namespaced xlink:href on SVG links.
+      assert_no_selector ".markdown-content a[*|href^='javascript:']", visible: :all
+      assert_not_fired
+    end
+
+    phase "4 CSP blocks inline script" do
+      execute_script(<<~JS)
+        window.__csp_script_ran = false
+        const script = document.createElement("script")
+        script.textContent = "window.__csp_script_ran = true"
+        document.body.appendChild(script)
+      JS
+      assert_equal false, evaluate_script("window.__csp_script_ran")
+    end
   end
 
-  test "a note's live preview pane can't execute script when rendered" do
-    note = @folder.notes.create!(title: "MD Note", note_type: "md", content: "", notebook: @notebook)
+  private
+
+  def visit_note(note)
     visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
-
-    fill_in "note[content]", with: XSS_PAYLOAD
-
-    assert_no_selector ".markdown-content img[onerror]"
-    assert_nil page.evaluate_script("window.__xss_fired")
   end
 
-  test "an existing note's saved content can't execute script on reload" do
-    # Covers the render-from-persisted-content path, not just live-typing
-    # above — a note reopened after being saved elsewhere is the more
-    # realistic case for untrusted content.
-    note = @folder.notes.create!(title: "MD Note", note_type: "md", content: XSS_PAYLOAD, notebook: @notebook)
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
-
-    assert_no_selector ".markdown-content img[onerror]"
-    assert_nil page.evaluate_script("window.__xss_fired")
-  end
-
-  test "the Content-Security-Policy header is present and blocks inline script" do
-    note = @folder.notes.create!(title: "MD Note", note_type: "md", content: "", notebook: @notebook)
-    visit root_url(notebook_id: @notebook.id, folder_id: @folder.id, note_id: note.id)
-
-    # Proof the header does something, not just that it's present: inject
-    # a real <script> at runtime and confirm CSP refuses to run it.
-    page.execute_script(<<~JS)
-      window.__csp_script_ran = false
-      const script = document.createElement("script")
-      script.textContent = "window.__csp_script_ran = true"
-      document.body.appendChild(script)
-    JS
-
-    assert_equal false, page.evaluate_script("window.__csp_script_ran")
+  def assert_not_fired
+    assert_nil evaluate_script("window.__xss_fired"), "an XSS payload executed"
   end
 end

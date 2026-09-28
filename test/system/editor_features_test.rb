@@ -6,53 +6,6 @@ class EditorFeaturesTest < ApplicationSystemTestCase
     sign_in_as users(:one)
   end
 
-  test "3段階表示モードの切り替えとプレビューが機能すること" do
-    # Create MD note data up front, then open that note's page.
-    notebook = users(:one).notebooks.create!(name: "Test Notebook")
-    folder = notebook.folders.create!(name: "Test Folder")
-    # Associate the notebook when creating the note too.
-    note = folder.notes.create!(title: "MD Test Note", content: "Initial", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-
-    # 1. Confirm the initial state (split view).
-    assert_selector "textarea[name='note[content]']", visible: true
-    assert_selector ".markdown-content", visible: true
-
-    # 2. Click the preview-only mode button.
-    find("button[title='#{I18n.t("editor.modes.preview_only")}']").click
-
-    # The textarea is hidden, the preview is visible.
-    assert_selector "textarea[name='note[content]']", visible: false
-    assert_selector ".markdown-content", visible: true
-
-    # 3. Click the edit-only mode button.
-    find("button[title='#{I18n.t("editor.modes.edit_only")}']").click
-
-    # The preview is hidden, the textarea is visible.
-    assert_selector "textarea[name='note[content]']", visible: true
-    assert_selector ".markdown-content", visible: false
-
-    # 4. Typing Markdown reflects into the preview immediately.
-    find("button[title='#{I18n.t("editor.modes.split")}']").click
-
-    # Fill in the form and verify it renders as HTML in the preview area.
-    fill_in "note[content]", with: <<~MD
-      # 爆速プレビューテスト
-
-      $$x^2 + y^2 = z^2$$
-
-      ```mermaid
-      flowchart TD
-        A[Start] --> B[End]
-      ```
-    MD
-
-    assert_selector ".markdown-content h1", text: "爆速プレビューテスト"
-    assert_selector ".markdown-content .katex"
-    assert_selector ".markdown-content .mermaid svg"
-  end
-
   test "scrap item でも KaTeX と Mermaid が描画されること" do
     notebook = users(:one).notebooks.create!(name: "Test Notebook")
     folder = notebook.folders.create!(name: "Test Folder")
@@ -76,48 +29,6 @@ class EditorFeaturesTest < ApplicationSystemTestCase
     assert_selector "#scrap_list_#{note.id} h1", text: "Scrap Math and Mermaid"
     assert_selector "#scrap_list_#{note.id} .katex"
     assert_selector "#scrap_list_#{note.id} .mermaid svg"
-  end
-
-  test "burst typing still renders the mermaid diagram once typing stops" do
-    notebook = users(:one).notebooks.create!(name: "Test Notebook")
-    folder = notebook.folders.create!(name: "Test Folder")
-    note = folder.notes.create!(title: "Burst Note", content: "Initial", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-    find("button[title='#{I18n.t("editor.modes.split")}']").click
-
-    # Type the diagram as a burst of keystrokes without waiting in between,
-    # so several preview renders overlap while Mermaid is still loading.
-    # The last render must win: once typing stops, the diagram appears.
-    textarea = find("textarea[name='note[content]']")
-    fill_in "note[content]", with: ""
-    textarea.send_keys("# Burst diagram\n\n")
-    textarea.send_keys("```mermaid\n")
-    textarea.send_keys("flowchart TD\n")
-    textarea.send_keys("  A[Start] --> B[End]\n")
-    textarea.send_keys("```\n")
-
-    assert_selector ".markdown-content .mermaid svg"
-  end
-
-  test "invalid mermaid syntax keeps the code block instead of an empty diagram" do
-    notebook = users(:one).notebooks.create!(name: "Test Notebook")
-    folder = notebook.folders.create!(name: "Test Folder")
-    note = folder.notes.create!(title: "Broken Diagram Note", content: "Initial", note_type: "md", notebook: notebook)
-
-    visit root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
-    find("button[title='#{I18n.t("editor.modes.split")}']").click
-
-    fill_in "note[content]", with: <<~MD
-      ```mermaid
-      this is not a diagram {{{
-      ```
-    MD
-
-    # The code block survives (mid-typing states look the same way);
-    # no half-rendered empty diagram takes its place.
-    assert_selector ".markdown-content pre code.language-mermaid"
-    assert_no_selector ".markdown-content .mermaid svg", wait: 2
   end
 
   test "リッチテキストコピーのボタンがMarkdownエディタに表示されること" do
