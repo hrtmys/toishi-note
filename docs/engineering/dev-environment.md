@@ -30,7 +30,7 @@ The base image (`ruby:4.0.4-slim`) is a plain Ruby image with no Node and none o
 - **`build-essential`/`libyaml-dev`/`pkg-config`/`python-is-python3`** — needed to build native gems, mirroring the production `Dockerfile`'s build stage.
 - **`foreman`** (a system gem, installed directly in the image rather than via `bundle install`) — `bin/dev` (`Procfile.dev`) shells out to it, and it isn't one of this app's actual dependencies.
 
-`node-gyp` is also installed to mirror what [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) installs, so the image and CI don't drift apart.
+`node-gyp` is still installed in the image, though [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) no longer installs it: no dependency compiles natively (npm bundles its own copy when one would), and dropping the apt package saves CI setup time. Rebuilding the image just to remove it isn't worth it.
 
 ## Fonts for Japanese rendering
 
