@@ -28,7 +28,7 @@
     "marked": "^18.0.13",
     "mermaid": "^11.17.2",
     "nodemon": "^3.1.14",
-    "postcss": "^8.5.28",
+    "postcss": "^8.5.29",
     "postcss-cli": "^12.0.0",
     "sass": "^1.104.1",
     "sortablejs": "^1.15.7",
