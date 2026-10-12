@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import * as bootstrap from "bootstrap"
 import { hideModal, installModalHideQueue, showModal } from "../lib/modal"
-import { isPaletteShortcut, paletteKeyAction, wrapIndex } from "../lib/palette_keys"
+import { paletteKeyAction, paletteShortcutAction, wrapIndex } from "../lib/palette_keys"
 
 // The Ctrl+P / Cmd+P command palette. The initial list needs no fetch:
 // HomeController#index already renders recently-viewed notes into the
@@ -34,10 +34,10 @@ export default class extends Controller {
   }
 
   globalKeydown(event) {
-    if (isPaletteShortcut(event)) {
-      event.preventDefault()
-      this.open()
-    }
+    const modalOpen = document.querySelector(".modal.show") !== null
+    const action = paletteShortcutAction(event, { modalOpen })
+    if (action) event.preventDefault()
+    if (action === "open") this.open()
   }
 
   open() {
