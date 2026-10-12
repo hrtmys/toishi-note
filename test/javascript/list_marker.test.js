@@ -57,6 +57,18 @@ describe("parseListMarker", () => {
     assert.equal(parseListMarker("just some text"), null)
     assert.equal(parseListMarker(""), null)
   })
+
+  it("returns null for a line indented with a full-width space", () => {
+    assert.equal(parseListMarker("　- a"), null)
+  })
+
+  it("accepts a full-width gap after a marker and continues it with an ASCII space", () => {
+    assert.equal(parseListMarker("-　a").continued, "- ")
+  })
+
+  it("keeps the gap length in the continued marker, mapping each gap character to one space", () => {
+    assert.equal(parseListMarker("- 　 a").continued, "-   ")
+  })
 })
 
 describe("renumberFollowingLines", () => {
@@ -316,5 +328,43 @@ describe("tabAction", () => {
 
   it("leaves Tab on plain lines to the browser", () => {
     assert.equal(tab("hello", 5), null)
+  })
+})
+
+describe("enterAction with full-width and no-break gaps", () => {
+  it("continues a full-width-gapped bullet with an ASCII space and rewrites the gap", () => {
+    expectEnter("-　a|", "- a\n- |")
+  })
+
+  it("continues an ordered item unchanged", () => {
+    expectEnter("1. a|", "1. a\n2. |")
+  })
+
+  it("continues a task item with a full-width gap after the box", () => {
+    expectEnter("- [ ]　a|", "- [ ] a\n- [ ] |")
+  })
+
+  it("keeps the gap width when continuing a bullet with two full-width spaces", () => {
+    expectEnter("-　　a|", "-  a\n-  |")
+  })
+
+  it("exits a bullet whose only gap is full-width", () => {
+    expectEnter("-　|", "|")
+  })
+
+  it("leaves a full-width-indented list line to the browser", () => {
+    expectNoEnter("　- a|")
+  })
+
+  it("does not nest a full-width-indented line under the item above it", () => {
+    expectNoEnter("- a\n　- b|")
+  })
+
+  it("leaves a Japanese middle-dot bullet to the browser", () => {
+    expectNoEnter("・a|")
+  })
+
+  it("continues a task item with full-width gaps on both sides of the box", () => {
+    expectEnter("-　[ ]　x|", "- [ ] x\n- [ ] |")
   })
 })

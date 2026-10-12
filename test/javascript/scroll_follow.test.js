@@ -105,4 +105,10 @@ describe("previewAnchor", () => {
     assert.equal(a.start, 1)
     assert.equal(a.end, 1)
   })
+
+  it("anchors a caret after a full-width-gapped bullet to that block, after the leading trim", () => {
+    const a = anchorAt("\n-　a|")
+    assert.equal(a.block, 0)
+    assert.equal(a.count, 1)
+  })
 })
