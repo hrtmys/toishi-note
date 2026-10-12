@@ -13,7 +13,7 @@ export function trimMarkdown(markdown) {
   return trimMarkdownStart(markdown.slice(0, end))
 }
 
-const LIST_PREFIX = /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t　 ]+(?:\[[ xX]\][ \t　 ]+)?(?=\S)/
+const LIST_PREFIX = /^(?:[ \t]*(?:>[ \t\u3000\u00A0]?)+)?[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t\u3000\u00A0]+(?:\[[ xX]\][ \t\u3000\u00A0]+)?(?=\S)/
 const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})(.*)$/s
 const FENCE_CLOSE = /^ {0,3}(`{3,}|~{3,})[ \t\r]*$/
 
@@ -33,7 +33,7 @@ export function normalizeListGaps(markdown) {
         return line
       }
       // One character in, one out, so offsets into the source stay valid.
-      return line.replace(LIST_PREFIX, (prefix) => prefix.replace(/[　 ]/g, " "))
+      return line.replace(LIST_PREFIX, (prefix) => prefix.replace(/[\u3000\u00A0]/g, " "))
     })
     .join("\n")
 }

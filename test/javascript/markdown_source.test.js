@@ -77,7 +77,7 @@ describe("normalizeListGaps", () => {
     const inputs = [
       "-　a",
       "- [x]　done",
-      "-  a",
+      "-\u00A0\u00A0a",
       "1.　x\n-　b",
       "```\n-　a\n```",
       "~~~~\n1.　x\n~~~\n~~~~\n-　b",
@@ -110,5 +110,13 @@ describe("rendering normalized source", () => {
 
   it("renders a full-width-gapped bullet as a list item", () => {
     assert.match(render("-　a"), /<ul>\s*<li>/)
+  })
+})
+
+describe("normalizeListGaps with a no-break space", () => {
+  it("rewrites a no-break space after a bullet, a number, and a quoted bullet", () => {
+    assert.equal(source.normalizeListGaps("-\u00A0a"), "- a")
+    assert.equal(source.normalizeListGaps("1.\u00A0a"), "1. a")
+    assert.equal(source.normalizeListGaps("> -\u00A0a"), "> - a")
   })
 })
