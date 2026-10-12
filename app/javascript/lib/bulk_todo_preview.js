@@ -6,17 +6,19 @@ const HEADING_LINE = /^#{1,6} (.*)$/
 const TAG = /^(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)$/is
 const VALID_ID_BODY = /^([0-9a-z]+)(;delete!)?$/
 const DUE_SHAPE = /^\d{4}-\d{2}-\d{2}$/
+const MAX_SKIPPED_SHOWN = 5
 
 // Convenience only: the server re-parses and re-validates independently.
-export function previewBulkEntries(raw) {
+export function previewBulkEntries(raw, { max = Infinity } = {}) {
   const text = raw.trim()
   if (text === "") return result("empty")
 
   if (!text.startsWith("[") && !text.startsWith("{")) {
     const entries = parseMarkdownEntries(text)
-    // Nothing recognized as a heading or task line either, so report it
-    // the same way garbage JSON is reported.
-    return entries.length === 0 ? result("error", "invalid_json") : result("ok", null, entries)
+    // Prose alone has no heading or task line, so it is reported the same
+    // way garbage JSON is reported rather than as a list of skipped lines.
+    const recognized = entries.some((e) => e.kind === "heading" || e.kind === "task")
+    return recognized ? result("ok", null, entries, max) : result("error", "invalid_json")
   }
 
   let parsed
@@ -28,12 +30,15 @@ export function previewBulkEntries(raw) {
 
   if (!Array.isArray(parsed)) return result("error", "must_be_array")
 
-  return result("ok", null, parsed.map(classifyJsonEntry))
+  return result("ok", null, parsed.map(classifyJsonEntry), max)
 }
 
-function result(status, error = null, entries = []) {
+function result(status, error = null, entries = [], max = Infinity) {
   const validCount = entries.filter((e) => e.kind === "task" && e.valid).length
-  return { status, error, entries, validCount }
+  const tooMany = validCount > max
+  return tooMany
+    ? { status, error, entries, validCount, tooMany, count: validCount, max }
+    : { status, error, entries, validCount, tooMany }
 }
 
 function classifyJsonEntry(entry) {
@@ -136,6 +141,8 @@ function classifyMarkdownTask(checked, rest, rawLine) {
 function parseMarkdownEntries(text) {
   const entries = []
   let mode = "normal"
+  let shownSkipped = 0
+  let hiddenSkipped = 0
 
   for (const line of text.split(/\r\n|\r|\n/)) {
     if (mode === "in_details") {
@@ -159,8 +166,22 @@ function parseMarkdownEntries(text) {
     if (mode === "in_structure") continue
 
     const taskMatch = line.match(TASK_LINE)
-    if (taskMatch) entries.push(classifyMarkdownTask(taskMatch[1] !== " ", taskMatch[2], line))
+    if (taskMatch) {
+      entries.push(classifyMarkdownTask(taskMatch[1] !== " ", taskMatch[2], line))
+      continue
+    }
+
+    const trimmed = line.trim()
+    if (trimmed === "") continue
+
+    if (shownSkipped < MAX_SKIPPED_SHOWN) {
+      entries.push({ kind: "skipped", text: trimmed })
+      shownSkipped += 1
+    } else {
+      hiddenSkipped += 1
+    }
   }
 
+  if (hiddenSkipped > 0) entries.push({ kind: "more_skipped", count: hiddenSkipped })
   return entries
 }
