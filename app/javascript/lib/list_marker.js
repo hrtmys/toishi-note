@@ -1,4 +1,4 @@
-import { insideFence } from "./markdown_source.js"
+import { fenceStep, insideFence } from "./markdown_source.js"
 
 // List-marker parsing shared with the list continuation UI.
 // Unit-tested; the controller owns key handling on top of these.
@@ -188,28 +188,66 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   return { edit: { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret } }
 }
 
-// Items above the line, nearest first. Indented non-list lines are continuation
-// text of the item above, so they are skipped rather than ending the list.
-function itemsAbove(value, lineStart) {
+// One flag per line up to lineIndex: whether the line sits inside a fence.
+function fencedFlags(value, lineIndex) {
+  let fence = null
+  return value.split("\n", lineIndex + 1).map((line) => {
+    const step = fenceStep(fence, line)
+    fence = step.fence
+    return step.inFence
+  })
+}
+
+const lineIndexOf = (value, offset) => value.slice(0, offset).split("\n").length - 1
+
+const isItem = (line) => isListItem(line) && !QUOTE_PREFIX.test(line)
+
+const isPlainParagraph = (line) => line.trim() !== ""
+  && indentWidth(line.match(/^[ \t]*/)[0]) === 0
+  && !QUOTE_PREFIX.test(line)
+  && !isListItem(line)
+  && !ATX_HEADING.test(line)
+  && !THEMATIC_BREAK.test(line)
+  && !fenceStep(null, line).inFence
+  && !line.startsWith("|")
+
+// A run of plain paragraph lines counts as lazy continuation only when it hangs from an item.
+function continuesItem(above, index, flags) {
+  let j = index
+  while (j >= 0 && !flags[j] && isPlainParagraph(above[j])) j--
+  return j >= 0 && !flags[j] && isItem(above[j])
+}
+
+// Tab stops are measured from the marker's column; a gap of 5+ columns starts content one column after the marker.
+function childIndent(indent, bullet, gap) {
+  const column = indent + bullet.length
+  let width = 0
+  for (const ch of gap) width += ch === "\t" ? 4 - ((column + width) % 4) : 1
+  return column + (width >= 5 ? 1 : width)
+}
+
+// Items above the line, nearest first. Continuation text and lazy paragraph lines are skipped rather than
+// ending the list; fenced lines are skipped, except a fence at indent 0, which ends it.
+function itemsAbove(value, lineStart, flags) {
+  const above = lineStart === 0 ? [] : value.slice(0, lineStart - 1).split("\n")
   const items = []
-  let end = lineStart - 1
-  while (end >= 0) {
-    const start = end > 0 ? value.lastIndexOf("\n", end - 1) + 1 : 0
-    const line = value.slice(start, end)
-    end = start - 1
+  for (let i = above.length - 1; i >= 0; i--) {
+    const line = above[i]
     if (line.trim() === "") continue
+    const indent = indentWidth(line.match(/^[ \t]*/)[0])
+    if (flags[i]) {
+      if (indent === 0) break
+      continue
+    }
 
     const marker = parseListMarker(line)
     if (marker?.full.trim().startsWith(">")) break
     if (!marker) {
-      if (indentWidth(line.match(/^[ \t]*/)[0]) === 0) break
-      continue
+      if (indent > 0 || continuesItem(above, i, flags)) continue
+      break
     }
-    // CommonMark: five or more spaces after a marker make the content start one space after it.
-    const [, lead, bullet, gap] = line.match(/^([ \t]*)([-*+]|\d+[.)])([ \t\u3000\u00A0]+)/)
-    const indent = indentWidth(lead)
-    const spaces = indentWidth(gap)
-    items.push({ indent, child: indent + bullet.length + (spaces >= 5 ? 1 : spaces) })
+    const [, bullet, gap] = line.match(/^[ \t]*([-*+]|\d+[.)])([ \t\u3000\u00A0]+)/)
+    items.push({ indent, child: childIndent(indent, bullet, gap) })
   }
   return items
 }
@@ -220,37 +258,116 @@ function isFirstAt(items, indent) {
   return !nearest || nearest.indent < indent
 }
 
-// Tab/Shift+Tab on a list line. null leaves Tab to the browser (focus
-// moves); { edit: null } means swallow the key without editing.
-export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isComposing }) {
-  if (isComposing) return null
-  const { lineStart, line } = currentLine(value, selectionStart)
-  const marker = parseListMarker(line)
-  if (!marker) return null
-  if (marker.full.trim().startsWith(">")) return { edit: null }
+// Leading whitespace that Shift+Tab removes from a non-list line: one tab, else up to two spaces.
+function outdentWidth(line) {
+  if (line.startsWith("\t")) return 1
+  return line.match(/^ {0,2}/)[0].length
+}
 
+// The new leading whitespace of a list line, with its renumbered marker; null when its level does not change.
+function listChange(items, line, shiftKey) {
   const leading = line.match(/^[ \t]*/)[0]
   const current = indentWidth(leading)
-  const items = itemsAbove(value, lineStart)
   const levels = items.flatMap((item) => [item.indent, item.child])
   const target = shiftKey
     ? Math.max(0, ...levels.filter((level) => level < current))
     : Math.min(...levels.filter((level) => level > current))
-  if (!Number.isFinite(target) || target === current) return { edit: null }
+  if (!Number.isFinite(target) || target === current) return null
 
   // CommonMark: a nested list that does not start at 1 cannot interrupt the parent's paragraph.
   const ordered = line.match(/^([ \t]*)(\d+)([.)])/)
   const renumber = ordered && isFirstAt(items, target)
-  const prefix = renumber ? ordered[0] : leading
-  const text = " ".repeat(target) + (renumber ? `1${ordered[3]}` : "")
-  const delta = text.length - prefix.length
+  return {
+    prefix: renumber ? ordered[0] : leading,
+    text: " ".repeat(target) + (renumber ? `1${ordered[3]}` : "")
+  }
+}
+
+// `text` already holds the lines above this one as rewritten.
+function rewriteLine(text, lineStart, line, flagged, flags, shiftKey) {
+  if (line.trim() === "" || (!flagged && QUOTE_PREFIX.test(line))) return line
+  const marker = flagged ? null : parseListMarker(line)
+  if (marker) {
+    const change = listChange(itemsAbove(text, lineStart, flags), line, shiftKey)
+    return change ? change.text + line.slice(change.prefix.length) : line
+  }
+  return shiftKey ? line.slice(outdentWidth(line)) : `  ${line}`
+}
+
+// Each line is rewritten top-down against the text already rewritten above it, so the edit is one replacement.
+function blockAction(value, firstStart, lastEnd, shiftKey) {
+  const firstIndex = lineIndexOf(value, firstStart)
+  const flags = fencedFlags(value, lineIndexOf(value, lastEnd))
+  const original = value.slice(firstStart, lastEnd).split("\n")
+  let text = value
+  let pos = firstStart
+  const rewritten = original.map((line, k) => {
+    const next = rewriteLine(text, pos, line, flags[firstIndex + k], flags, shiftKey)
+    text = text.slice(0, pos) + next + text.slice(pos + line.length)
+    pos += next.length + 1
+    return next
+  })
+  const block = rewritten.join("\n")
+  if (block === original.join("\n")) return { edit: null }
   return {
     edit: {
-      start: lineStart,
-      end: lineStart + prefix.length,
-      text,
-      selectionStart: Math.max(lineStart, selectionStart + delta),
-      selectionEnd: Math.max(lineStart, selectionEnd + delta)
+      start: firstStart,
+      end: lastEnd,
+      text: block,
+      selectionStart: firstStart,
+      selectionEnd: firstStart + block.length
     }
+  }
+}
+
+// Tab/Shift+Tab. null leaves the key to the browser (IME, or Tab after Esc); { edit: null } swallows it.
+export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isComposing, escaped }) {
+  if (isComposing || escaped) return null
+  const { lineStart, line } = currentLine(value, selectionStart)
+  const end = currentLine(value, selectionEnd)
+  if (end.lineStart !== lineStart) {
+    const lastEnd = end.lineStart === selectionEnd ? selectionEnd - 1 : end.lineEnd
+    return blockAction(value, lineStart, lastEnd, shiftKey)
+  }
+
+  const lineIndex = lineIndexOf(value, lineStart)
+  const flags = fencedFlags(value, lineIndex)
+  const flagged = flags[lineIndex]
+  if (!flagged && QUOTE_PREFIX.test(line)) return { edit: null }
+  const marker = flagged ? null : parseListMarker(line)
+
+  if (marker) {
+    const change = listChange(itemsAbove(value, lineStart, flags), line, shiftKey)
+    if (!change) return { edit: null }
+    const delta = change.text.length - change.prefix.length
+    return {
+      edit: {
+        start: lineStart,
+        end: lineStart + change.prefix.length,
+        text: change.text,
+        selectionStart: Math.max(lineStart, selectionStart + delta),
+        selectionEnd: Math.max(lineStart, selectionEnd + delta)
+      }
+    }
+  }
+
+  if (shiftKey) {
+    const removed = outdentWidth(line)
+    if (removed === 0) return { edit: null }
+    return {
+      edit: {
+        start: lineStart,
+        end: lineStart + removed,
+        text: "",
+        selectionStart: Math.max(lineStart, selectionStart - removed),
+        selectionEnd: Math.max(lineStart, selectionEnd - removed)
+      }
+    }
+  }
+
+  // A one-line selection is indented from the line start, as code editors do.
+  const at = selectionStart === selectionEnd ? selectionStart : lineStart
+  return {
+    edit: { start: at, end: at, text: "  ", selectionStart: selectionStart + 2, selectionEnd: selectionEnd + 2 }
   }
 }
