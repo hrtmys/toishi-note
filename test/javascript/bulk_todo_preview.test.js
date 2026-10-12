@@ -3,8 +3,7 @@
 import { describe, it } from "node:test"
 import { readFileSync } from "node:fs"
 import assert from "node:assert/strict"
-import { previewBulkEntries } from "../../app/javascript/lib/bulk_todo_preview.js"
-import * as bulkPreview from "../../app/javascript/lib/bulk_todo_preview.js"
+import { previewBulkEntries, parseTaskTags } from "../../app/javascript/lib/bulk_todo_preview.js"
 
 const tasks = (result) => result.entries.filter((e) => e.kind === "task")
 
@@ -14,7 +13,7 @@ const sharedCases = JSON.parse(readFileSync(new URL("../shared/todo_paste_cases.
 describe("parseTaskTags: shared cases with TodoPaste", () => {
   for (const row of sharedCases) {
     it(`shared case: ${row.name}`, () => {
-      const got = bulkPreview.parseTaskTags(row.line)
+      const got = parseTaskTags(row.line)
       assert.deepEqual({ content: got.content, id: got.id, due: got.due }, { content: row.content, id: row.id, due: row.due })
     })
   }

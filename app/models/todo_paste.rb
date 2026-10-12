@@ -13,7 +13,8 @@ class TodoPaste
 
   TASK_LINE = /\A- \[( |x)\] (.*)\z/
   HEADING_LINE = /\A##\s*(.*)\z/
-  TAG = /\A(.*?)\s*\((id|due):\s*([^)]*)\)\z/m
+  TAG = /\A(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)\z/mi
+  Span = Struct.new(:start, :stop, :value, :delete, keyword_init: true)
   VALID_ID_BODY = /\A([0-9a-z]+)(;delete!)?\z/
   VALID_DUE_VALUE = /\A(none|\d{4}-\d{2}-\d{2})\z/
 
@@ -69,40 +70,47 @@ class TodoPaste
     Line.new(heading: heading, checked: checked, content: content.strip, due: due, id: id, delete: delete)
   end
 
-  # Strips trailing (id: …) and (due: …) tags from the end, in either order,
-  # each at most once. A malformed id stops the scan. A malformed due stays
-  # literal content, but an id to its left still binds; a due to its left does not.
+  # Scans trailing (id: …) and (due: …) tags right to left, in either order,
+  # each at most once, with case-insensitive names and ASCII or full-width
+  # parentheses. A malformed id stops the scan. A malformed due stays content
+  # and the scan looks past it for an id; a due further left is not bound.
+  # More than one valid id binds none, so every id tag stays in content.
   def extract_tags(rest)
-    current = rest
-    seen = {}
-    id = nil
-    delete = false
-    due = nil
-    literal = []
+    ids = []
+    dues = []
+    literal_due = false
+    stop = rest.length
 
-    while (match = TAG.match(current))
-      key, body = match[2], match[3]
-      break if seen[key]
-      break if key == "due" && literal.any?
+    while (match = TAG.match(rest[0, stop]))
+      key = (match[2] || match[4]).downcase
+      body = match[3] || match[5]
+      start = match[1].length
 
       if key == "id"
         valid = VALID_ID_BODY.match(body)
         break if valid.nil?
 
-        id = valid[1].to_i(36)
-        delete = valid[2].present?
-        seen[key] = true
-      elsif (parsed = parse_due(body))
-        due = parsed
-        seen[key] = true
+        ids << Span.new(start: start, stop: stop, value: valid[1].to_i(36), delete: valid[2].present?)
       else
-        literal.unshift(current[match[1].length..])
+        break if literal_due || dues.any?
+
+        due = parse_due(body)
+        if due.nil?
+          literal_due = true
+        else
+          dues << Span.new(start: start, stop: stop, value: due)
+        end
       end
 
-      current = match[1]
+      stop = start
     end
 
-    [ current + literal.join, id, delete, due ]
+    bound_id = ids.size == 1 ? ids.first : nil
+    bound_due = dues.first
+    consumed = [ bound_id, bound_due ].compact.sort_by { |span| -span.start }
+    content = consumed.reduce(rest) { |text, span| text[0...span.start] + text[span.stop..] }
+
+    [ content, bound_id&.value, bound_id&.delete || false, bound_due&.value ]
   end
 
   def parse_due(value)

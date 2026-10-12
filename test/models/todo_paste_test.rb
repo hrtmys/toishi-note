@@ -115,8 +115,17 @@ class TodoPasteTest < ActiveSupport::TestCase
     test "shared case: #{row['name']}" do
       line = TodoPaste.parse("## G\n- [ ] #{row['line']}").lines.sole
       assert_equal row["content"], line.content
-      assert_equal row["id"], line.id
-      assert_equal shared_due(row["due"]), line.due
+      if row["id"].nil?
+        assert_nil line.id
+      else
+        assert_equal row["id"], line.id
+      end
+      expected_due = shared_due(row["due"])
+      if expected_due.nil?
+        assert_nil line.due
+      else
+        assert_equal expected_due, line.due
+      end
     end
   end
 
