@@ -243,4 +243,10 @@ class TodoApplyPlanTest < ActiveSupport::TestCase
     assert_equal 1, plan.operations.count { |op| op.type == :due_change }
     assert_not_includes plan.skipped.map(&:reason), :conflicting_lines
   end
+
+  test "indented and ordered task lines in a todos.md paste produce no ops" do
+    plan = plan_for("## Groceries\n  - [ ] sub-step\n1. [ ] step")
+
+    assert_empty plan.operations
+  end
 end

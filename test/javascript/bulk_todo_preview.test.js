@@ -8,7 +8,8 @@ import { previewBulkEntries, parseTaskTags } from "../../app/javascript/lib/bulk
 const tasks = (result) => result.entries.filter((e) => e.kind === "task")
 
 // Shared with test/models/todo_paste_test.rb: both parsers must produce these rows.
-const sharedCases = JSON.parse(readFileSync(new URL("../shared/todo_paste_cases.json", import.meta.url), "utf8"))
+const sharedFixture = JSON.parse(readFileSync(new URL("../shared/todo_paste_cases.json", import.meta.url), "utf8"))
+const sharedCases = sharedFixture.tag_cases
 
 describe("parseTaskTags: shared cases with TodoPaste", () => {
   for (const row of sharedCases) {
@@ -137,9 +138,10 @@ describe("previewBulkEntries: Markdown", () => {
     assert.equal(task.raw, line)
   })
 
-  it("ignores prose and other list markers", () => {
+  it("lists prose and a checkbox-less list item as skipped, with their text", () => {
     const result = previewBulkEntries("## G\nSome prose\n* [ ] star\n1. numbered\n- [ ] Real")
-    assert.deepEqual(tasks(result).map((e) => e.content), [ "Real" ])
+    assert.deepEqual(result.entries.filter((e) => e.kind === "skipped").map((e) => e.text), [ "Some prose", "1. numbered" ])
+    assert.deepEqual(tasks(result).map((e) => e.content), [ "star", "Real" ])
   })
 
   it("reports text with no heading or task line as invalid_json", () => {
@@ -152,5 +154,85 @@ describe("previewBulkEntries: Markdown", () => {
     const big = "## G\n" + "- [ ] task (due: 2026-09-30) (id: 1a)\n".repeat(14000)
     assert.ok(big.length > 500_000)
     assert.equal(previewBulkEntries(big).validCount, 14000)
+  })
+})
+
+// Shared with test/models/todo_paste_test.rb, lenient mode only: the preview is the bulk-add modal's grammar.
+describe("previewBulkEntries: task line grammar (lenient, shared fixture)", () => {
+  for (const row of sharedFixture.task_lines) {
+    it(`task line: ${JSON.stringify(row.input)}`, () => {
+      const found = tasks(previewBulkEntries(row.input)).map((t) => [ t.content, t.checked ])
+      const expected = row.lenient.task ? [ [ row.lenient.content, row.lenient.checked ] ] : []
+      assert.deepEqual(found, expected)
+    })
+  }
+
+  it("keeps # to ###### lines as headings and skips a seven-hash line", () => {
+    const result = previewBulkEntries("# Title\n## Note\n####### x\n- [ ] a")
+    assert.deepEqual(result.entries.filter((e) => e.kind !== "task"), [
+      { kind: "heading", text: "Title" },
+      { kind: "heading", text: "Note" },
+      { kind: "skipped", text: "####### x" }
+    ])
+  })
+})
+
+describe("previewBulkEntries: skipped lines", () => {
+  const skipped = (result) => result.entries.filter((e) => e.kind === "skipped")
+
+  it("lists non-task lines as skipped kind with their text", () => {
+    const result = previewBulkEntries("## G\nSome prose\n- [ ] Buy milk\n- [ ]x\n<b>bold</b>")
+    assert.deepEqual(skipped(result), [
+      { kind: "skipped", text: "Some prose" },
+      { kind: "skipped", text: "- [ ]x" },
+      { kind: "skipped", text: "<b>bold</b>" }
+    ])
+  })
+
+  it("shows at most five skipped lines, then one summary entry with the remaining count", () => {
+    const prose = Array.from({ length: 8 }, (_, i) => `prose ${i + 1}`)
+    const result = previewBulkEntries(`## G\n${prose.join("\n")}\n- [ ] Buy milk`)
+    assert.deepEqual(skipped(result).map((e) => e.text), prose.slice(0, 5))
+    assert.deepEqual(result.entries.filter((e) => e.kind === "more_skipped"), [ { kind: "more_skipped", count: 3 } ])
+  })
+
+  it("adds no summary entry when exactly five lines are skipped", () => {
+    const prose = Array.from({ length: 5 }, (_, i) => `prose ${i + 1}`)
+    const result = previewBulkEntries(`## G\n${prose.join("\n")}\n- [ ] Buy milk`)
+    assert.equal(skipped(result).length, 5)
+    assert.equal(result.entries.some((e) => e.kind === "more_skipped"), false)
+  })
+
+  it("does not count skipped lines as valid tasks", () => {
+    const result = previewBulkEntries("## G\nprose\n- [ ] Buy milk\n-[ ] h\nmore prose")
+    assert.equal(result.validCount, 1)
+  })
+})
+
+describe("previewBulkEntries: the task cap", () => {
+  const taskLines = (n) => Array.from({ length: n }, (_, i) => `- [ ] task ${i + 1}`).join("\n")
+
+  it("sets tooMany with the count and max when valid tasks exceed max", () => {
+    const result = previewBulkEntries(`## G\n${taskLines(3)}`, { max: 2 })
+    assert.equal(result.tooMany, true)
+    assert.equal(result.count, 3)
+    assert.equal(result.max, 2)
+  })
+
+  it("does not set tooMany at exactly max", () => {
+    assert.equal(previewBulkEntries(`## G\n${taskLines(3)}`, { max: 3 }).tooMany, false)
+  })
+
+  it("counts only valid tasks against max, not skipped lines", () => {
+    const result = previewBulkEntries("## G\nprose\nprose\nprose\n- [ ] one\n- [ ] two", { max: 2 })
+    assert.equal(result.tooMany, false)
+  })
+
+  it("flags 501 tasks against the 500 cap and passes 500", () => {
+    const over = previewBulkEntries(`## G\n${taskLines(501)}`, { max: 500 })
+    assert.equal(over.tooMany, true)
+    assert.equal(over.count, 501)
+    assert.equal(over.max, 500)
+    assert.equal(previewBulkEntries(`## G\n${taskLines(500)}`, { max: 500 }).tooMany, false)
   })
 })

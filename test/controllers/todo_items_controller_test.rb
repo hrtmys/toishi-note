@@ -89,12 +89,37 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "bulk_create does not count blank entries against the cap" do
+    entries = Array.new(TodoItemsController::MAX_BULK_ENTRIES) { |i| "Task #{i}" } + [ "  " ]
+
+    assert_difference("TodoItem.count", TodoItemsController::MAX_BULK_ENTRIES) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: entries.to_json }, as: :turbo_stream
+    end
+    assert_response :success
+  end
+
+  test "bulk_create skips an object whose content is not a string, as the preview does" do
+    assert_no_difference("TodoItem.count") do
+      post bulk_create_note_todo_items_url(@note), params: { entries: '[{"content": 5}]' }, as: :turbo_stream
+    end
+    assert_response :success
+  end
+
   test "bulk_create imports Markdown checklist lines, not only JSON" do
     assert_difference("TodoItem.count", 1) do
       post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Buy milk" }, as: :turbo_stream
     end
     assert_response :success
     assert @note.todo_items.exists?(content: "Buy milk")
+  end
+
+  test "bulk_create imports uppercase, bulleted and indented Markdown task lines with the right checked state" do
+    assert_difference("TodoItem.count", 3) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: "- [X] b\n* [ ] c\n  - [ ] e" }, as: :turbo_stream
+    end
+    assert_response :success
+    assert_equal({ "b" => true, "c" => false, "e" => false },
+                 @note.todo_items.where(content: %w[b c e]).pluck(:content, :is_checked).to_h)
   end
 
   test "bulk_create skips Markdown lines with no text once their tags are stripped" do

@@ -50,10 +50,11 @@ class TodoItemsController < ApplicationController
   # "content" and an optional checked flag). The browser's live preview is
   # a UX aid only — this re-parses and re-validates independently.
   def bulk_create
-    entries = Note.parse_bulk_todo_entries(params[:entries])
-    return head :unprocessable_entity if entries.size > MAX_BULK_ENTRIES
+    # Counted after dropping blank entries, the same way the preview counts.
+    items = @note.build_bulk_todo_items(Note.parse_bulk_todo_entries(params[:entries]))
+    return head :unprocessable_entity if items.size > MAX_BULK_ENTRIES
 
-    items = @note.build_bulk_todo_items(entries).select(&:save)
+    items = items.select(&:save)
 
     render turbo_stream: [
       *items.map { |item| turbo_stream.append("todo_list_#{@note.id}", partial: "todo_items/item", locals: { item: item }) },

@@ -9,6 +9,7 @@ import { previewBulkEntries } from "../lib/bulk_todo_preview"
 // the server re-parses and re-validates independently.
 export default class extends Controller {
   static targets = ["textarea", "preview", "error", "submit", "form"]
+  static values = { max: Number }
 
   connect() {
     this.modal = bootstrap.Modal.getOrCreateInstance(this.element)
@@ -18,16 +19,15 @@ export default class extends Controller {
   }
 
   preview() {
-    const { status, error, entries, validCount } = previewBulkEntries(this.textareaTarget.value)
+    const result = previewBulkEntries(this.textareaTarget.value, { max: this.maxValue })
 
-    if (status === "empty") return this.reset()
-    if (status === "error") return this.showError(t(`bulk_import.${error}`))
+    if (result.status === "empty") return this.reset()
+    if (result.status === "error") return this.showError(t(`bulk_import.${result.error}`))
 
-    this.renderPreview(entries, validCount)
+    this.renderPreview(result)
   }
 
-  renderPreview(entries, validCount) {
-    this.errorTarget.classList.add("d-none")
+  renderPreview({ entries, validCount, tooMany, count, max }) {
     this.previewTarget.innerHTML = ""
 
     entries.forEach((entry) => {
@@ -40,9 +40,27 @@ export default class extends Controller {
         return
       }
 
+      if (entry.kind === "more_skipped") {
+        li.className = "list-group-item text-muted small"
+        li.textContent = t("bulk_import.more_skipped", { count: entry.count })
+        this.previewTarget.appendChild(li)
+        return
+      }
+
       li.className = "list-group-item d-flex align-items-center gap-2"
 
-      if (entry.valid) {
+      if (entry.kind === "skipped") {
+        li.classList.add("list-group-item-danger")
+
+        const label = document.createElement("span")
+        label.textContent = t("bulk_import.skipped")
+
+        const text = document.createElement("span")
+        text.className = "text-break"
+        text.textContent = entry.text
+
+        li.append(warningIcon(), label, text)
+      } else if (entry.valid) {
         const checkbox = document.createElement("input")
         checkbox.type = "checkbox"
         checkbox.className = "form-check-input"
@@ -56,26 +74,33 @@ export default class extends Controller {
       } else {
         li.classList.add("list-group-item-danger")
 
-        const icon = document.createElement("i")
-        icon.className = "bi bi-exclamation-triangle-fill"
-
         const label = document.createElement("span")
         label.textContent = entry.reason === "delete_unsupported"
           ? t("bulk_import.markdown_delete_unsupported", { raw: entry.raw })
           : t("bulk_import.skipped_invalid_task", { raw: JSON.stringify(entry.raw) })
 
-        li.append(icon, label)
+        li.append(warningIcon(), label)
       }
 
       this.previewTarget.appendChild(li)
     })
 
-    this.submitTarget.disabled = validCount === 0
+    if (tooMany) {
+      this.showMessage(t("bulk_import.too_many", { count, max }))
+      this.submitTarget.disabled = true
+    } else {
+      this.errorTarget.classList.add("d-none")
+      this.submitTarget.disabled = validCount === 0
+    }
   }
 
   showError(message) {
     this.previewTarget.innerHTML = ""
     this.submitTarget.disabled = true
+    this.showMessage(message)
+  }
+
+  showMessage(message) {
     this.errorTarget.textContent = message
     this.errorTarget.classList.remove("d-none")
   }
@@ -83,6 +108,10 @@ export default class extends Controller {
   reset() {
     this.previewTarget.innerHTML = ""
     this.submitTarget.disabled = true
+    this.errorTarget.classList.add("d-none")
+  }
+
+  submitStart() {
     this.errorTarget.classList.add("d-none")
   }
 
@@ -94,6 +123,15 @@ export default class extends Controller {
       this.formTarget.reset()
       this.reset()
       hideModal(this.modalState, this.modal)
+      return
     }
+
+    this.showMessage(t("forms.add_failed"))
   }
+}
+
+function warningIcon() {
+  const icon = document.createElement("i")
+  icon.className = "bi bi-exclamation-triangle-fill"
+  return icon
 }

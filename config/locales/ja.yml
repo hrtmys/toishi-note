@@ -310,8 +310,11 @@ ja:
     settings:
       save_failed: "設定を保存できませんでした — 通信状況を確認してください。"
     bulk_import:
-      invalid_json: "有効なJSONではありません。"
+      invalid_json: "JSON の配列か、Markdown のチェックリスト（- [ ] タスク）を貼り付けてください。"
       must_be_array: "JSONはタスクの配列である必要があります。"
+      skipped: "スキップ — タスク行ではありません"
+      more_skipped: "…ほか %{count} 行をスキップ"
+      too_many: "タスクが多すぎます：%{count} 件（上限 %{max} 件）。分けて追加してください。"
       skipped_invalid_task: "スキップ — 有効なタスクではありません: %{raw}"
       markdown_delete_unsupported: "削除マーカーはここでは使用できません — スキップしました: %{raw}"
     forms:

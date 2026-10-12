@@ -117,7 +117,7 @@ class Note < ApplicationRecord
   # A removal marker has nothing to append to here — this path only ever
   # creates items — so such a line is dropped rather than built.
   def self.parse_bulk_todo_markdown(text)
-    TodoPaste.parse(text).lines.reject(&:delete?).map do |line|
+    TodoPaste.parse(text, lenient: true).lines.reject(&:delete?).map do |line|
       { "content" => line.content, "checked" => line.checked, "due_date" => line.due.is_a?(Date) ? line.due : nil }
     end
   end
@@ -193,9 +193,9 @@ class Note < ApplicationRecord
         [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first, entry["due_date"] ]
       end
 
-    return if content.to_s.strip.blank?
+    return unless content.is_a?(String) && content.strip.present?
 
-    todo_items.build(content: content.to_s.strip, is_checked: !!checked, due_date: due_date)
+    todo_items.build(content: content.strip, is_checked: !!checked, due_date: due_date)
   end
 
   def auto_set_title

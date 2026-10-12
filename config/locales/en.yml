@@ -338,8 +338,11 @@ en:
     settings:
       save_failed: "Couldn't save your settings — check your connection."
     bulk_import:
-      invalid_json: "That isn't valid JSON."
+      invalid_json: "Paste a JSON array or Markdown checklist lines (- [ ] task)."
       must_be_array: "The JSON must be an array of tasks."
+      skipped: "Skipped — not a task line"
+      more_skipped: "…and %{count} more lines skipped"
+      too_many: "Too many tasks: %{count} (the limit is %{max}). Split them into smaller batches."
       skipped_invalid_task: "Skipped — not a valid task: %{raw}"
       markdown_delete_unsupported: "Removal markers aren't supported here — skipped: %{raw}"
     forms:

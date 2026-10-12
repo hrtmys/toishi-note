@@ -1,4 +1,5 @@
-[
+{
+  "tag_cases": [
   { "name": "plain line", "line": "Buy milk", "content": "Buy milk", "id": null, "due": null },
   { "name": "id then due", "line": "Buy milk (id: c8) (due: 2026-09-01)", "content": "Buy milk", "id": 440, "due": "2026-09-01" },
   { "name": "due then id (reversed)", "line": "Buy milk (due: 2026-09-01) (id: c8)", "content": "Buy milk", "id": 440, "due": "2026-09-01" },
@@ -23,4 +24,22 @@
   { "name": "mismatched parentheses do not count", "line": "Buy milk（id: c8)", "content": "Buy milk（id: c8)", "id": null, "due": null },
   { "name": "duplicate due keeps the older one in content", "line": "Task (due: 2020-01-01) (due: 2026-09-01)", "content": "Task (due: 2020-01-01)", "id": null, "due": "2026-09-01" },
   { "name": "due-tag shape in the middle of content", "line": "Renew (due: 2020-01-01) before it expires (id: c8)", "content": "Renew (due: 2020-01-01) before it expires", "id": 440, "due": null }
-]
+  ],
+  "task_lines": [
+    { "input": "- [x] a", "lenient": { "task": true, "checked": true, "content": "a" }, "strict": { "task": true, "checked": true, "content": "a" } },
+    { "input": "- [X] b", "lenient": { "task": true, "checked": true, "content": "b" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "* [ ] c", "lenient": { "task": true, "checked": false, "content": "c" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "+ [ ] d", "lenient": { "task": true, "checked": false, "content": "d" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "  - [ ] e", "lenient": { "task": true, "checked": false, "content": "e" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "\t- [ ] k", "lenient": { "task": true, "checked": false, "content": "k" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "1. [ ] f", "lenient": { "task": true, "checked": false, "content": "f" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "2) [x] g", "lenient": { "task": true, "checked": true, "content": "g" }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "- [ ]x", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "-[ ] h", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "- [y] i", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "ー [ ] j", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "# Title", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "## Note", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } },
+    { "input": "####### x", "lenient": { "task": false, "checked": null, "content": null }, "strict": { "task": false, "checked": null, "content": null } }
+  ]
+}
