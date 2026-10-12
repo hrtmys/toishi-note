@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { StreamActions } from "@hotwired/turbo"
 import { t } from "../lib/translations"
-import { byteLength, conflictRoute, keepaliveEligible, leaveDecision, saveOutcome, titleSyncDecision, visitDecision } from "../lib/autosave"
+import { byteLength, conflictRoute, keepaliveEligible, leaveDecision, saveOutcome, titleSyncDecision, unloadListenerNeeded, visitDecision } from "../lib/autosave"
 import { allNoteQueues, findNoteQueue, noteQueue } from "../lib/save_queue"
 
 const VISIT_PAUSE_CAP_MS = 5000
@@ -84,10 +84,9 @@ function warnIfLeavingLosesSaves(event) {
     wrapperConnected: queue.wrapperConnected,
     inFlight: queue.inFlight,
     inFlightKeepalive: queue.inFlightKeepalive,
-    waiting: queue.pending.size > 0,
-    scheduledBodies: []
+    waiting: queue.pending.size > 0
   }))
-  if (leaveDecision({ queues, inflightKeepaliveBytes }) === "warn") {
+  if (leaveDecision({ queues }) === "warn") {
     event.preventDefault()
     event.returnValue = ""
   }
@@ -95,7 +94,7 @@ function warnIfLeavingLosesSaves(event) {
 
 // Registered only while needed: any beforeunload listener keeps the page out of the bfcache.
 function refreshLeaveListener() {
-  if (allNoteQueues().some((queue) => queue.hasUnsaved)) {
+  if (unloadListenerNeeded(allNoteQueues())) {
     window.addEventListener("beforeunload", warnIfLeavingLosesSaves)
   } else {
     window.removeEventListener("beforeunload", warnIfLeavingLosesSaves)
@@ -108,8 +107,19 @@ document.addEventListener("visibilitychange", () => {
 })
 
 document.addEventListener("turbo:before-cache", () => {
-  document.querySelectorAll("[data-note-url]").forEach((wrapper) => wrapper.setAttribute("data-note-snapshot", ""))
+  document.querySelectorAll("[data-note-url]").forEach((wrapper) => {
+    wrapper.setAttribute("data-note-snapshot", "")
+    const queue = findNoteQueue(wrapper.dataset.noteUrl)
+    if (queue) wrapper.dataset.noteSnapshotSeq = queue.seq
+  })
 })
+
+function takePrefetchCounter(kind, href) {
+  if (kind === "prefetch") return null
+  const counter = prefetchCounters.get(href) ?? null
+  prefetchCounters.delete(href)
+  return counter
+}
 
 function requestKind(event) {
   if (event.detail.fetchOptions.headers?.["X-Sec-Purpose"] === "prefetch") return "prefetch"
@@ -130,7 +140,7 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
     frameHasNoteWrapper: kind === "frame" && Boolean(event.target.querySelector("[data-note-url]")),
     queues: queues.map((queue) => ({ held: queue.held, hasUnsaved: queue.hasUnsaved })),
     prefetchAttached: Boolean(detail.fetchRequest),
-    prefetchCounter: prefetchCounters.get(detail.url.href) ?? null,
+    prefetchCounter: takePrefetchCounter(kind, detail.url.href),
     saveCounter
   })
 
@@ -158,6 +168,17 @@ StreamActions.server_value = function () {
 
 function toast(message) {
   window.dispatchEvent(new CustomEvent("toast:show", { detail: { message } }))
+}
+
+// The toast element is replaced with the page, so it waits for the next render.
+function toastAfterVisit(message) {
+  // A newer visit or a failed fetch means the paused one never renders.
+  const events = [ "turbo:load", "turbo:frame-load", "turbo:visit", "turbo:fetch-request-error" ]
+  const finish = (event) => {
+    events.forEach((name) => document.removeEventListener(name, finish))
+    if (event.type === "turbo:load" || event.type === "turbo:frame-load") toast(message)
+  }
+  events.forEach((name) => document.addEventListener(name, finish))
 }
 
 export default class extends Controller {
@@ -219,7 +240,7 @@ export default class extends Controller {
     if (route.action === "toast_now") {
       toast(message)
     } else if (route.action === "toast_after_load") {
-      document.addEventListener("turbo:load", () => toast(message), { once: true })
+      toastAfterVisit(message)
     } else {
       const target = this.element.isConnected ? this.element : queue.wrapper
       target.dispatchEvent(new CustomEvent("note:conflict", { bubbles: true }))

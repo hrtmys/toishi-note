@@ -27,7 +27,8 @@ export default class extends Controller {
     const queue = this.queue()
     const attached = queue.attach(this.element, {
       version: Number(this.element.dataset.noteLockVersion),
-      snapshot: this.element.hasAttribute("data-note-snapshot")
+      snapshot: this.element.hasAttribute("data-note-snapshot"),
+      snapshotSeq: this.element.dataset.noteSnapshotSeq === undefined ? undefined : Number(this.element.dataset.noteSnapshotSeq)
     })
     writeWrapperVersion(queue)
     if (attached === "stale") this.showStale()

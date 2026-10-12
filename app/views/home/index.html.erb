@@ -31,9 +31,8 @@
           <% if @current_note %>
           <%# note-conflict is unconditional (title editing, and its autosave, happens for every
               note type) — editor only joins it for md notes, which also autosave content.
-              data-note-lock-version is the one shared version both fields' autosave reads and
-              writes, so editing title then content moments later doesn't conflict with itself —
-              see autosave_controller.js. %>
+              data-note-lock-version mirrors the note's save queue version, which both fields
+              share — see lib/save_queue.js. %>
           <div class="p-4 d-flex flex-column h-100"
               data-controller="note-conflict<%= ' editor' if @current_note.note_type == 'md' %>"
               data-note-lock-version="<%= @current_note.lock_version %>"

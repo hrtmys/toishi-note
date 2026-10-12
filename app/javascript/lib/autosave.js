@@ -19,8 +19,7 @@ export function keepaliveEligible(body, inflightBytes) {
 }
 
 // "warn" when leaving now could lose a save the keepalive flush can't carry.
-export function leaveDecision({ queues, inflightKeepaliveBytes }) {
-  let budget = inflightKeepaliveBytes
+export function leaveDecision({ queues }) {
   for (const queue of queues) {
     if (queue.held) {
       if (queue.wrapperConnected) return "warn"
@@ -28,12 +27,13 @@ export function leaveDecision({ queues, inflightKeepaliveBytes }) {
     }
     if (queue.waiting) return "warn"
     if (queue.inFlight && queue.inFlightKeepalive === false) return "warn"
-    for (const body of queue.scheduledBodies) {
-      if (!keepaliveEligible(body, budget)) return "warn"
-      budget += byteLength(body)
-    }
   }
   return "leave"
+}
+
+// A held note whose page has left can't explain a prompt, so it doesn't keep the listener.
+export function unloadListenerNeeded(queues) {
+  return queues.some((queue) => queue.hasUnsaved && !(queue.held && !queue.wrapperConnected))
 }
 
 export function titleSyncDecision({ ownUrl, noteUrl, incoming, current, lastServerValue, composing, titleSaveActive, focused }) {

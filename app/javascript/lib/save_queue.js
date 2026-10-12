@@ -106,15 +106,16 @@ export class SaveQueue {
     if (version !== null && version !== undefined && Number(version) > this.version) this.version = Number(version)
   }
 
-  // A snapshot's fields carry the typed text, so its older version is
-  // ignored; a fresh render older than this tab's own saves is held instead.
-  attach(wrapper, { version, snapshot }) {
+  // A snapshot's fields carry the typed text, so its older version is ignored
+  // unless values were sequenced after it was taken (e.g. from another URL).
+  attach(wrapper, { version, snapshot, snapshotSeq }) {
     if (this.held && wrapper !== this.wrapper) this.discard()
     this.wrapper = wrapper
     this.wrapperConnected = true
 
     let result = null
-    if (snapshot || Number(version) >= this.version) {
+    const trusted = snapshot ? snapshotSeq === undefined || snapshotSeq >= this.seq : Number(version) >= this.version
+    if (trusted) {
       this.adopt(version)
     } else if (!this.held) {
       this.held = true
