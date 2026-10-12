@@ -29,15 +29,13 @@ describe("keepaliveEligible", () => {
 })
 
 describe("leaveDecision", () => {
-  const queue = (overrides) => ({ held: false, wrapperConnected: true, inFlight: false, waiting: false, scheduledBodies: [], ...overrides })
+  const queue = (overrides) => ({ held: false, wrapperConnected: true, inFlight: false, waiting: false, ...overrides })
   const rows = [
     [ "idle", { queues: [ queue() ], inflightKeepaliveBytes: 0 }, "leave" ],
-    [ "a small scheduled body with the budget free", { queues: [ queue({ scheduledBodies: [ "{}" ] }) ], inflightKeepaliveBytes: 0 }, "leave" ],
     [ "a value waiting behind an in-flight save", { queues: [ queue({ inFlight: true, waiting: true }) ], inflightKeepaliveBytes: 10 }, "warn" ],
+    [ "a save in flight sent without keepalive", { queues: [ queue({ inFlight: true, inFlightKeepalive: false }) ], inflightKeepaliveBytes: 0 }, "warn" ],
     [ "held with its wrapper connected", { queues: [ queue({ held: true }) ], inflightKeepaliveBytes: 0 }, "warn" ],
     [ "held with no wrapper connected", { queues: [ queue({ held: true, wrapperConnected: false }) ], inflightKeepaliveBytes: 0 }, "leave" ],
-    [ "a body over the limit", { queues: [ queue({ scheduledBodies: [ "a".repeat(65537) ] }) ], inflightKeepaliveBytes: 0 }, "warn" ],
-    [ "a small body after another note used the budget", { queues: [ queue({ scheduledBodies: [ "a".repeat(1000) ] }), queue({ inFlight: true }) ], inflightKeepaliveBytes: 65000 }, "warn" ]
   ]
   for (const [ name, state, expected ] of rows) {
     it(name, () => assert.equal(autosave.leaveDecision(state), expected))
@@ -97,4 +95,20 @@ describe("conflictRoute", () => {
   it("discards and toasts now when no wrapper is connected, naming the placeholder for a blank title", () => {
     assert.deepEqual(autosave.conflictRoute({ wrapperConnected: false, visitPaused: false, title: "", placeholder: "無題" }), { action: "toast_now", discard: true, title: "無題" })
   })
+})
+
+describe("unloadListenerNeeded", () => {
+  const q = (overrides) => ({ hasUnsaved: false, held: false, wrapperConnected: true, ...overrides })
+  const rows = [
+    [ "no queues", [], false ],
+    [ "idle queues", [ q(), q({ wrapperConnected: false }) ], false ],
+    [ "unsaved values", [ q({ hasUnsaved: true }) ], true ],
+    [ "unsaved values on a page that left", [ q({ hasUnsaved: true, wrapperConnected: false }) ], true ],
+    [ "held with its wrapper connected", [ q({ hasUnsaved: true, held: true }) ], true ],
+    [ "held with its wrapper gone", [ q({ hasUnsaved: true, held: true, wrapperConnected: false }) ], false ],
+    [ "a held, gone note next to an unsaved one", [ q({ hasUnsaved: true, held: true, wrapperConnected: false }), q({ hasUnsaved: true }) ], true ]
+  ]
+  for (const [ name, queues, expected ] of rows) {
+    it(name, () => assert.equal(autosave.unloadListenerNeeded(queues), expected))
+  }
 })

@@ -332,16 +332,41 @@ describe("one queue per note", () => {
     assert.equal(queue.holdReason, "conflict")
   })
 
-  it("a fresh render with a higher version is adopted without a hold; a lower snapshot neither holds nor lowers", async () => {
+  it("a fresh render with a higher version is adopted without a hold", () => {
     const { send } = controlledSend()
     const queue = saveQueueLib.noteQueue(freshUrl(), { version: 4, send })
     queue.attach({}, { version: 6, snapshot: false })
     assert.equal(queue.held, false)
     assert.equal(queue.version, 6)
+  })
 
-    queue.attach({}, { version: 2, snapshot: true })
+  it("a lower snapshot stamped at the queue's current sequence neither holds nor lowers", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
+    queue.attach({}, { version: 1, snapshot: false })
+    queue.request("content", "saved")
+    await tick()
+    calls[0].resolve({ status: 200, version: 2 })
+    await tick()
+
+    queue.attach({}, { version: 1, snapshot: true, snapshotSeq: queue.seq })
     assert.equal(queue.held, false)
-    assert.equal(queue.version, 6)
+    assert.equal(queue.version, 2)
+  })
+
+  it("a snapshot stamped before later values were sequenced holds as stale", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
+    queue.attach({}, { version: 1, snapshot: false })
+    const stamp = queue.seq
+    queue.request("content", "saved from another URL")
+    await tick()
+    calls[0].resolve({ status: 200, version: 2 })
+    await tick()
+
+    assert.equal(queue.attach({}, { version: 1, snapshot: true, snapshotSeq: stamp }), "stale")
+    assert.equal(queue.held, true)
+    assert.equal(queue.holdReason, "stale")
   })
 
   it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {
