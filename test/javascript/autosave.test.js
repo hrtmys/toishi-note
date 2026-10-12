@@ -31,11 +31,11 @@ describe("keepaliveEligible", () => {
 describe("leaveDecision", () => {
   const queue = (overrides) => ({ held: false, wrapperConnected: true, inFlight: false, waiting: false, ...overrides })
   const rows = [
-    [ "idle", { queues: [ queue() ], inflightKeepaliveBytes: 0 }, "leave" ],
-    [ "a value waiting behind an in-flight save", { queues: [ queue({ inFlight: true, waiting: true }) ], inflightKeepaliveBytes: 10 }, "warn" ],
-    [ "a save in flight sent without keepalive", { queues: [ queue({ inFlight: true, inFlightKeepalive: false }) ], inflightKeepaliveBytes: 0 }, "warn" ],
-    [ "held with its wrapper connected", { queues: [ queue({ held: true }) ], inflightKeepaliveBytes: 0 }, "warn" ],
-    [ "held with no wrapper connected", { queues: [ queue({ held: true, wrapperConnected: false }) ], inflightKeepaliveBytes: 0 }, "leave" ],
+    [ "idle", { queues: [ queue() ] }, "leave" ],
+    [ "a value waiting behind an in-flight save", { queues: [ queue({ inFlight: true, waiting: true }) ] }, "warn" ],
+    [ "a save in flight sent without keepalive", { queues: [ queue({ inFlight: true, inFlightKeepalive: false }) ] }, "warn" ],
+    [ "held with its wrapper connected", { queues: [ queue({ held: true }) ] }, "warn" ],
+    [ "held with no wrapper connected", { queues: [ queue({ held: true, wrapperConnected: false }) ] }, "leave" ],
   ]
   for (const [ name, state, expected ] of rows) {
     it(name, () => assert.equal(autosave.leaveDecision(state), expected))

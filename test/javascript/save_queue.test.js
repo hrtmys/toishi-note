@@ -281,7 +281,7 @@ describe("one queue per note", () => {
     const { calls, send } = controlledSend()
     const queue = saveQueueLib.noteQueue(freshUrl(), { version: 7, send })
     queue.attach({}, { version: 7, snapshot: false })
-    queue.attach({}, { version: 5, snapshot: true })
+    queue.attach({}, { version: 5, snapshot: true, snapshotSeq: queue.seq })
 
     queue.request("content", "x")
     await tick()
@@ -367,6 +367,52 @@ describe("one queue per note", () => {
     assert.equal(queue.attach({}, { version: 1, snapshot: true, snapshotSeq: stamp }), "stale")
     assert.equal(queue.held, true)
     assert.equal(queue.holdReason, "stale")
+  })
+
+  it("a snapshot with no stamp holds as stale", () => {
+    const { send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 3, send })
+    queue.attach({}, { version: 3, snapshot: false })
+
+    assert.equal(queue.attach({}, { version: 3, snapshot: true }), "stale")
+    assert.equal(queue.held, true)
+    assert.equal(queue.holdReason, "stale")
+  })
+
+  for (const [ name, staleAttach ] of [
+    [ "a stale fresh render", { version: 1, snapshot: false } ],
+    [ "an unstamped snapshot", { version: 1, snapshot: true } ]
+  ]) {
+    it(`a value scheduled before ${name} holds is still sent with the queue's version; one scheduled after waits`, async () => {
+      const { calls, send } = controlledSend()
+      const queue = saveQueueLib.noteQueue(freshUrl(), { version: 2, send })
+      queue.attach({}, { version: 2, snapshot: false })
+
+      const before = queue.schedule("content", "typed on the live page")
+      assert.equal(queue.attach({}, staleAttach), "stale")
+      queue.schedule("title", "typed on the stale page")
+      mock.timers.tick(500)
+      await tick()
+      assert.deepEqual(calls.map((c) => c.payload), [ { field: "content", value: "typed on the live page", version: 2 } ])
+      calls[0].resolve({ status: 200, version: 3 })
+      assert.equal(await before, "saved")
+      await tick()
+      assert.equal(calls.length, 1)
+      assert.equal(queue.held, true)
+    })
+  }
+
+  it("re-attaching after a hold never discards a value scheduled before it", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 2, send })
+    queue.attach({}, { version: 2, snapshot: false })
+
+    queue.schedule("content", "typed before the hold")
+    queue.attach({}, { version: 1, snapshot: false })
+    queue.attach({}, { version: 2, snapshot: false })
+    mock.timers.tick(500)
+    await tick()
+    assert.deepEqual(calls.map((c) => c.payload.value), [ "typed before the hold" ])
   })
 
   it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {
