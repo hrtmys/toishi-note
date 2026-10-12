@@ -13,8 +13,7 @@ class TodoPaste
 
   TASK_LINE = /\A- \[( |x)\] (.*)\z/
   HEADING_LINE = /\A##\s*(.*)\z/
-  ID_TAG = /\A(.*?)\s*\(id:\s*([^)]*)\)\z/m
-  DUE_TAG = /\A(.*?)\s*\(due:\s*([^)]*)\)\z/m
+  TAG = /\A(.*?)\s*\((id|due):\s*([^)]*)\)\z/m
   VALID_ID_BODY = /\A([0-9a-z]+)(;delete!)?\z/
   VALID_DUE_VALUE = /\A(none|\d{4}-\d{2}-\d{2})\z/
 
@@ -66,32 +65,50 @@ class TodoPaste
   end
 
   def build_line(heading, checked, rest)
-    content, id, delete = extract_id(rest)
-    content, due = extract_due(content)
+    content, id, delete, due = extract_tags(rest)
     Line.new(heading: heading, checked: checked, content: content.strip, due: due, id: id, delete: delete)
   end
 
-  # The id tag is the rightmost suffix. A body that doesn't cleanly match
-  # <base36> or <base36>;delete! leaves the whole group as literal
-  # content — fail-closed, so a typo'd command can never silently bind.
-  def extract_id(rest)
-    return [ rest, nil, false ] unless (match = ID_TAG.match(rest))
+  # Strips trailing (id: …) and (due: …) tags from the end, in either order,
+  # each at most once. A tag whose body doesn't validate stops the scan and
+  # stays literal content — fail-closed, so a typo'd command never binds.
+  def extract_tags(rest)
+    content = rest
+    seen = {}
+    id = nil
+    delete = false
+    due = nil
 
-    pre, body = match[1], match[2]
-    return [ rest, nil, false ] unless (valid = VALID_ID_BODY.match(body))
+    while (match = TAG.match(content))
+      key, body = match[2], match[3]
+      break if seen[key]
 
-    [ pre, valid[1].to_i(36), valid[2].present? ]
+      if key == "id"
+        valid = VALID_ID_BODY.match(body)
+        break if valid.nil?
+
+        id = valid[1].to_i(36)
+        delete = valid[2].present?
+      else
+        parsed = parse_due(body)
+        break if parsed.nil?
+
+        due = parsed
+      end
+
+      seen[key] = true
+      content = match[1]
+    end
+
+    [ content, id, delete, due ]
   end
 
-  def extract_due(content)
-    return [ content, nil ] unless (match = DUE_TAG.match(content))
+  def parse_due(value)
+    return :none if value == "none"
+    return nil unless VALID_DUE_VALUE.match?(value)
 
-    pre, value = match[1], match[2]
-    return [ content, nil ] unless VALID_DUE_VALUE.match?(value)
-
-    due = value == "none" ? :none : Date.iso8601(value)
-    [ pre, due ]
+    Date.iso8601(value)
   rescue ArgumentError
-    [ content, nil ]
+    nil
   end
 end
