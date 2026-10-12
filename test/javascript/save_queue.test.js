@@ -1,6 +1,8 @@
-import { describe, it } from "node:test"
+import { describe, it, mock, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-import { SaveQueue } from "../../app/javascript/lib/save_queue.js"
+import * as saveQueueLib from "../../app/javascript/lib/save_queue.js"
+
+const { SaveQueue } = saveQueueLib
 
 // A send() whose responses the test releases by hand, so ordering is explicit.
 function controlledSend() {
@@ -151,5 +153,274 @@ describe("SaveQueue", () => {
     calls[0].resolve({ status: 200, version: 2 })
     await saved
     assert.equal(queue.hasUnsaved, false)
+  })
+})
+
+describe("SaveQueue debounce", () => {
+  beforeEach(() => mock.timers.enable({ apis: [ "setTimeout" ] }))
+  afterEach(() => mock.timers.reset())
+
+  it("sends a scheduled value after 500 ms with the version current at send time", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 3, send })
+
+    const settled = queue.schedule("content", "draft")
+    mock.timers.tick(499)
+    await tick()
+    assert.equal(calls.length, 0)
+    queue.adopt(4)
+    mock.timers.tick(1)
+    await tick()
+    assert.deepEqual(calls.map((c) => c.payload), [ { field: "content", value: "draft", version: 4 } ])
+    calls[0].resolve({ status: 200, version: 5 })
+    assert.equal(await settled, "saved")
+  })
+
+  it("rescheduling sends once with the latest value; the replaced schedule settles superseded", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+
+    const first = queue.schedule("content", "a")
+    mock.timers.tick(300)
+    const second = queue.schedule("content", "ab")
+    mock.timers.tick(300)
+    await tick()
+    assert.equal(calls.length, 0, "the timer restarted")
+    mock.timers.tick(200)
+    await tick()
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].payload.value, "ab")
+    calls[0].resolve({ status: 200, version: 2 })
+    assert.deepEqual(await Promise.all([ first, second ]), [ "superseded", "saved" ])
+  })
+
+  it("request() for a scheduled field cancels its timer, so only one save goes out", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+
+    const scheduled = queue.schedule("content", "typed")
+    const requested = queue.request("content", "kept")
+    assert.equal(await scheduled, "superseded")
+    await tick()
+    calls[0].resolve({ status: 200, version: 2 })
+    assert.equal(await requested, "saved")
+    mock.timers.tick(1000)
+    await tick()
+    assert.equal(calls.length, 1)
+  })
+
+  it("flush() sends a scheduled value at once, and it counts as unsaved until then", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+
+    queue.schedule("content", "tail")
+    assert.equal(queue.hasUnsaved, true)
+    queue.flush()
+    await tick()
+    assert.deepEqual(calls.map((c) => c.payload), [ { field: "content", value: "tail", version: 1 } ])
+  })
+
+  it("postpone() stops the timer during composition but flush() still sends the confirmed value", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+
+    queue.schedule("content", "日本語の")
+    queue.postpone("content")
+    mock.timers.tick(2000)
+    await tick()
+    assert.equal(calls.length, 0)
+    assert.equal(queue.hasUnsaved, true)
+    queue.flush()
+    await tick()
+    assert.equal(calls[0].payload.value, "日本語の")
+  })
+
+  it("discard() drops scheduled values so nothing is sent later", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+
+    const scheduled = queue.schedule("content", "gone")
+    queue.discard()
+    assert.equal(await scheduled, "discarded")
+    mock.timers.tick(1000)
+    await tick()
+    assert.equal(calls.length, 0)
+    assert.equal(queue.hasUnsaved, false)
+  })
+})
+
+let urlSeq = 0
+const freshUrl = () => `/notes/${9000 + ++urlSeq}`
+
+describe("one queue per note", () => {
+  beforeEach(() => mock.timers.enable({ apis: [ "setTimeout" ] }))
+  afterEach(() => mock.timers.reset())
+
+  it("serializes saves from two page instances, the second carrying the version the first returned", async () => {
+    const { calls, send } = controlledSend()
+    const url = freshUrl()
+    const queue = saveQueueLib.noteQueue(url, { version: 1, send })
+    const pageA = {}
+    const pageB = {}
+    queue.attach(pageA, { version: 1, snapshot: false })
+    assert.equal(saveQueueLib.noteQueue(url), queue)
+
+    queue.schedule("content", "from A")
+    queue.flush()
+    queue.attach(pageB, { version: 1, snapshot: false })
+    queue.schedule("title", "from B")
+    queue.flush()
+    await tick()
+    assert.equal(calls.length, 1)
+    calls[0].resolve({ status: 200, version: 2 })
+    await tick()
+    assert.deepEqual(calls[1].payload, { field: "title", value: "from B", version: 2 })
+  })
+
+  it("a snapshot with a lower rendered version never lowers what is sent", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 7, send })
+    queue.attach({}, { version: 7, snapshot: false })
+    queue.attach({}, { version: 5, snapshot: true })
+
+    queue.request("content", "x")
+    await tick()
+    assert.equal(calls[0].payload.version, 7)
+  })
+
+  it("a hold survives the same wrapper reconnecting and is dropped when another instance attaches", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
+    const page = {}
+    queue.attach(page, { version: 1, snapshot: false })
+    queue.request("content", "mine")
+    await tick()
+    calls[0].resolve({ status: 409, version: 2 })
+    await tick()
+
+    queue.detach(page)
+    queue.attach(page, { version: 1, snapshot: false })
+    assert.equal(queue.held, true)
+
+    queue.attach({}, { version: 2, snapshot: false })
+    assert.equal(queue.held, false)
+    assert.equal(queue.hasUnsaved, false)
+  })
+
+  it("a fresh render older than the queue holds as stale and sends nothing", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 4, send })
+    queue.attach({}, { version: 4, snapshot: false })
+
+    assert.equal(queue.attach({}, { version: 3, snapshot: false }), "stale")
+    assert.equal(queue.held, true)
+    assert.equal(queue.holdReason, "stale")
+    queue.schedule("content", "typed on the stale page")
+    mock.timers.tick(1000)
+    await tick()
+    assert.equal(calls.length, 0)
+  })
+
+  it("a 409 hold is distinguishable from a stale hold", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
+    queue.attach({}, { version: 1, snapshot: false })
+    queue.request("content", "mine")
+    await tick()
+    calls[0].resolve({ status: 409, version: 2 })
+    await tick()
+    assert.equal(queue.holdReason, "conflict")
+  })
+
+  it("a fresh render with a higher version is adopted without a hold; a lower snapshot neither holds nor lowers", async () => {
+    const { send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 4, send })
+    queue.attach({}, { version: 6, snapshot: false })
+    assert.equal(queue.held, false)
+    assert.equal(queue.version, 6)
+
+    queue.attach({}, { version: 2, snapshot: true })
+    assert.equal(queue.held, false)
+    assert.equal(queue.version, 6)
+  })
+
+  it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {
+    const { calls, send } = controlledSend()
+    const url = freshUrl()
+    const queue = saveQueueLib.noteQueue(url, { version: 2, send })
+    saveQueueLib.findNoteQueue(url).adopt(3)
+    saveQueueLib.findNoteQueue(url).adopt(1)
+    queue.request("content", "after pin")
+    await tick()
+    assert.equal(calls[0].payload.version, 3)
+
+    assert.equal(saveQueueLib.findNoteQueue(freshUrl()), undefined)
+  })
+})
+
+describe("SaveQueue#waitForPending", () => {
+  beforeEach(() => mock.timers.enable({ apis: [ "setTimeout" ] }))
+  afterEach(() => mock.timers.reset())
+
+  const watch = (promise) => {
+    const state = { done: false }
+    promise.then(() => { state.done = true })
+    return state
+  }
+
+  it("resolves at once when nothing is pending", async () => {
+    const { send } = controlledSend()
+    const wait = watch(new SaveQueue({ version: 1, send }).waitForPending(5000))
+    await tick()
+    assert.equal(wait.done, true)
+  })
+
+  it("resolves once the saves pending at call time settle, not waiting for a value scheduled later", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+    queue.schedule("content", "before")
+    queue.flush()
+    await tick()
+
+    const wait = watch(queue.waitForPending(5000))
+    queue.schedule("content", "typed during the wait")
+    queue.flush()
+    await tick()
+    assert.equal(wait.done, false)
+
+    calls[0].resolve({ status: 200, version: 2 })
+    await tick()
+    await tick()
+    assert.equal(wait.done, true)
+    assert.equal(queue.hasUnsaved, true, "the later value is still on its way")
+  })
+
+  it("resolves at the cap when a save hangs", async () => {
+    const { send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+    queue.request("content", "hangs")
+    await tick()
+
+    const wait = watch(queue.waitForPending(5000))
+    mock.timers.tick(4999)
+    await tick()
+    assert.equal(wait.done, false)
+    mock.timers.tick(1)
+    await tick()
+    assert.equal(wait.done, true)
+  })
+
+  it("ends the wait when a pending save is held after a 409, without running to the cap", async () => {
+    const { calls, send } = controlledSend()
+    const queue = new SaveQueue({ version: 1, send })
+    queue.request("content", "mine")
+    await tick()
+
+    const wait = watch(queue.waitForPending(5000))
+    calls[0].resolve({ status: 409, version: 2 })
+    await tick()
+    await tick()
+    assert.equal(queue.held, true)
+    assert.equal(wait.done, true)
   })
 })
