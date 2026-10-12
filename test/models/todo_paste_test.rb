@@ -107,6 +107,33 @@ class TodoPasteTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 1), line.due
   end
 
+  test "an id before a malformed due tag still binds, and the due stays literal content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: bogus)").lines.sole
+    assert_equal "Buy milk (due: bogus)", line.content
+    assert_equal 12 * 36 + 8, line.id
+    assert_nil line.due
+  end
+
+  test "an impossible calendar date is a malformed due, so an id before it still binds" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-13-45)").lines.sole
+    assert_equal "Buy milk (due: 2026-13-45)", line.content
+    assert_equal 12 * 36 + 8, line.id
+    assert_nil line.due
+  end
+
+  test "a malformed id at the end still stops the scan, so a due before it stays content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01) (id: !!!)").lines.sole
+    assert_equal "Buy milk (due: 2026-09-01) (id: !!!)", line.content
+    assert_nil line.id
+    assert_nil line.due
+  end
+
+  test "a valid due to the left of a malformed due stays content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01) (due: bogus)").lines.sole
+    assert_equal "Buy milk (due: 2026-09-01) (due: bogus)", line.content
+    assert_nil line.due
+  end
+
   test "ignores the preamble prose before any heading" do
     result = TodoPaste.parse(<<~MD)
       This is a snapshot of open tasks from Toishi Note, for handing off to an AI assistant.
