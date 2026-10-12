@@ -97,6 +97,15 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert @note.todo_items.exists?(content: "Buy milk")
   end
 
+  test "bulk_create imports uppercase, bulleted and indented Markdown task lines with the right checked state" do
+    assert_difference("TodoItem.count", 3) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: "- [X] b\n* [ ] c\n  - [ ] e" }, as: :turbo_stream
+    end
+    assert_response :success
+    assert_equal({ "b" => true, "c" => false, "e" => false },
+                 @note.todo_items.where(content: %w[b c e]).pluck(:content, :is_checked).to_h)
+  end
+
   test "bulk_create skips Markdown lines with no text once their tags are stripped" do
     text = "- [ ] (due: 2026-10-01)\n- [ ]    (id: abc)\n- [ ] \n- [ ] 牛乳 (due: 2026-10-01)"
     assert_difference("TodoItem.count", 1) do

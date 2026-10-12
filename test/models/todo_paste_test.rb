@@ -109,7 +109,27 @@ class TodoPasteTest < ActiveSupport::TestCase
 
   # Shared with test/javascript/bulk_todo_preview.test.js: both parsers must
   # produce these rows, so the preview and the apply cannot drift.
-  SHARED_CASES = JSON.parse(File.read(Rails.root.join("test/shared/todo_paste_cases.json")))
+  SHARED_FIXTURE = JSON.parse(File.read(Rails.root.join("test/shared/todo_paste_cases.json")))
+  SHARED_CASES = SHARED_FIXTURE.fetch("tag_cases")
+  TASK_LINE_CASES = SHARED_FIXTURE.fetch("task_lines")
+
+  # lenient is the bulk-add modal's grammar; strict is /todos apply's.
+  %w[lenient strict].each do |mode|
+    TASK_LINE_CASES.each do |row|
+      test "task line #{mode}: #{row['input'].inspect}" do
+        expected = row.fetch(mode)
+        result = mode == "lenient" ? TodoPaste.parse(row["input"], lenient: true) : TodoPaste.parse(row["input"])
+
+        if expected["task"]
+          line = result.lines.sole
+          assert_equal expected["checked"], line.checked
+          assert_equal expected["content"], line.content
+        else
+          assert_empty result.lines
+        end
+      end
+    end
+  end
 
   SHARED_CASES.each do |row|
     test "shared case: #{row['name']}" do
