@@ -3,10 +3,13 @@
 
 // Recognizes six marker shapes: "-", "*", "+", "1.", "- [ ]" (task list),
 // and ">". Task-list is checked first since it's a superset of bare bullet.
+// CommonMark counts only ASCII spaces as a gap, so the full-width and no-break ones map to spaces.
+const asciiGap = (text) => text.replace(/[　 ]/g, " ")
+
 export function parseListMarker(line) {
   let m
 
-  m = line.match(/^(\s*)([-*+])(\s+)\[([ xX])\](\s*)/)
+  m = line.match(/^([ \t]*)([-*+])([ \t　 ]+)\[([ xX])\]([ \t　 ]*)/)
   if (m) {
     return {
       full: m[0],
@@ -14,31 +17,31 @@ export function parseListMarker(line) {
       // A continued task starts unchecked, regardless of whether the
       // item it followed was checked — carrying a checkmark forward
       // onto a brand new, not-yet-done item would be actively wrong.
-      continued: `${m[1]}${m[2]}${m[3]}[ ]${m[5]}`
+      continued: `${m[1]}${m[2]}${asciiGap(m[3])}[ ]${asciiGap(m[5])}`
     }
   }
 
-  m = line.match(/^(\s*)([-*+])(\s+)/)
+  m = line.match(/^([ \t]*)([-*+])([ \t　 ]+)/)
   if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: m[0] }
+    return { full: m[0], rest: line.slice(m[0].length), continued: asciiGap(m[0]) }
   }
 
-  m = line.match(/^(\s*)(\d+)([.)])(\s+)/)
+  m = line.match(/^([ \t]*)(\d+)([.)])([ \t　 ]+)/)
   if (m) {
     const nextNumber = parseInt(m[2], 10) + 1
     return {
       full: m[0],
       rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${m[4]}`,
+      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`,
       // The renumber step needs these back to fix up the lines below a
       // continued item; bullets/task items/quote never renumber.
       ordered: { indent: m[1], number: parseInt(m[2], 10), delimiter: m[3] }
     }
   }
 
-  m = line.match(/^(\s*)(>)(\s*)/)
+  m = line.match(/^([ \t]*)(>)([ \t　 ]*)/)
   if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: m[0] }
+    return { full: m[0], rest: line.slice(m[0].length), continued: asciiGap(m[0]) }
   }
 
   return null
@@ -65,7 +68,7 @@ export function renumberFollowingLines(value, lineEnd, indent, firstNumber) {
     const nextNewline = value.indexOf("\n", pos)
     const followerEnd = nextNewline === -1 ? value.length : nextNewline
     const follower = value.slice(pos, followerEnd)
-    const m = follower.match(/^(\s*)(\d+)([.)])(\s+)(.*)$/)
+    const m = follower.match(/^([ \t]*)(\d+)([.)])([ \t　 ]+)(.*)$/)
     if (!m || m[1] !== indent) break
 
     text += `\n${indent}${number}${m[3]}${m[4]}${m[5]}`
@@ -93,7 +96,7 @@ function findParentItem(value, lineStart, width) {
     const line = value.slice(start, end)
     const lineEnd = end
     end = start - 1
-    if (line.trim() === "" || indentWidth(line.match(/^\s*/)[0]) >= width) continue
+    if (line.trim() === "" || indentWidth(line.match(/^[ \t]*/)[0]) >= width) continue
 
     const marker = parseListMarker(line)
     if (!marker || marker.full.trim().startsWith(">")) return null
@@ -115,7 +118,7 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   if (!marker) return null
 
   if (marker.rest.trim() === "") {
-    const indent = line.match(/^\s*/)[0]
+    const indent = line.match(/^[ \t]*/)[0]
     const isQuote = marker.full.trim().startsWith(">")
     const width = indentWidth(indent)
     const parent = width > 0 ? findParentItem(value, lineStart, width) : null
@@ -148,15 +151,17 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   const renumbered = marker.ordered
     ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
     : null
-  const edit = renumbered
-    ? {
-        start: selectionStart,
-        end: renumbered.end,
-        text: `\n${marker.continued}${value.slice(selectionStart, lineEnd)}${renumbered.text}`,
-        selectionStart: caret,
-        selectionEnd: caret
-      }
-    : { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret }
+  // The edit covers the whole line so the current line's gap is rewritten in the same undo step.
+  const markerEnd = lineStart + marker.full.length
+  const lineText = asciiGap(value.slice(lineStart, markerEnd)) + value.slice(markerEnd, lineEnd)
+  const split = selectionStart - lineStart
+  const edit = {
+    start: lineStart,
+    end: renumbered?.end ?? lineEnd,
+    text: `${lineText.slice(0, split)}\n${marker.continued}${lineText.slice(split)}${renumbered?.text ?? ""}`,
+    selectionStart: caret,
+    selectionEnd: caret
+  }
   return { edit }
 }
 
@@ -174,11 +179,11 @@ function itemsAbove(value, lineStart) {
     const marker = parseListMarker(line)
     if (marker?.full.trim().startsWith(">")) break
     if (!marker) {
-      if (indentWidth(line.match(/^\s*/)[0]) === 0) break
+      if (indentWidth(line.match(/^[ \t]*/)[0]) === 0) break
       continue
     }
     // CommonMark: five or more spaces after a marker make the content start one space after it.
-    const [, lead, bullet, gap] = line.match(/^(\s*)([-*+]|\d+[.)])(\s+)/)
+    const [, lead, bullet, gap] = line.match(/^([ \t]*)([-*+]|\d+[.)])([ \t　 ]+)/)
     const indent = indentWidth(lead)
     const spaces = indentWidth(gap)
     items.push({ indent, child: indent + bullet.length + (spaces >= 5 ? 1 : spaces) })
@@ -201,7 +206,7 @@ export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isCom
   if (!marker) return null
   if (marker.full.trim().startsWith(">")) return { edit: null }
 
-  const leading = line.match(/^\s*/)[0]
+  const leading = line.match(/^[ \t]*/)[0]
   const current = indentWidth(leading)
   const items = itemsAbove(value, lineStart)
   const levels = items.flatMap((item) => [item.indent, item.child])
@@ -211,7 +216,7 @@ export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isCom
   if (!Number.isFinite(target) || target === current) return { edit: null }
 
   // CommonMark: a nested list that does not start at 1 cannot interrupt the parent's paragraph.
-  const ordered = line.match(/^(\s*)(\d+)([.)])/)
+  const ordered = line.match(/^([ \t]*)(\d+)([.)])/)
   const renumber = ordered && isFirstAt(items, target)
   const prefix = renumber ? ordered[0] : leading
   const text = " ".repeat(target) + (renumber ? `1${ordered[3]}` : "")
