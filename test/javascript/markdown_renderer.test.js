@@ -35,4 +35,20 @@ describe("renderMarkdownIntoElement: a table next to a list item", () => {
     assert.equal(element.querySelector("p").textContent, "para")
     assert.ok(element.querySelector(":scope > table"))
   })
+
+  it("draws an indented table even when the same header line recurs lazily later in the item", () => {
+    const element = render("- a\n  | x | y |\n  |---|---|\n  | 1 | 2 |\n\n  para\n| x | y |\n|---|---|")
+    assert.equal(element.querySelectorAll("li table").length, 1)
+    assert.match(element.querySelector("li p:last-child").textContent, /^para\n\| x \| y \|\n\|---\|---\|$/)
+  })
+
+  it("draws a table when only the header line is lazy", () => {
+    assert.ok(render("- a\n| x | y |\n  |---|---|").querySelector("li table"))
+  })
+
+  it("keeps text when only the delimiter row is lazy", () => {
+    const element = render("- a\n  | x | y |\n|---|---|\n| 1 | 2 |")
+    assert.equal(element.querySelector("table"), null)
+    assert.match(element.querySelector("li").textContent, /^a\n\| x \| y \|\n\|---\|---\|\n\| 1 \| 2 \|$/)
+  })
 })
