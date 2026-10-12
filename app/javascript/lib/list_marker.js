@@ -32,10 +32,7 @@ export function parseListMarker(line) {
     return {
       full: m[0],
       rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`,
-      // The renumber step needs these back to fix up the lines below a
-      // continued item; bullets/task items/quote never renumber.
-      ordered: { indent: m[1], number: parseInt(m[2], 10), delimiter: m[3] }
+      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`
     }
   }
 
@@ -52,34 +49,6 @@ export function currentLine(value, caretPosition) {
   const nextNewline = value.indexOf("\n", caretPosition)
   const lineEnd = nextNewline === -1 ? value.length : nextNewline
   return { lineStart, lineEnd, line: value.slice(lineStart, lineEnd) }
-}
-
-// Renumbers consecutive same-indent ordered lines below lineEnd so a
-// continued item keeps the sequence. Returns null when nothing follows.
-export function renumberFollowingLines(value, lineEnd, indent, firstNumber) {
-  if (value[lineEnd] !== "\n") return null
-
-  let pos = lineEnd + 1
-  let number = firstNumber
-  let text = ""
-  let end = lineEnd
-
-  for (;;) {
-    const nextNewline = value.indexOf("\n", pos)
-    const followerEnd = nextNewline === -1 ? value.length : nextNewline
-    const follower = value.slice(pos, followerEnd)
-    const m = follower.match(/^([ \t]*)(\d+)([.)])([ \t　 ]+)(.*)$/)
-    if (!m || m[1] !== indent) break
-
-    text += `\n${indent}${number}${m[3]}${m[4]}${m[5]}`
-    end = followerEnd
-    number += 1
-    if (nextNewline === -1) break
-    pos = followerEnd + 1
-  }
-
-  if (end === lineEnd) return null
-  return { end, text }
 }
 
 function indentWidth(whitespace) {
@@ -124,15 +93,12 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
     const parent = width > 0 ? findParentItem(value, lineStart, width) : null
 
     if (parent && !isQuote) {
-      const renumbered = parent.marker.ordered
-        ? renumberFollowingLines(value, lineEnd, parent.marker.ordered.indent, parent.marker.ordered.number + 2)
-        : null
       const caret = lineStart + parent.marker.continued.length
       return {
         edit: {
           start: lineStart,
-          end: renumbered?.end ?? lineEnd,
-          text: parent.marker.continued + (renumbered?.text ?? ""),
+          end: lineEnd,
+          text: parent.marker.continued,
           selectionStart: caret,
           selectionEnd: caret
         }
@@ -148,9 +114,6 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   }
 
   const caret = selectionStart + 1 + marker.continued.length
-  const renumbered = marker.ordered
-    ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
-    : null
   if (/[\u3000\u00A0]/.test(marker.full)) {
     // The edit covers the whole line so the current line's gap is rewritten in the same undo step.
     const markerEnd = lineStart + marker.full.length
@@ -158,23 +121,14 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
     const split = selectionStart - lineStart
     const edit = {
       start: lineStart,
-      end: renumbered?.end ?? lineEnd,
-      text: `${lineText.slice(0, split)}\n${marker.continued}${lineText.slice(split)}${renumbered?.text ?? ""}`,
+      end: lineEnd,
+      text: `${lineText.slice(0, split)}\n${marker.continued}${lineText.slice(split)}`,
       selectionStart: caret,
       selectionEnd: caret
     }
     return { edit }
   }
-  const edit = renumbered
-    ? {
-        start: selectionStart,
-        end: renumbered.end,
-        text: `\n${marker.continued}${value.slice(selectionStart, lineEnd)}${renumbered.text}`,
-        selectionStart: caret,
-        selectionEnd: caret
-      }
-    : { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret }
-  return { edit }
+  return { edit: { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret } }
 }
 
 // Items above the line, nearest first. Indented non-list lines are continuation
