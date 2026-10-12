@@ -14,7 +14,7 @@ class TodoPaste
   TASK_LINE = /\A- \[( |x)\] (.*)\z/
   LENIENT_TASK_LINE = /\A[ \t]*(?:[-*+]|\d{1,9}[.)]) \[( |x|X)\] (.*)\z/
   HEADING_LINE = /\A##\s*(.*)\z/
-  LENIENT_HEADING_LINE = /\A(?:#){1,6} (.*)\z/
+  LENIENT_HEADING_LINE = /\A\#{1,6} (.*)\z/
   TAG = /\A(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)\z/mi
   Span = Struct.new(:start, :stop, :value, :delete, keyword_init: true)
   VALID_ID_BODY = /\A([0-9a-z]+)(;delete!)?\z/

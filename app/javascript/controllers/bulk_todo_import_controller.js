@@ -114,6 +114,10 @@ export default class extends Controller {
   // Only close and clear the modal once the import actually went through —
   // a failed request (e.g. a dropped connection) should leave the pasted
   // JSON in place so nothing is lost.
+  submitStart() {
+    this.errorTarget.classList.add("d-none")
+  }
+
   submitEnd(event) {
     if (event.detail.success) {
       this.formTarget.reset()

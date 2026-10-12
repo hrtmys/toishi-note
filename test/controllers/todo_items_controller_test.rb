@@ -89,6 +89,15 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "bulk_create does not count blank entries against the cap" do
+    entries = Array.new(TodoItemsController::MAX_BULK_ENTRIES) { |i| "Task #{i}" } + [ "  " ]
+
+    assert_difference("TodoItem.count", TodoItemsController::MAX_BULK_ENTRIES) do
+      post bulk_create_note_todo_items_url(@note), params: { entries: entries.to_json }, as: :turbo_stream
+    end
+    assert_response :success
+  end
+
   test "bulk_create imports Markdown checklist lines, not only JSON" do
     assert_difference("TodoItem.count", 1) do
       post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Buy milk" }, as: :turbo_stream

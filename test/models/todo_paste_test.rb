@@ -118,7 +118,7 @@ class TodoPasteTest < ActiveSupport::TestCase
     TASK_LINE_CASES.each do |row|
       test "task line #{mode}: #{row['input'].inspect}" do
         expected = row.fetch(mode)
-        result = mode == "lenient" ? TodoPaste.parse(row["input"], lenient: true) : TodoPaste.parse(row["input"])
+        result = TodoPaste.parse(row["input"], lenient: mode == "lenient")
 
         if expected["task"]
           line = result.lines.sole
