@@ -1,7 +1,7 @@
 // app/assets/stylesheets/application.bootstrap.scss
 @import 'bootstrap/scss/bootstrap';
 @import 'bootstrap-icons/font/bootstrap-icons';
-@import 'github-dark';
+@import 'github';
 
 // typography defines $cjk-monospace-stack, used by text_diff and
 // markdown_content below — must load first, since Sass @import resolves

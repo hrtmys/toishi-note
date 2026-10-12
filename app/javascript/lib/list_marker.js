@@ -160,27 +160,69 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   return { edit }
 }
 
+// Items above the line, nearest first. Indented non-list lines are continuation
+// text of the item above, so they are skipped rather than ending the list.
+function itemsAbove(value, lineStart) {
+  const items = []
+  let end = lineStart - 1
+  while (end >= 0) {
+    const start = end > 0 ? value.lastIndexOf("\n", end - 1) + 1 : 0
+    const line = value.slice(start, end)
+    end = start - 1
+    if (line.trim() === "") continue
+
+    const marker = parseListMarker(line)
+    if (marker?.full.trim().startsWith(">")) break
+    if (!marker) {
+      if (indentWidth(line.match(/^\s*/)[0]) === 0) break
+      continue
+    }
+    // CommonMark: five or more spaces after a marker make the content start one space after it.
+    const [, lead, bullet, gap] = line.match(/^(\s*)([-*+]|\d+[.)])(\s+)/)
+    const indent = indentWidth(lead)
+    const spaces = indentWidth(gap)
+    items.push({ indent, child: indent + bullet.length + (spaces >= 5 ? 1 : spaces) })
+  }
+  return items
+}
+
+// True when no item at `indent` precedes a shallower one, i.e. the line opens a new level.
+function isFirstAt(items, indent) {
+  const nearest = items.find((item) => item.indent <= indent)
+  return !nearest || nearest.indent < indent
+}
+
 // Tab/Shift+Tab on a list line. null leaves Tab to the browser (focus
 // moves); { edit: null } means swallow the key without editing.
 export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isComposing }) {
   if (isComposing) return null
   const { lineStart, line } = currentLine(value, selectionStart)
-  if (!parseListMarker(line)) return null
+  const marker = parseListMarker(line)
+  if (!marker) return null
+  if (marker.full.trim().startsWith(">")) return { edit: null }
 
-  if (!shiftKey) {
-    return { edit: { start: lineStart, end: lineStart, text: "  ", selectionStart: selectionStart + 2, selectionEnd: selectionEnd + 2 } }
-  }
+  const leading = line.match(/^\s*/)[0]
+  const current = indentWidth(leading)
+  const items = itemsAbove(value, lineStart)
+  const levels = items.flatMap((item) => [item.indent, item.child])
+  const target = shiftKey
+    ? Math.max(0, ...levels.filter((level) => level < current))
+    : Math.min(...levels.filter((level) => level > current))
+  if (!Number.isFinite(target) || target === current) return { edit: null }
 
-  const leading = line.match(/^(\t|  )/)
-  if (!leading) return { edit: null }
-  const removed = leading[0].length
+  // CommonMark: a nested list that does not start at 1 cannot interrupt the parent's paragraph.
+  const ordered = line.match(/^(\s*)(\d+)([.)])/)
+  const renumber = ordered && isFirstAt(items, target)
+  const prefix = renumber ? ordered[0] : leading
+  const text = " ".repeat(target) + (renumber ? `1${ordered[3]}` : "")
+  const delta = text.length - prefix.length
   return {
     edit: {
       start: lineStart,
-      end: lineStart + removed,
-      text: "",
-      selectionStart: Math.max(lineStart, selectionStart - removed),
-      selectionEnd: Math.max(lineStart, selectionEnd - removed)
+      end: lineStart + prefix.length,
+      text,
+      selectionStart: Math.max(lineStart, selectionStart + delta),
+      selectionEnd: Math.max(lineStart, selectionEnd + delta)
     }
   }
 }

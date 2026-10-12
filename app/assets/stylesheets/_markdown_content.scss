@@ -30,6 +30,11 @@
     overflow-x: auto;
   }
 
+  pre code.hljs {
+    background: transparent;
+    padding: 0;
+  }
+
   blockquote {
     border-left: 4px solid #adb5bd;
     padding-left: 1rem;
