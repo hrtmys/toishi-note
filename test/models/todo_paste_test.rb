@@ -73,6 +73,40 @@ class TodoPasteTest < ActiveSupport::TestCase
     assert_equal :none, result.lines.sole.due
   end
 
+  test "reversed tags (id before due) parse the same as the emitted order" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_equal 12 * 36 + 8, line.id
+  end
+
+  test "reversed tags separated by extra spaces parse cleanly" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk   (id: c8)    (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_equal 12 * 36 + 8, line.id
+  end
+
+  test "a due tag alone parses to a due with no id" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_nil line.id
+  end
+
+  test "parentheses inside content survive reversed tags" do
+    result = TodoPaste.parse("## G\n- [ ] Draft report (draft) (id: c8) (due: 2026-09-01)\n- [ ] パスポートを更新（期限あり）(id: c9) (due: 2026-09-01)")
+    assert_equal [ "Draft report (draft)", "パスポートを更新（期限あり）" ], result.lines.map(&:content)
+    assert_equal [ 12 * 36 + 8, 12 * 36 + 9 ], result.lines.map(&:id)
+  end
+
+  test "a repeated id tag, with the due between, keeps the older id in content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-09-01) (id: d9)").lines.sole
+    assert_equal "Buy milk (id: c8)", line.content
+    assert_equal 13 * 36 + 9, line.id
+    assert_equal Date.new(2026, 9, 1), line.due
+  end
+
   test "ignores the preamble prose before any heading" do
     result = TodoPaste.parse(<<~MD)
       This is a snapshot of open tasks from Toishi Note, for handing off to an AI assistant.
