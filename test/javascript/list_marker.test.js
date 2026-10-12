@@ -67,7 +67,7 @@ describe("parseListMarker", () => {
   })
 
   it("keeps the gap length in the continued marker, mapping each gap character to one space", () => {
-    assert.equal(parseListMarker("- 　 a").continued, "-   ")
+    assert.equal(parseListMarker("-\u00A0\u3000\u00A0a").continued, "-   ")
   })
 })
 
@@ -337,7 +337,7 @@ describe("enterAction with full-width and no-break gaps", () => {
   })
 
   it("continues an ordered item unchanged", () => {
-    expectEnter("1. a|", "1. a\n2. |")
+    expectEnter("1.\u00A0a|", "1. a\n2. |")
   })
 
   it("continues a task item with a full-width gap after the box", () => {
