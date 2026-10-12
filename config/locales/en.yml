@@ -257,6 +257,8 @@ en:
       reload: "Reload"
       reload_confirm: "Discard your unsaved changes and load the version from the other device?"
       keep_mine: "Keep mine"
+    editor:
+      tab_hint: "Tab indents. Press Esc, then Tab, to move focus out of the editor."
   # Backs the "paste two texts, see a word-level diff" panel — shared as-is
   # between the md editor's Compare tab and the standalone tool under
   # Settings (see app/views/shared/_compare_panel.html.erb), so these keys
