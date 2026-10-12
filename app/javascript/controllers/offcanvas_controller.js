@@ -27,6 +27,25 @@ export default class extends Controller {
     this.offcanvas.hide()
   }
 
+  // A modal shown over the open menu leaves focus trapped behind it, so
+  // close the menu first. Focus then returns to whichever opener is visible.
+  openSettings(event) {
+    const gear = event.currentTarget
+    const modalElement = document.getElementById("settingsModal")
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement)
+    modalElement.addEventListener("hidden.bs.modal", () => {
+      const opener = gear.checkVisibility({ visibilityProperty: true }) ? gear : document.getElementById("sidebarToggleBtn")
+      opener?.focus()
+    }, { once: true })
+
+    if (!this.element.classList.contains("show")) {
+      modal.show()
+      return
+    }
+    this.element.addEventListener("hidden.bs.offcanvas", () => modal.show(), { once: true })
+    this.close()
+  }
+
   // Re-show with the slide transition suppressed (see
   // .offcanvas-instant in _home.scss), avoiding a replayed animation.
   showWithoutAnimation() {
