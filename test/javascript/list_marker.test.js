@@ -249,17 +249,65 @@ describe("enterAction", () => {
   })
 })
 
+const expectTab = (before, after, extra = {}) => {
+  const start = caretAt(before)
+  const expected = caretAt(after)
+  const result = tab(start.value, start.caret, extra)
+  assert.ok(result?.edit, `no edit for ${JSON.stringify(before)}`)
+  const { edit } = result
+  assert.deepEqual(
+    { before, value: apply(start.value, edit), selectionStart: edit.selectionStart, selectionEnd: edit.selectionEnd },
+    { before, value: expected.value, selectionStart: expected.caret, selectionEnd: expected.caret }
+  )
+}
+const expectTabSwallowed = (before, extra = {}) => {
+  const { value, caret } = caretAt(before)
+  assert.deepEqual(tab(value, caret, extra), { edit: null }, before)
+}
+
 describe("tabAction", () => {
-  it("indents a list line by two spaces and shifts the caret", () => {
-    const { edit } = tab("- a", 3)
-    assert.equal(apply("- a", edit), "  - a")
-    assert.equal(edit.selectionStart, 5)
-    assert.equal(edit.selectionEnd, 5)
+  it("indents a list line to the next level under its parent", () => {
+    expectTab("- a\n- |b", "- a\n  - |b")
+    expectTab("- [ ] a\n- [ ] |b", "- [ ] a\n  - [ ] |b")
+    expectTab("- a\n\n- |b", "- a\n\n  - |b")
+    expectTab("- a\n  - b\n- |c", "- a\n  - b\n  - |c")
+    expectTab("- a\n- b|c", "- a\n  - b|c")
   })
 
-  it("outdents two spaces or a tab on Shift+Tab", () => {
-    assert.equal(apply("  - a", tab("  - a", 5, { shiftKey: true }).edit), "- a")
-    assert.equal(apply("\t- a", tab("\t- a", 4, { shiftKey: true }).edit), "- a")
+  it("renumbers an ordered item only when it becomes the first at its new level", () => {
+    expectTab("1. a\n2. |b", "1. a\n   1. |b")
+    expectTab("10. a\n11. |b", "10. a\n    1. |b")
+    expectTab("1. a\n   1. b\n2. |c", "1. a\n   1. b\n   2. |c")
+  })
+
+  it("swallows Tab when no level is deeper, and Tab or Shift+Tab on a quote line", () => {
+    expectTabSwallowed("- a\n  - |b")
+    expectTabSwallowed("- |a")
+    expectTabSwallowed("# H\n- |a")
+    expectTabSwallowed("para\n- |a")
+    expectTabSwallowed("- a\n  - b\n\t- |c")
+    expectTabSwallowed("> - a\n> - |b")
+    expectTabSwallowed("> - a\n> - |b", { shiftKey: true })
+  })
+
+  it("moves a list line to the previous level on Shift+Tab", () => {
+    expectTab("- a\n  - |b", "- a\n- |b", { shiftKey: true })
+    expectTab("1. a\n   - |b", "1. a\n- |b", { shiftKey: true })
+    expectTab("- a\n  - b\n    - |c", "- a\n  - b\n  - |c", { shiftKey: true })
+    expectTabSwallowed("- |a", { shiftKey: true })
+    expectTab("- a\n\t- |b", "- a\n  - |b", { shiftKey: true })
+  })
+
+  it("skips indented continuation text when finding the levels above", () => {
+    expectTab("- a\n  more\n- |b", "- a\n  more\n  - |b")
+    expectTab("-     a\n- |b", "-     a\n  - |b")
+  })
+
+  it("leaves Tab on non-list text and during IME composition to the browser", () => {
+    const plain = caretAt("para|")
+    assert.equal(tab(plain.value, plain.caret), null)
+    const composing = caretAt("- a\n- |b")
+    assert.equal(tab(composing.value, composing.caret, { isComposing: true }), null)
   })
 
   it("swallows Shift+Tab on an unindented list line", () => {
