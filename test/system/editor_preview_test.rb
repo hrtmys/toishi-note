@@ -2,6 +2,7 @@ require "application_system_test_case"
 
 class EditorPreviewTest < ApplicationSystemTestCase
   TEXTAREA = "textarea[name='note[content]']".freeze
+  PREVIEW_AREA = "[data-editor-target='previewArea']".freeze
 
   setup do
     sign_in_as users(:one)
@@ -66,7 +67,7 @@ class EditorPreviewTest < ApplicationSystemTestCase
       assert_selector ".markdown-content .mermaid svg", count: 1
     end
 
-    phase "4a scroll kept across re-render" do
+    phase "4a typing mid-note brings its block into view and keeps it there across the diagram re-render" do
       execute_script(<<~JS, long_markdown)
         const ta = document.querySelector("#{TEXTAREA}")
         ta.value = arguments[0]
@@ -74,28 +75,52 @@ class EditorPreviewTest < ApplicationSystemTestCase
       JS
       assert_selector ".markdown-content h2", text: "Section 0"
       assert_selector ".markdown-content .mermaid svg"
-      execute_script(<<~JS)
-        const preview = document.querySelector("[data-editor-target='previewArea']")
-        preview.scrollTop = (preview.scrollHeight - preview.clientHeight) * 0.5
-      JS
-      ratio_before = preview_ratio
-      assert_in_delta 0.5, ratio_before, 0.05, "the preview could not be parked mid-document"
+      execute_script("document.querySelector(\"#{PREVIEW_AREA}\").scrollTop = 0")
       execute_script(<<~JS)
         const ta = document.querySelector("#{TEXTAREA}")
-        ta.value = ta.value + "\\nAppended scroll probe line\\n"
-        ta.dispatchEvent(new Event("input", { bubbles: true }))
+        ta.focus()
+        const caret = ta.value.indexOf("Body paragraph 30 ") + "Body paragraph 30".length
+        ta.setSelectionRange(caret, caret)
+        document.execCommand("insertText", false, "x")
       JS
-      assert_selector ".markdown-content", text: "Appended scroll probe line"
-      # The re-rendered diagram grows the content above the viewport, the late insert that used to drift the view.
-      assert_selector ".markdown-content .mermaid svg"
-      ratio_after = preview_ratio
-      assert_in_delta ratio_before, ratio_after, 0.05, "re-render moved the preview"
-      assert_operator ratio_after, :<, 0.75, "the preview drifted toward the bottom"
+      wait_until("the typed paragraph never rendered") { preview_text?("Body paragraph 30x") }
+      wait_until("the re-rendered diagram never landed") { diagram_landed? }
+      assert paragraph_in_preview_viewport?("Body paragraph 30x"), "the typed block is outside the preview viewport"
     end
 
     phase "4b preview follows the editor" do
       execute_script("const ta = document.querySelector(\"#{TEXTAREA}\"); ta.scrollTop = ta.scrollHeight")
       wait_until("the preview did not follow the editor to the bottom") { preview_ratio > 0.9 }
+    end
+
+    phase "4c a short note's preview follows typing at the end; a manual preview scroll wins until the next keystroke" do
+      execute_script(<<~JS, short_flowchart_markdown)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.value = arguments[0]
+        ta.dispatchEvent(new Event("input", { bubbles: true }))
+      JS
+      assert_selector ".markdown-content .mermaid svg"
+      assert_not overflows?(TEXTAREA), "the editor overflows, so this is not a short note"
+      assert overflows?(PREVIEW_AREA), "the preview does not overflow, so there is nothing to follow"
+
+      execute_script("document.querySelector(\"#{PREVIEW_AREA}\").scrollTop = 0")
+      execute_script(<<~JS)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.focus()
+        ta.setSelectionRange(ta.value.length, ta.value.length)
+      JS
+      find(TEXTAREA).send_keys("\nnew last line")
+      wait_until("the typed line never came into the preview viewport") { paragraph_in_preview_viewport?("new last line") }
+
+      execute_script(<<~JS)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.focus()
+        ta.setSelectionRange(ta.value.length, ta.value.length)
+        document.execCommand("insertText", false, "!")
+        document.querySelector("#{PREVIEW_AREA}").scrollTop = 0
+      JS
+      wait_until("the typed exclamation mark never rendered") { preview_text?("new last line!") }
+      assert_operator preview_scroll_top, :<, 5, "the follow pulled the preview back after a manual scroll"
     end
   end
 
@@ -110,6 +135,47 @@ class EditorPreviewTest < ApplicationSystemTestCase
     diagram = "```mermaid\nflowchart TD\n  #{(1..12).map { |i| "N#{i}" }.join(" --> ")}\n```\n"
     sections = Array.new(40) { |i| "## Section #{i}\n\nBody paragraph #{i} with some text to take vertical space.\n" }
     ([ diagram ] + sections).join("\n")
+  end
+
+  # Three source lines, 24 nodes stacked top to bottom: a tall diagram in a short note.
+  def short_flowchart_markdown
+    chain = ->(from, to) { (from..to).map { |i| "N#{i}" }.join("-->") }
+    "```mermaid\nflowchart TD\n  #{chain.call(1, 12)}\n  #{chain.call(12, 24)}\n```\n\nend line"
+  end
+
+  def overflows?(selector)
+    evaluate_script("(() => { const el = document.querySelector(#{selector.to_json}); return el.scrollHeight > el.clientHeight })()")
+  end
+
+  def preview_scroll_top
+    evaluate_script("document.querySelector(\"#{PREVIEW_AREA}\").scrollTop")
+  end
+
+  def preview_text?(text)
+    evaluate_script("document.querySelector(\"#{PREVIEW_AREA}\").textContent.includes(#{text.to_json})")
+  end
+
+  def diagram_landed?
+    evaluate_script(<<~JS)
+      (() => {
+        const content = document.querySelector(".markdown-content")
+        return content.querySelector(".mermaid svg") !== null && content.querySelector("pre code.language-mermaid") === null
+      })()
+    JS
+  end
+
+  # Whether the paragraph holding the text lies fully inside the preview's visible area.
+  def paragraph_in_preview_viewport?(text)
+    evaluate_script(<<~JS)
+      (() => {
+        const preview = document.querySelector("#{PREVIEW_AREA}")
+        const paragraph = [ ...preview.querySelectorAll("p") ].find((p) => p.textContent.includes(#{text.to_json}))
+        if (!paragraph) return false
+        const view = preview.getBoundingClientRect()
+        const rect = paragraph.getBoundingClientRect()
+        return rect.top >= view.top && rect.bottom <= view.bottom
+      })()
+    JS
   end
 
   # -1 means the preview is not scrollable at all, a setup failure rather than a pass.
