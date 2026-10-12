@@ -151,7 +151,7 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   const renumbered = marker.ordered
     ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
     : null
-  if (/[\u3000 \u00A0]/.test(marker.full)) {
+  if (/[\u3000\u00A0]/.test(marker.full)) {
     // The edit covers the whole line so the current line's gap is rewritten in the same undo step.
     const markerEnd = lineStart + marker.full.length
     const lineText = asciiGap(value.slice(lineStart, markerEnd)) + value.slice(markerEnd, lineEnd)
