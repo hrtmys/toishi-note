@@ -17,7 +17,8 @@ export default class extends Controller {
     const message = submitter?.dataset.turboConfirm ?? form.dataset.turboConfirm
     if (message && !window.confirm(message)) return
 
-    const body = submitter ? new FormData(form, submitter) : new FormData(form)
+    // URL-encoded like Turbo: multipart would store textarea newlines as CRLF.
+    const body = new URLSearchParams(submitter ? new FormData(form, submitter) : new FormData(form))
     if (submitter) submitter.disabled = true
     this.dispatch("start")
 
