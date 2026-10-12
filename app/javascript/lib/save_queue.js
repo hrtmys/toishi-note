@@ -80,7 +80,7 @@ export class SaveQueue {
   // Resubmits the held values over the other device's version.
   keepMine() {
     this.lowered = false
-    if (this.conflictVersion !== null) this.adopt(this.conflictVersion)
+    if (this.conflictVersion !== null) this.raise(this.conflictVersion)
     this.conflictVersion = null
     this.held = false
     this.changed()
@@ -101,9 +101,13 @@ export class SaveQueue {
     this.changed()
   }
 
-  // While lowered, only this queue's own landed save may raise the version again.
+  // A toggle's version is taken only when it can't hide another tab's save in between.
   adopt(version) {
-    if (this.lowered) return
+    if (this.lowered || this.inFlight) return
+    if (version !== null && version !== undefined && Number(version) === this.version + 1) this.version = Number(version)
+  }
+
+  raise(version) {
     if (version !== null && version !== undefined && Number(version) > this.version) this.version = Number(version)
   }
 
@@ -119,7 +123,7 @@ export class SaveQueue {
       this.lowered = true
     } else if (Number(version) > this.version) {
       this.lowered = false
-      this.adopt(version)
+      this.raise(version)
     }
     this.changed()
   }
@@ -218,7 +222,7 @@ export class SaveQueue {
         // A save sent before a lowering must not undo it.
         if (sentSeq > this.lowerSeq) {
           this.lowered = false
-          this.adopt(version)
+          this.raise(version)
         }
         this.changed()
       } else {

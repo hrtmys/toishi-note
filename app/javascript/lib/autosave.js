@@ -49,6 +49,8 @@ export function visitDecision({ method, kind, frameHasNoteWrapper, queues, prefe
   if (kind !== "drive" && !(kind === "frame" && frameHasNoteWrapper)) return leaveAlone
 
   const unsaved = queues.some((queue) => !queue.held && queue.hasUnsaved)
+  // Flushing a lowered note's edits would only 409 and discard them off-screen.
+  if (queues.some((queue) => !queue.held && queue.lowered && queue.hasUnsaved)) return { ...leaveAlone, block: true }
   const dropPrefetch = prefetchAttached && (unsaved || prefetchCounter !== saveCounter)
   return { pause: unsaved, flush: unsaved, dropPrefetch }
 }

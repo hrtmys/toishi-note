@@ -88,7 +88,7 @@ function warnIfLeavingLosesSaves(event) {
     inFlight: queue.inFlight,
     inFlightKeepalive: queue.inFlightKeepalive,
     waiting: queue.pending.size > 0,
-    lowered: queue.lowered
+    lowered: queue.lowered && queue.hasUnsaved
   }))
   if (leaveDecision({ queues }) === "warn") {
     event.preventDefault()
@@ -134,13 +134,19 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
     method: String(detail.fetchOptions.method || "GET").toUpperCase(),
     kind,
     frameHasNoteWrapper: kind === "frame" && Boolean(event.target.querySelector("[data-note-url]")),
-    queues: queues.map((queue) => ({ held: queue.held, hasUnsaved: queue.hasUnsaved })),
+    queues: queues.map((queue) => ({ held: queue.held, lowered: queue.lowered, hasUnsaved: queue.hasUnsaved })),
     prefetchAttached: Boolean(detail.fetchRequest),
     prefetchCounter: takePrefetchCounter(kind, detail.url.href),
     saveCounter
   })
 
   if (kind === "prefetch") prefetchCounters.set(detail.url.href, saveCounter)
+  if (decision.block) {
+    // Never resumed: the visit is abandoned so the banner stays on screen.
+    event.preventDefault()
+    showLoweredConflicts(queues)
+    return
+  }
   if (!decision.pause) {
     if (decision.dropPrefetch) delete detail.fetchRequest
     return
@@ -155,6 +161,28 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
     if (pausedVisit === visit) pausedVisit = null
     detail.resume()
   })
+})
+
+function showLoweredConflicts(queues) {
+  queues.filter((queue) => queue.lowered && queue.hasUnsaved && queue.wrapperConnected)
+    .forEach((queue) => queue.wrapper.dispatchEvent(new CustomEvent("note:conflict", { bubbles: true })))
+}
+
+// Cancelling here keeps Drive from starting a visit it can't finish.
+document.addEventListener("turbo:before-visit", (event) => {
+  const queues = allNoteQueues()
+  const decision = visitDecision({
+    method: "GET",
+    kind: "drive",
+    frameHasNoteWrapper: false,
+    queues: queues.map((queue) => ({ held: queue.held, lowered: queue.lowered, hasUnsaved: queue.hasUnsaved })),
+    prefetchAttached: false,
+    prefetchCounter: null,
+    saveCounter
+  })
+  if (!decision.block) return
+  event.preventDefault()
+  showLoweredConflicts(queues)
 })
 
 // The server sends the auto-title as an attribute; the field decides whether to show it.

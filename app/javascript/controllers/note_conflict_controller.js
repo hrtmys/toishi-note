@@ -38,7 +38,7 @@ export default class extends Controller {
     // Held edits exist only in this tab until the user decides; closing
     // or reloading it now would lose them without a word.
     const queue = this.queue()
-    if (queue?.held && queue.hasUnsaved) window.addEventListener("beforeunload", this.warnBeforeUnload)
+    if (queue.held && queue.hasUnsaved) window.addEventListener("beforeunload", this.warnBeforeUnload)
   }
 
   stopWarning() {
