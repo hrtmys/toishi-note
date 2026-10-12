@@ -71,6 +71,7 @@ export default class extends Controller {
     // Captured now: by the debounced render the caret may have moved on.
     this._followCaret = true
     this._followCaretPos = this.textareaTarget.selectionEnd
+    this._scrollTopAtInput = this.previewAreaTarget.scrollTop
 
     clearTimeout(this.previewTimer)
     this.previewTimer = setTimeout(() => this.renderPreviewNow(), 200)
@@ -111,6 +112,7 @@ export default class extends Controller {
     this._pinnedToBottom = false
     this._followCaret = false
     this._followCaretPos = 0
+    this._scrollTopAtInput = null
     this._followAnchor = null
     this._restoreUntil = 0
     this._applyingScroll = false
@@ -141,7 +143,9 @@ export default class extends Controller {
       if (this._applyingScroll && preview.scrollTop >= preview.scrollHeight - preview.clientHeight - 1) return
       this._pinMode = null
       this._pinnedRatio = null
-      this._followCaret = false
+      // Scroll events arrive a frame late: one for a scroll made before the keystroke
+      // still reads the position the keystroke saw, and must not cancel its follow.
+      if (preview.scrollTop !== this._scrollTopAtInput) this._followCaret = false
     }
     this.textareaTarget.addEventListener("scroll", this._onTextareaScroll)
     this.previewAreaTarget.addEventListener("scroll", this._onPreviewScroll)
