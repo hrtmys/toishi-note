@@ -40,8 +40,15 @@ class TodoNoteTest < ApplicationSystemTestCase
       force_fetch_rejection
       find(CONTENT).fill_in(with: "Buy milk")
       click_on I18n.t("home.common.add")
-      assert_selector ".toast.show", text: I18n.t("js.forms.add_failed")
+      assert_toast I18n.t("js.forms.add_failed")
       assert_equal "Buy milk", find(CONTENT).value
+      assert_no_toast I18n.t("js.forms.save_failed")
+
+      passport = @note.todo_items.find_by!(content: "パスポート更新")
+      find("#todo_item_#{passport.id} input[type='checkbox']").click
+      assert_toast I18n.t("js.forms.save_failed")
+      assert_no_selector "#todo_item_#{passport.id} input[type='checkbox']:checked"
+      assert_not passport.reload.is_checked?
       restore_fetch
       find(CONTENT).fill_in(with: "")
     end
@@ -71,7 +78,31 @@ class TodoNoteTest < ApplicationSystemTestCase
       assert @note.todo_items.find_by!(content: "Call plumber").is_checked?
     end
 
+    phase "3b add, then tick two items in the same JS tick" do
+      milk = @note.todo_items.find_by!(content: "Buy milk")
+      xss = @note.todo_items.find_by!(content: XSS)
+      find(CONTENT).fill_in(with: "Renew visa")
+      execute_script(<<~JS, note_todo_items_path(@note), milk.id, xss.id)
+        document.querySelector(`form[action="${arguments[0]}"]`).requestSubmit()
+        document.querySelector(`#todo_item_${arguments[1]} input[type="checkbox"]`).click()
+        document.querySelector(`#todo_item_${arguments[2]} input[type="checkbox"]`).click()
+      JS
+
+      within("#todo_list_#{@note.id}") { assert_text "Renew visa" }
+      assert_equal "", find(CONTENT).value
+      assert_selector "#todo_item_#{milk.id} .text-decoration-line-through"
+      assert_selector "#todo_item_#{xss.id} .text-decoration-line-through"
+      within("#todo_progress_#{@note.id}") { assert_text "3 / 5" }
+      wait_until("the add and both ticks never all saved") do
+        @note.todo_items.count == 5 && milk.reload.is_checked? && xss.reload.is_checked?
+      end
+      assert_equal 1, @note.todo_items.where(content: "Renew visa").count
+      assert_no_toast I18n.t("js.forms.add_failed")
+      assert_no_toast I18n.t("js.forms.save_failed")
+    end
+
     item = @note.todo_items.find_by!(content: "パスポート更新")
+    visa = @note.todo_items.find_by!(content: "Renew visa")
 
     phase "4 AI handoff copy carries the item and its id" do
       visit root_url(todos: true)
@@ -87,10 +118,16 @@ class TodoNoteTest < ApplicationSystemTestCase
       assert_match(/\(id: [0-9a-z]+\)/, copied)
     end
 
-    phase "5 checking an item off in the project view removes it" do
-      within("#all_todos_item_#{item.id}") { find("input[type='checkbox']").check }
+    phase "5 checking two items off in the project view in one tick removes both" do
+      assert_selector "#all_todos_item_#{visa.id}"
+      execute_script(<<~JS, item.id, visa.id)
+        document.querySelector(`#all_todos_item_${arguments[0]} input[type="checkbox"]`).click()
+        document.querySelector(`#all_todos_item_${arguments[1]} input[type="checkbox"]`).click()
+      JS
       assert_no_selector "#all_todos_item_#{item.id}"
-      wait_until("the check-off never saved") { item.reload.is_checked? }
+      assert_no_selector "#all_todos_item_#{visa.id}"
+      wait_until("the check-offs never saved") { item.reload.is_checked? && visa.reload.is_checked? }
+      assert_no_toast I18n.t("js.forms.save_failed")
     end
   end
 end

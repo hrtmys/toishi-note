@@ -56,8 +56,8 @@ The target is one system test per file, each named for the browser-only behavior
 | `sidebar_panes_test.rb` | CSS flex layout geometry |
 | `sidebar_scroll_test.rb` | `scrollIntoView`/`scrollTop` geometry; client-side sort in the DOM |
 | `settings_and_fab_test.rb` | live toggles without reload; reload timing; clipboard API; modal events across controllers; JS translations |
-| `todo_note_test.rb` | Turbo submit lifecycle; live modal preview; clipboard; submit-on-change stream |
-| `scrap_note_test.rb` | rendering after a Turbo-stream insert; height measured after render; change-then-fetch; clipboard |
+| `todo_note_test.rb` | Turbo submit lifecycle; live modal preview; clipboard; submit-on-change stream; concurrent form submissions (add + two ticks in one JS tick, two hub check-offs in one tick); failed tick toasts and unticks |
+| `scrap_note_test.rb` | rendering after a Turbo-stream insert; height measured after render; change-then-fetch; clipboard; add in flight surviving a declined promote; doubled Ctrl+Enter and accepted delete through real confirm dialogs; failed delete toasts; promote opens the new note as a full visit |
 | `setup_flow_test.rb` | live field toggling, and HTML5 `required` blocking submission |
 
 ## The budget

@@ -1,6 +1,6 @@
 <div id="todo_item_<%= item.id %>" class="hover-container d-flex align-items-center py-2 border-bottom">
   
-  <%= form_with url: note_todo_item_path(item.note, item), method: :patch, class: "m-0 me-3" do |f| %>
+  <%= form_with url: note_todo_item_path(item.note, item), method: :patch, class: "m-0 me-3", data: { controller: "stream-submit", action: "submit->stream-submit#submit" } do |f| %>
     <%= f.check_box :is_checked,
         checked: item.is_checked,
         class: "form-check-input fs-5",
@@ -17,5 +17,5 @@
     </span>
   <% end %>
 
-  <%= button_to "×", note_todo_item_path(item.note, item), method: :delete, class: "hover-target btn btn-sm btn-outline-danger py-0 px-2 border-0" %>
+  <%= button_to "×", note_todo_item_path(item.note, item), method: :delete, class: "hover-target btn btn-sm btn-outline-danger py-0 px-2 border-0", form: { data: { controller: "stream-submit", action: "submit->stream-submit#submit" } } %>
 </div>

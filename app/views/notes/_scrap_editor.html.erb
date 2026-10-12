@@ -13,7 +13,8 @@
 
   <div class="mt-2 bg-white p-2 rounded shadow-sm border flex-shrink-0">
     <%= form_with url: note_scrap_items_path(note), method: :post,
-        data: { controller: "reset-form", action: "turbo:submit-start->reset-form#submitStart turbo:submit-end->reset-form#submitEnd" } do |f| %>
+        data: { controller: "reset-form stream-submit", stream_submit_report_failure_value: false,
+                action: "submit->stream-submit#submit stream-submit:start->reset-form#submitStart stream-submit:end->reset-form#submitEnd" } do |f| %>
       <%= f.text_area :content,
           class: "form-control border-0 mb-2",
           rows: 3,

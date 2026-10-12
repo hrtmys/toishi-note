@@ -98,3 +98,6 @@ application.register("todos-copy", TodosCopyController)
 
 import AiExcludedToggleController from "./ai_excluded_toggle_controller"
 application.register("ai-excluded-toggle", AiExcludedToggleController)
+
+import StreamSubmitController from "./stream_submit_controller"
+application.register("stream-submit", StreamSubmitController)

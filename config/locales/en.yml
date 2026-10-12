@@ -342,3 +342,4 @@ en:
     forms:
       adding: "Adding…"
       add_failed: "Couldn't add that — check your connection."
+      save_failed: "Couldn't save that — check your connection."
