@@ -50,10 +50,12 @@ export function revealCaret(textarea) {
   document.body.append(mirror)
   try {
     const rect = span.getClientRects()[0]
-    const mirrorTop = mirror.getBoundingClientRect().top
+    // An inline rect covers only the glyphs; widen it to the full line box.
+    const lineHeight = parseFloat(style.lineHeight) || rect.height
+    const middle = (rect.top + rect.bottom) / 2 - mirror.getBoundingClientRect().top + paddingTop
     const next = revealScrollTop({
-      top: rect.top - mirrorTop + paddingTop,
-      bottom: rect.bottom - mirrorTop + paddingTop,
+      top: middle - lineHeight / 2,
+      bottom: middle + lineHeight / 2,
       scrollTop: textarea.scrollTop,
       viewHeight: textarea.clientHeight,
       maxScrollTop: textarea.scrollHeight - textarea.clientHeight,
@@ -90,7 +92,13 @@ export function previewAnchor(markdown, caret) {
   const block = blocks[index]
 
   // marked's raw swallows trailing newlines; they are not lines of the block.
-  const lines = countNewlines(block.raw.replace(/\n+$/, "")) + 1
+  const text = block.raw.replace(/\n+$/, "")
+  const lines = countNewlines(text) + 1
+  if (lines === 1) {
+    // A soft-wrapped paragraph can be taller than the view; aim at the caret, not the block top.
+    const share = Math.min(Math.max((at - block.start) / text.length, 0), 1)
+    return { block: index, start: share, end: share, count: blocks.length }
+  }
   const { start, end } = lineShare(lines, countNewlines(trimmed.slice(block.start, at)))
 
   return { block: index, start, end, count: blocks.length }

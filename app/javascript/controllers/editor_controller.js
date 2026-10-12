@@ -91,6 +91,7 @@ export default class extends Controller {
     const follow = this._followCaret
     this._followCaret = false
     this._pinMode = follow ? "follow" : "ratio"
+    if (follow) this._followAnchor = previewAnchor(this.textareaTarget.value, this._followCaretPos)
     const max = preview.scrollHeight - preview.clientHeight
     this._pinnedRatio = max <= 0 ? 0 : preview.scrollTop / max
     this._pinnedToBottom = max > 0 && (max - preview.scrollTop) < 2
@@ -110,6 +111,7 @@ export default class extends Controller {
     this._pinnedToBottom = false
     this._followCaret = false
     this._followCaretPos = 0
+    this._followAnchor = null
     this._restoreUntil = 0
     this._applyingScroll = false
     this._lastAppliedScrollTop = null
@@ -131,11 +133,12 @@ export default class extends Controller {
       this.syncPreviewToEditor()
     }
     this._onPreviewScroll = () => {
-      if (this._applyingScroll) return
-      // A programmatic restore lands exactly on the value it applied —
-      // anything else is the user taking over, so stop re-pinning.
+      // A programmatic restore lands exactly on the value it applied, or on the
+      // clamped bottom if the content shrank meanwhile; anything else is the user.
+      const preview = this.previewAreaTarget
       if (this._lastAppliedScrollTop !== null &&
-          Math.abs(this.previewAreaTarget.scrollTop - this._lastAppliedScrollTop) < 1) return
+          Math.abs(preview.scrollTop - this._lastAppliedScrollTop) < 1) return
+      if (this._applyingScroll && preview.scrollTop >= preview.scrollHeight - preview.clientHeight - 1) return
       this._pinMode = null
       this._pinnedRatio = null
       this._followCaret = false
@@ -208,7 +211,7 @@ export default class extends Controller {
   // Block indices only map to children while the renderer keeps one element per token.
   followTop() {
     const preview = this.previewAreaTarget
-    const anchor = previewAnchor(this.textareaTarget.value, this._followCaretPos)
+    const anchor = this._followAnchor
     if (anchor === null) return null
 
     let top = 0
