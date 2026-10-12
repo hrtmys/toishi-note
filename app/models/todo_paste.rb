@@ -70,11 +70,9 @@ class TodoPaste
     Line.new(heading: heading, checked: checked, content: content.strip, due: due, id: id, delete: delete)
   end
 
-  # Scans trailing (id: …) and (due: …) tags right to left, in either order,
-  # each at most once, with case-insensitive names and ASCII or full-width
-  # parentheses. A malformed id stops the scan. A malformed due stays content
-  # and the scan looks past it for an id; a due further left is not bound.
-  # More than one valid id binds none, so every id tag stays in content.
+  # An AI editing todos.md may reorder or mangle these tags; losing an id would
+  # turn an update into a duplicate, and binding the wrong one would overwrite
+  # another item, so repeated ids bind none. Cases: test/shared/todo_paste_cases.json.
   def extract_tags(rest)
     ids = []
     dues = []
