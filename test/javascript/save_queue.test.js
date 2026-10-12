@@ -304,13 +304,13 @@ describe("one queue per note", () => {
     assert.equal(queue.version, 6)
   })
 
-  for (const [ name, extra ] of [ [ "fresh render", {} ], [ "snapshot", { snapshot: true } ] ]) {
-    it(`a lower-version ${name} lowers what the next save sends, without holding`, async () => {
+  {
+    it(`a lower-version render lowers what the next save sends, without holding`, async () => {
       const { calls, send } = controlledSend()
       const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
       queue.attach({}, { version: 5 })
 
-      queue.attach({}, { version: 3, ...extra })
+      queue.attach({}, { version: 3 })
       assert.equal(queue.held, false)
       queue.request("content", "typed on the older page")
       await tick()
@@ -359,6 +359,52 @@ describe("one queue per note", () => {
     queue.keepMine()
     await tick()
     assert.deepEqual(calls[1].payload, { field: "content", value: "typed before", version: 6 })
+  })
+
+  it("while lowered, a toggle's version doesn't raise what the next save sends", async () => {
+    const { calls, send } = controlledSend()
+    const url = freshUrl()
+    const queue = saveQueueLib.noteQueue(url, { version: 5, send })
+    queue.attach({}, { version: 5 })
+    queue.attach({}, { version: 3 })
+    assert.equal(queue.lowered, true)
+
+    saveQueueLib.findNoteQueue(url).adopt(6)
+    queue.request("content", "x")
+    await tick()
+    assert.equal(calls[0].payload.version, 3)
+  })
+
+  it("a higher-version attach clears the lowered flag", () => {
+    const { send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
+    queue.attach({}, { version: 5 })
+    queue.attach({}, { version: 3 })
+    assert.equal(queue.lowered, true)
+    queue.attach({}, { version: 8 })
+    assert.equal(queue.lowered, false)
+    assert.equal(queue.version, 8)
+  })
+
+  it("only a 2xx on a save sent after the lowering clears the flag", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
+    queue.attach({}, { version: 5 })
+
+    queue.request("content", "in flight")
+    await tick()
+    queue.attach({}, { version: 3 })
+    calls[0].resolve({ status: 200, version: 6 })
+    await tick()
+    assert.equal(queue.lowered, true)
+
+    queue.request("content", "after")
+    await tick()
+    calls[1].resolve({ status: 200, version: 7 })
+    await tick()
+    assert.equal(queue.lowered, false)
+    queue.adopt(9)
+    assert.equal(queue.version, 9)
   })
 
   it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {

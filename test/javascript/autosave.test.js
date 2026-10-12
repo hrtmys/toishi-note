@@ -34,6 +34,7 @@ describe("leaveDecision", () => {
     [ "idle", { queues: [ queue() ] }, "leave" ],
     [ "a value waiting behind an in-flight save", { queues: [ queue({ inFlight: true, waiting: true }) ] }, "warn" ],
     [ "a save in flight sent without keepalive", { queues: [ queue({ inFlight: true, inFlightKeepalive: false }) ] }, "warn" ],
+    [ "a lowered queue, whose flush would conflict after unload", { queues: [ queue({ lowered: true }) ] }, "warn" ],
     [ "held with its wrapper connected", { queues: [ queue({ held: true }) ] }, "warn" ],
     [ "held with no wrapper connected", { queues: [ queue({ held: true, wrapperConnected: false }) ] }, "leave" ],
   ]

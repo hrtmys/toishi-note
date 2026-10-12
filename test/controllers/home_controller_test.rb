@@ -32,6 +32,20 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[value=?]", note.title
   end
 
+  test "a note page opts out of Turbo's snapshot cache, and a page without a note keeps it" do
+    notebook = users(:one).notebooks.create!(name: "Cache Notebook")
+    folder = notebook.folders.create!(name: "Cache Folder")
+    note = folder.notes.create!(notebook: notebook, title: "Cached?", note_type: "md")
+
+    get root_url(notebook_id: notebook.id, folder_id: folder.id, note_id: note.id)
+    assert_select 'head meta[name="turbo-cache-control"][content="no-cache"]', count: 1
+
+    Notebook.destroy_all
+    get root_url
+    assert_response :success
+    assert_select 'meta[name="turbo-cache-control"]', count: 0
+  end
+
   test "orders notes with pinned ones first, then newest-updated" do
     notebook = users(:one).notebooks.create!(name: "Notebook")
     folder = notebook.folders.create!(name: "Folder")
