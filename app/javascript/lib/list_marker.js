@@ -32,8 +32,7 @@ export function parseListMarker(line) {
     return {
       full: m[0],
       rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`,
-      ordered: { indent: m[1], number: parseInt(m[2], 10), delimiter: m[3] }
+      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`
     }
   }
 

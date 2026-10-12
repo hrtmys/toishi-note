@@ -18,8 +18,7 @@ describe("parseListMarker", () => {
     assert.deepEqual(parseListMarker("1. first"), {
       full: "1. ",
       rest: "first",
-      continued: "2. ",
-      ordered: { indent: "", number: 1, delimiter: "." }
+      continued: "2. "
     })
   })
 
@@ -120,11 +119,11 @@ describe("enterAction", () => {
     assert.equal(result.edit.selectionEnd, 10)
   })
 
-  it("leaves the following ordered items' numbers alone", () => {
-    const value = "1. first\n2. second"
+  it("continues a parenthesised ordered list without renumbering the items below", () => {
+    const value = "1) first\n2) second"
     const { edit } = enter(value, 8)
-    assert.equal(apply(value, edit), "1. first\n2. \n2. second")
-    assert.equal(edit.selectionStart, "1. first\n2. ".length)
+    assert.equal(apply(value, edit), "1) first\n2) \n2) second")
+    assert.equal(edit.selectionStart, "1) first\n2) ".length)
   })
 
   it("inserts the next number at the caret without renumbering the items below", () => {
