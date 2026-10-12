@@ -151,17 +151,29 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   const renumbered = marker.ordered
     ? renumberFollowingLines(value, lineEnd, marker.ordered.indent, marker.ordered.number + 2)
     : null
-  // The edit covers the whole line so the current line's gap is rewritten in the same undo step.
-  const markerEnd = lineStart + marker.full.length
-  const lineText = asciiGap(value.slice(lineStart, markerEnd)) + value.slice(markerEnd, lineEnd)
-  const split = selectionStart - lineStart
-  const edit = {
-    start: lineStart,
-    end: renumbered?.end ?? lineEnd,
-    text: `${lineText.slice(0, split)}\n${marker.continued}${lineText.slice(split)}${renumbered?.text ?? ""}`,
-    selectionStart: caret,
-    selectionEnd: caret
+  if (/[\u3000 \u00A0]/.test(marker.full)) {
+    // The edit covers the whole line so the current line's gap is rewritten in the same undo step.
+    const markerEnd = lineStart + marker.full.length
+    const lineText = asciiGap(value.slice(lineStart, markerEnd)) + value.slice(markerEnd, lineEnd)
+    const split = selectionStart - lineStart
+    const edit = {
+      start: lineStart,
+      end: renumbered?.end ?? lineEnd,
+      text: `${lineText.slice(0, split)}\n${marker.continued}${lineText.slice(split)}${renumbered?.text ?? ""}`,
+      selectionStart: caret,
+      selectionEnd: caret
+    }
+    return { edit }
   }
+  const edit = renumbered
+    ? {
+        start: selectionStart,
+        end: renumbered.end,
+        text: `\n${marker.continued}${value.slice(selectionStart, lineEnd)}${renumbered.text}`,
+        selectionStart: caret,
+        selectionEnd: caret
+      }
+    : { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret }
   return { edit }
 }
 
