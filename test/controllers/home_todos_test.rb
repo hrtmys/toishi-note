@@ -17,6 +17,14 @@ class HomeTodosTest < ActionDispatch::IntegrationTest
     assert_select "a.btn-secondary", text: I18n.t("home.todos.view_project")
   end
 
+  test "an item's content wraps rather than pushing the delete button out of the row" do
+    item = @note.todo_items.create!(content: "https://example.com/#{"a" * 180}")
+
+    get root_url(todos: true)
+
+    assert_select "#todo_item_#{item.id} span.text-break[style*='min-width: 0']"
+  end
+
   test "an unknown view param falls back to project rather than erroring" do
     @note.todo_items.create!(content: "Open")
 
