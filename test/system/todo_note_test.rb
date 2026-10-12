@@ -40,7 +40,7 @@ class TodoNoteTest < ApplicationSystemTestCase
       force_fetch_rejection
       find(CONTENT).fill_in(with: "Buy milk")
       click_on I18n.t("home.common.add")
-      assert_selector ".toast.show", text: I18n.t("js.forms.add_failed")
+      assert_toast I18n.t("js.forms.add_failed")
       assert_equal "Buy milk", find(CONTENT).value
       assert_no_toast I18n.t("js.forms.save_failed")
 
