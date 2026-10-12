@@ -110,9 +110,56 @@ class TextareaEditingTest < ApplicationSystemTestCase
       assert_equal "Second draft", @note.reload.content
       assert_selector "[data-note-conflict-target='banner'].d-none", visible: :all
     end
+
+    phase "7 caret stays visible after scripted edits" do
+      list = Array.new(60) { |i| "- item #{i}" }.join("\n")
+      execute_script(<<~JS, list)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.value = arguments[0]
+        ta.dispatchEvent(new Event("input", { bubbles: true }))
+      JS
+      execute_script(<<~JS)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.focus()
+        ta.setSelectionRange(ta.value.length, ta.value.length)
+        ta.scrollTop = ta.scrollHeight
+      JS
+      textarea.send_keys(:enter, "x", :enter, "y")
+      assert_equal "#{list}\n- x\n- y", textarea.value
+      textarea.send_keys(:enter)
+      assert_equal "#{list}\n- x\n- y\n- ", textarea.value
+      assert_operator textarea_bottom_gap, :<=, 1, "the caret line scrolled out of view after Enter"
+      textarea.send_keys([ :control, "z" ])
+      assert_equal "#{list}\n- x\n- y", textarea.value
+
+      line_height = evaluate_script("parseFloat(getComputedStyle(document.querySelector(\"#{TEXTAREA}\")).lineHeight)")
+      execute_script(<<~JS)
+        const ta = document.querySelector("#{TEXTAREA}")
+        ta.focus()
+        ta.setSelectionRange(2, 8)
+        ta.scrollTop = ta.scrollHeight
+      JS
+      assert_operator textarea_scroll_top, :>, 10 * line_height, "the textarea did not scroll to the bottom"
+      textarea.send_keys([ :control, "b" ])
+      assert textarea.value.start_with?("- **item 0**\n"), "Ctrl+B did not wrap the selection on line 1"
+      assert_operator textarea_scroll_top, :<, line_height, "Ctrl+B left the caret line out of view"
+    end
   end
 
   private
+
+  def textarea_scroll_top
+    evaluate_script("document.querySelector(\"#{TEXTAREA}\").scrollTop")
+  end
+
+  def textarea_bottom_gap
+    evaluate_script(<<~JS)
+      (() => {
+        const ta = document.querySelector("#{TEXTAREA}")
+        return ta.scrollHeight - ta.clientHeight - ta.scrollTop
+      })()
+    JS
+  end
 
   def clear(textarea)
     textarea.send_keys([ :control, "a" ], :backspace)
