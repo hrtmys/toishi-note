@@ -145,7 +145,7 @@ export default class extends Controller {
       this._pinnedRatio = null
       // Scroll events arrive a frame late: one for a scroll made before the keystroke
       // still reads the position the keystroke saw, and must not cancel its follow.
-      if (preview.scrollTop !== this._scrollTopAtInput) this._followCaret = false
+      if (this._scrollTopAtInput === null || Math.abs(preview.scrollTop - this._scrollTopAtInput) >= 1) this._followCaret = false
     }
     this.textareaTarget.addEventListener("scroll", this._onTextareaScroll)
     this.previewAreaTarget.addEventListener("scroll", this._onPreviewScroll)

@@ -75,6 +75,9 @@ class EditorPreviewTest < ApplicationSystemTestCase
       JS
       assert_selector ".markdown-content h2", text: "Section 0"
       assert_selector ".markdown-content .mermaid svg"
+      # The scroll to 0 below must be a real scroll, or it fires no late event.
+      execute_script("const p = document.querySelector(\"#{PREVIEW_AREA}\"); p.scrollTop = p.scrollHeight")
+      wait_until("the preview never scrolled down") { preview_scroll_top > 0 }
       execute_script(<<~JS)
         document.querySelector("#{PREVIEW_AREA}").scrollTop = 0
         const ta = document.querySelector("#{TEXTAREA}")
