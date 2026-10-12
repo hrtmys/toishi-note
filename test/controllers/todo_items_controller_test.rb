@@ -98,6 +98,13 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "bulk_create skips an object whose content is not a string, as the preview does" do
+    assert_no_difference("TodoItem.count") do
+      post bulk_create_note_todo_items_url(@note), params: { entries: '[{"content": 5}]' }, as: :turbo_stream
+    end
+    assert_response :success
+  end
+
   test "bulk_create imports Markdown checklist lines, not only JSON" do
     assert_difference("TodoItem.count", 1) do
       post bulk_create_note_todo_items_url(@note), params: { entries: "- [ ] Buy milk" }, as: :turbo_stream

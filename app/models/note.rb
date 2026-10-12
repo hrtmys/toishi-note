@@ -193,9 +193,9 @@ class Note < ApplicationRecord
         [ entry["content"], entry.values_at("checked", "is_checked", "done").compact.first, entry["due_date"] ]
       end
 
-    return if content.to_s.strip.blank?
+    return unless content.is_a?(String) && content.strip.present?
 
-    todo_items.build(content: content.to_s.strip, is_checked: !!checked, due_date: due_date)
+    todo_items.build(content: content.strip, is_checked: !!checked, due_date: due_date)
   end
 
   def auto_set_title
