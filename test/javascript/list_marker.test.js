@@ -628,6 +628,10 @@ describe("tabAction's level walk", () => {
   it("stops the walk at an ATX heading", () => {
     expectSwallowedRange("- a\n# H\n- |b")
   })
+
+  it("walks past an indented continuation line to reach the item a lazy line hangs from", () => {
+    expectEdit("- a\n  more\nlazy\n- |b", "- a\n  more\nlazy\n  - |b")
+  })
 })
 
 describe("enterAction with full-width and no-break gaps", () => {
