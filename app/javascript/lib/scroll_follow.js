@@ -13,6 +13,59 @@ export function revealScrollTop({ top, bottom, scrollTop, viewHeight, maxScrollT
   return Math.min(Math.max(target, 0), maxScrollTop)
 }
 
+export function revealCaret(textarea) {
+  if (textarea.scrollHeight <= textarea.clientHeight) return
+
+  const style = getComputedStyle(textarea)
+  const paddingTop = parseFloat(style.paddingTop)
+  const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+  const { value, selectionEnd } = textarea
+  const lineEnd = value.indexOf("\n", selectionEnd)
+  const restOfLine = value.slice(selectionEnd, lineEnd === -1 ? value.length : lineEnd)
+
+  // A textarea exposes no caret coordinates, so lay out a same-width copy of its text.
+  const mirror = document.createElement("div")
+  Object.assign(mirror.style, {
+    position: "absolute",
+    visibility: "hidden",
+    top: "0",
+    left: "-9999px",
+    boxSizing: "content-box",
+    width: `${textarea.clientWidth - paddingX}px`,
+    padding: "0",
+    border: "0",
+    whiteSpace: "pre-wrap",
+    overflowWrap: "break-word",
+    font: style.font,
+    lineHeight: style.lineHeight,
+    letterSpacing: style.letterSpacing,
+    wordSpacing: style.wordSpacing,
+    tabSize: style.tabSize,
+    wordBreak: style.wordBreak,
+  })
+  const span = document.createElement("span")
+  span.textContent = restOfLine === "" ? "." : restOfLine
+  mirror.append(document.createTextNode(value.slice(0, selectionEnd)), span)
+
+  document.body.append(mirror)
+  try {
+    const rect = span.getClientRects()[0]
+    const mirrorTop = mirror.getBoundingClientRect().top
+    const next = revealScrollTop({
+      top: rect.top - mirrorTop + paddingTop,
+      bottom: rect.bottom - mirrorTop + paddingTop,
+      scrollTop: textarea.scrollTop,
+      viewHeight: textarea.clientHeight,
+      maxScrollTop: textarea.scrollHeight - textarea.clientHeight,
+      margin: paddingTop,
+    })
+    // scrollTop rather than value or focus(), which would disturb the undo stack and focus.
+    if (next !== null) textarea.scrollTop = next
+  } finally {
+    mirror.remove()
+  }
+}
+
 export function previewAnchor(markdown, caret) {
   const trimmed = markdown.trim()
   if (trimmed === "") return null

@@ -1,4 +1,5 @@
 import { currentLine } from "./list_marker.js"
+import { revealCaret } from "./scroll_follow.js"
 
 // Editor shortcut decisions as pure functions. An Edit means: select
 // [start, end), insert text, then set the selection; performEdit applies
@@ -70,4 +71,5 @@ export function performEdit(textarea, edit) {
   textarea.setSelectionRange(edit.start, edit.end)
   document.execCommand("insertText", false, edit.text)
   textarea.setSelectionRange(edit.selectionStart, edit.selectionEnd)
+  revealCaret(textarea)
 }
