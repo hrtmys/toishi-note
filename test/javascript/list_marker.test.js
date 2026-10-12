@@ -7,18 +7,19 @@ import {
 
 describe("parseListMarker", () => {
   it("continues a dash bullet unchanged", () => {
-    assert.deepEqual(parseListMarker("- first"), { full: "- ", rest: "first", continued: "- " })
+    assert.deepEqual(parseListMarker("- first"), { full: "- ", rest: "first", continued: "- ", quote: "" })
   })
 
   it("continues a star bullet unchanged", () => {
-    assert.deepEqual(parseListMarker("* first"), { full: "* ", rest: "first", continued: "* " })
+    assert.deepEqual(parseListMarker("* first"), { full: "* ", rest: "first", continued: "* ", quote: "" })
   })
 
   it("increments an ordered marker", () => {
     assert.deepEqual(parseListMarker("1. first"), {
       full: "1. ",
       rest: "first",
-      continued: "2. "
+      continued: "2. ",
+      quote: ""
     })
   })
 
@@ -27,7 +28,7 @@ describe("parseListMarker", () => {
   })
 
   it("continues a task item unchecked", () => {
-    assert.deepEqual(parseListMarker("- [ ] todo"), { full: "- [ ] ", rest: "todo", continued: "- [ ] " })
+    assert.deepEqual(parseListMarker("- [ ] todo"), { full: "- [ ] ", rest: "todo", continued: "- [ ] ", quote: "" })
   })
 
   it("resets a checked task item to unchecked on continue", () => {
@@ -36,7 +37,7 @@ describe("parseListMarker", () => {
   })
 
   it("continues a blockquote unchanged", () => {
-    assert.deepEqual(parseListMarker("> quote"), { full: "> ", rest: "quote", continued: "> " })
+    assert.deepEqual(parseListMarker("> quote"), { full: "> ", rest: "quote", continued: "> ", quote: "> " })
   })
 
   it("keeps leading indentation in the continued marker", () => {
@@ -67,6 +68,26 @@ describe("parseListMarker", () => {
 
   it("keeps the gap length in the continued marker, mapping each gap character to one space", () => {
     assert.equal(parseListMarker("-\u00A0\u3000\u00A0a").continued, "-   ")
+  })
+
+  it("continues a task box without a following space as a plain bullet", () => {
+    assert.equal(parseListMarker("- [ ]x").continued, "- ")
+  })
+
+  it("does not treat a dash thematic break as a list item", () => {
+    assert.equal(parseListMarker("- - -"), null)
+  })
+
+  it("continues a bare nested quote with its whole prefix", () => {
+    const parsed = parseListMarker(">> a")
+    assert.equal(parsed.continued, ">> ")
+    assert.equal(parsed.quote, ">> ")
+  })
+
+  it("keeps the quote prefix in front of a list continued inside a quote", () => {
+    const parsed = parseListMarker("> - a")
+    assert.equal(parsed.quote, "> ")
+    assert.equal(parsed.continued, "> - ")
   })
 })
 
@@ -219,6 +240,84 @@ describe("enterAction", () => {
     expectNoEnter("- a\n- |", { isComposing: true })
     expectNoEnter("- a\n  - |", { isComposing: true })
     expectNoEnter("- a\n- |", { shiftKey: true })
+  })
+})
+
+describe("enterAction on quoted lists, ordered tasks and thematic breaks", () => {
+  it("continues a bullet inside a quote with the prefix", () => {
+    expectEnter("> - a|", "> - a\n> - |")
+  })
+
+  it("continues a quote line with its whole prefix", () => {
+    expectEnter(">> a|", ">> a\n>> |")
+  })
+
+  it("continues a spaced nested quote prefix", () => {
+    expectEnter("> > a|", "> > a\n> > |")
+  })
+
+  it("continues an ordered item inside a quote with the next number", () => {
+    expectEnter("> 1. a|", "> 1. a\n> 2. |")
+  })
+
+  it("continues a checked task inside a quote as unchecked", () => {
+    expectEnter("> - [x] a|", "> - [x] a\n> - [ ] |")
+  })
+
+  it("leaves the list on an empty item inside a quote but keeps the quote", () => {
+    expectEnter("> - a\n> - |", "> - a\n> |")
+  })
+
+  it("exits an empty nested quote line in one step", () => {
+    expectEnter(">> a\n>> |", ">> a\n\n|")
+  })
+
+  it("continues an ordered task with the next number and an unchecked box", () => {
+    expectEnter("1. [ ] a|", "1. [ ] a\n2. [ ] |")
+  })
+
+  it("continues a parenthesised ordered task with the next number and an unchecked box", () => {
+    expectEnter("1) [x] a|", "1) [x] a\n2) [ ] |")
+  })
+
+  it("continues a task box without a following space as a plain bullet", () => {
+    expectEnter("- [ ]x|", "- [ ]x\n- |")
+  })
+
+  it("returns null for a dash thematic break", () => {
+    expectNoEnter("- - -|")
+  })
+
+  it("returns null for a star thematic break", () => {
+    expectNoEnter("* * *|")
+  })
+
+  it("returns null for a thematic break with uneven spacing", () => {
+    expectNoEnter("-  -  -|")
+  })
+
+  it("treats a dash-separated line with text as an ordinary item", () => {
+    expectEnter("- a - b|", "- a - b\n- |")
+  })
+
+  it("keeps a quote prefix written without a space after the marker", () => {
+    expectEnter(">- a|", ">- a\n>- |")
+  })
+
+  it("continues a list inside a nested quote with the full prefix", () => {
+    expectEnter("> > - a|", "> > - a\n> > - |")
+  })
+
+  it("returns null for a thematic break inside a quote", () => {
+    expectNoEnter("> - - -|")
+  })
+
+  it("rewrites a full-width gap after a quote marker to an ASCII space", () => {
+    expectEnter(">\u3000- a|", "> - a\n> - |")
+  })
+
+  it("rewrites a full-width gap after a bullet inside a quote to an ASCII space", () => {
+    expectEnter("> -\u3000a|", "> - a\n> - |")
   })
 })
 

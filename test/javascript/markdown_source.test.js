@@ -49,6 +49,14 @@ describe("normalizeListGaps", () => {
     assert.equal(source.normalizeListGaps("-　[ ]　x"), "- [ ] x")
   })
 
+  it("turns a full-width gap after a bullet inside a quote into an ASCII space", () => {
+    assert.equal(source.normalizeListGaps("> -\u3000a"), "> - a")
+  })
+
+  it("turns a full-width gap after a quote marker into an ASCII space", () => {
+    assert.equal(source.normalizeListGaps(">\u3000- a"), "> - a")
+  })
+
   it("keeps an unclosed fence open to the end of the document", () => {
     assert.equal(source.normalizeListGaps("```\n-　a"), "```\n-　a")
   })
