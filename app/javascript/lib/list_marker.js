@@ -1,3 +1,5 @@
+import { insideFence } from "./markdown_source.js"
+
 // List-marker parsing shared with the list continuation UI.
 // Unit-tested; the controller owns key handling on top of these.
 
@@ -81,6 +83,37 @@ function findParentItem(value, lineStart, width) {
   return null
 }
 
+const ATX_HEADING = /^ {0,3}#{1,6}([ \t]|$)/
+
+// A bare quote prefix parses as a marker too.
+const isListItem = (line) => {
+  const marker = parseListMarker(line)
+  return marker !== null && marker.full !== marker.quote
+}
+
+// CommonMark: only an ordered item starting at 1 can interrupt a paragraph.
+function isParagraphAbove(value, lineStart, quote) {
+  if (lineStart === 0) return false
+  const prevEnd = lineStart - 1
+  const prevStart = prevEnd > 0 ? value.lastIndexOf("\n", prevEnd - 1) + 1 : 0
+  const prev = value.slice(prevStart, prevEnd)
+  if (prev.trim() === "" || insideFence(value, prevStart)) return false
+  const prevQuote = prev.match(QUOTE_PREFIX)?.[0] ?? ""
+  if (asciiGap(prevQuote) !== asciiGap(quote)) return false
+  const text = prev.slice(prevQuote.length)
+  if (text.trim() === "" || isListItem(text) || ATX_HEADING.test(text) || THEMATIC_BREAK.test(text)) return false
+
+  let end = prevStart - 1
+  while (end >= 0) {
+    const start = end > 0 ? value.lastIndexOf("\n", end - 1) + 1 : 0
+    const above = value.slice(start, end)
+    if (above.trim() === "") break
+    if (isListItem(above)) return false
+    end = start - 1
+  }
+  return true
+}
+
 // Enter on a list line: continue the marker, or exit when the marker is empty.
 // null leaves Enter to the browser.
 export function enterAction({ value, selectionStart, selectionEnd, isComposing, shiftKey, ctrlKey, metaKey, altKey }) {
@@ -92,8 +125,20 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   const { lineStart, lineEnd, line } = currentLine(value, selectionStart)
   const marker = parseListMarker(line)
   if (!marker) return null
+  if (insideFence(value, lineStart)) return null
 
-  if (marker.rest.trim() === "") {
+  const hasRest = marker.rest.trim() !== ""
+  const offset = selectionStart - lineStart
+  if (hasRest && offset < marker.full.length) {
+    if (!marker.quote || offset < marker.quote.length) return null
+    const text = `\n${asciiGap(marker.quote)}`
+    const caret = selectionStart + text.length
+    return { edit: { start: selectionStart, end: selectionStart, text, selectionStart: caret, selectionEnd: caret } }
+  }
+  const ordered = line.slice(marker.quote.length).match(/^[ \t]*(\d+)[.)]/)
+  if (hasRest && ordered && Number(ordered[1]) !== 1 && isParagraphAbove(value, lineStart, marker.quote)) return null
+
+  if (!hasRest) {
     if (marker.quote && marker.quote !== marker.full) {
       const text = asciiGap(marker.quote)
       const caret = lineStart + text.length
