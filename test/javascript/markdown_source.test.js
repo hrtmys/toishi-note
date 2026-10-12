@@ -91,6 +91,52 @@ describe("normalizeListGaps", () => {
   })
 })
 
+describe("fenceStep", () => {
+  // Folds fenceStep over the lines, starting from null (no open fence).
+  const fenceFlags = (lines) => {
+    let fence = null
+    return lines.map((line) => {
+      const step = source.fenceStep(fence, line)
+      fence = step.fence
+      return step.inFence
+    })
+  }
+
+  it("marks the opener, body and closer as inside and the line after the closer as outside", () => {
+    assert.deepEqual(fenceFlags(["```", "x", "```", "after"]), [true, true, true, false])
+  })
+
+  it("keeps an unclosed fence open to the end", () => {
+    assert.deepEqual(fenceFlags(["```js", "x", "y"]), [true, true, true])
+  })
+
+  it("does not close a four-tilde fence with a three-tilde line", () => {
+    assert.deepEqual(fenceFlags(["~~~~", "~~~", "x", "~~~~", "after"]), [true, true, true, true, false])
+  })
+
+  it("does not treat a fence indented four spaces as an opener", () => {
+    assert.deepEqual(fenceFlags(["    ```", "x"]), [false, false])
+  })
+
+  it("does not treat a backtick opener whose info string has a backtick as an opener", () => {
+    assert.deepEqual(fenceFlags(["``` a`b", "x"]), [false, false])
+  })
+})
+
+describe("insideFence", () => {
+  it("is true for a line in the body of a fence", () => {
+    assert.equal(source.insideFence("```\n- a\n```", 4), true)
+  })
+
+  it("is false for a line after the closer", () => {
+    assert.equal(source.insideFence("```\nx\n```\n- a", 10), false)
+  })
+
+  it("is true for a line inside an unclosed fence", () => {
+    assert.equal(source.insideFence("```js\n1. a", 6), true)
+  })
+})
+
 describe("trimMarkdown", () => {
   it("trims leading and trailing newlines", () => {
     assert.equal(source.trimMarkdown("\n\n# A\n\n"), "# A")

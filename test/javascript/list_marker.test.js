@@ -321,6 +321,104 @@ describe("enterAction on quoted lists, ordered tasks and thematic breaks", () =>
   })
 })
 
+describe("enterAction inside fences, before a marker, and after a paragraph", () => {
+  it("returns null for a bullet inside a backtick fence", () => {
+    expectNoEnter("```\n- a|\n```")
+  })
+
+  it("returns null for an ordered item inside an unclosed fence with an info string", () => {
+    expectNoEnter("```js\n1. a|")
+  })
+
+  it("does not let a shorter tilde line close a longer tilde fence", () => {
+    expectNoEnter("~~~~\n~~~\n- a|\n~~~~")
+  })
+
+  it("continues a bullet after a fence closes", () => {
+    expectEnter("```\nx\n```\n- a|", "```\nx\n```\n- a\n- |")
+  })
+
+  it("continues a bullet after a line indented four spaces, which is not a fence", () => {
+    expectEnter("    ```\n- a|", "    ```\n- a\n- |")
+  })
+
+  it("returns null on the opening fence line", () => {
+    expectNoEnter("```|")
+  })
+
+  it("returns null on the closing fence line", () => {
+    expectNoEnter("```\nx\n```|")
+  })
+
+  it("returns null with the caret before a bullet", () => {
+    expectNoEnter("|- a")
+  })
+
+  it("returns null with the caret in the indent before a marker", () => {
+    expectNoEnter("  |- a")
+  })
+
+  it("returns null with the caret inside a marker", () => {
+    expectNoEnter("-| a")
+  })
+
+  it("keeps the quote prefix when the caret is after it and before the marker", () => {
+    expectEnter("> |- a", "> \n> |- a")
+  })
+
+  it("returns null with the caret inside a quote prefix", () => {
+    expectNoEnter(">| - a")
+  })
+
+  it("moves the text after the caret onto a new item when the caret is right after the marker", () => {
+    expectEnter("- |a", "- \n- |a")
+  })
+
+  it("exits an empty item below a list item, leaving a blank line", () => {
+    expectEnter("- a\n|- ", "- a\n\n|")
+  })
+
+  it("returns null for an ordered item after a paragraph line when its number is not 1", () => {
+    expectNoEnter("para\n2. x|")
+  })
+
+  it("continues an ordered item after a paragraph line when its number is 1", () => {
+    expectEnter("para\n1. x|", "para\n1. x\n2. |")
+  })
+
+  it("continues an ordered item after a heading line", () => {
+    expectEnter("# H\n2. x|", "# H\n2. x\n3. |")
+  })
+
+  it("continues an ordered item after a blank line", () => {
+    expectEnter("para\n\n2. x|", "para\n\n2. x\n3. |")
+  })
+
+  it("continues an ordered item after a list item", () => {
+    expectEnter("- a\n2. x|", "- a\n2. x\n3. |")
+  })
+
+  it("continues a bullet after a paragraph line", () => {
+    expectEnter("para\n- x|", "para\n- x\n- |")
+  })
+
+  it("continues an ordered item after an indented continuation line of a list item", () => {
+    expectEnter("- a\n  b\n2. x|", "- a\n  b\n2. x\n3. |")
+  })
+
+  it("returns null for an ordered item inside a quote after a quoted paragraph line", () => {
+    expectNoEnter("> para\n> 2. x|")
+  })
+
+  it("returns null for a parenthesised ordered item after a paragraph line when its number is not 1", () => {
+    expectNoEnter("para\n2) x|")
+  })
+
+  it("exits an empty ordered item after a paragraph line, leaving a blank line", () => {
+    expectEnter("para\n2. |", "para\n\n|")
+  })
+})
+
 const expectTab = (before, after, extra = {}) => {
   const start = caretAt(before)
   const expected = caretAt(after)
