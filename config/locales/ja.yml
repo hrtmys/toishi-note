@@ -86,6 +86,7 @@ ja:
       more_actions: "その他の操作"
     notebooks:
       heading: "NOTEBOOKS"
+      new: "新規ノートブック"
       new_prompt: "ノートブック名を入力してください"
       rename_prompt: "新しいノートブック名を入力してください"
       export: "エクスポート (.zip)"
@@ -100,6 +101,7 @@ ja:
       heading: "ピン留め"
     folders:
       heading: "FOLDERS"
+      new: "新規フォルダ"
       new_prompt: "フォルダ名を入力してください"
       rename_prompt: "新しいフォルダ名を入力してください"
       delete_confirm: "このフォルダを削除しますか？"

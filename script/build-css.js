@@ -1,6 +1,5 @@
-// Entry point for `yarn watch:css`: `node --watch-path` reruns this file whenever a
-// stylesheet changes. Node's built-in watcher replaces nodemon, whose chokidar 3
-// dependency pulls in an unpatched `braces` advisory that fails `yarn audit` in CI.
+// `yarn watch:css` reruns this via `node --watch-path`. Not nodemon: its chokidar 3 pulls in
+// an unpatched braces advisory that fails `yarn audit`.
 import { execSync } from "node:child_process"
 
 try {

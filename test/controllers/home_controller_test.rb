@@ -438,6 +438,20 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "#note_title_input[aria-label=?]", I18n.t("notes.title_placeholder", locale: :ja)
   end
 
+  test "sidebar icon-only buttons carry accessible names, in the user's locale" do
+    notebook = users(:one).notebooks.create!(name: "Notebook")
+    folder = notebook.folders.create!(name: "Folder")
+    labels = %w[home.notebooks.new home.folders.new home.files.new_md home.files.new_todo home.files.new_scrap
+                home.sort.updated home.sort.created home.sort.title]
+
+    %w[en ja].each do |locale|
+      users(:one).update!(locale: locale)
+      get root_url(notebook_id: notebook.id, folder_id: folder.id)
+      assert_response :success
+      labels.each { |key| assert_select "#sidebarMenu button[aria-label=?]", I18n.t(key, locale: locale) }
+    end
+  end
+
   test "the Settings modal renders in Japanese for a ja user, except the Language label" do
     users(:one).update!(locale: "ja")
 

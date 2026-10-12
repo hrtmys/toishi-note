@@ -110,6 +110,7 @@ en:
       more_actions: "More actions"
     notebooks:
       heading: "NOTEBOOKS"
+      new: "New notebook"
       new_prompt: "Enter a notebook name"
       rename_prompt: "Enter a new notebook name"
       export: "Export (.zip)"
@@ -124,6 +125,7 @@ en:
       heading: "Pinned"
     folders:
       heading: "FOLDERS"
+      new: "New folder"
       new_prompt: "Enter a folder name"
       rename_prompt: "Enter a new folder name"
       delete_confirm: "Delete this folder?"
