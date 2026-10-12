@@ -1,10 +1,30 @@
 // The Markdown grammar mirrors TodoPaste (app/models/todo_paste.rb); the
 // preview only creates items, so a removal marker is rejected, never honoured.
 import { describe, it } from "node:test"
+import { readFileSync } from "node:fs"
 import assert from "node:assert/strict"
-import { previewBulkEntries } from "../../app/javascript/lib/bulk_todo_preview.js"
+import { previewBulkEntries, parseTaskTags } from "../../app/javascript/lib/bulk_todo_preview.js"
 
 const tasks = (result) => result.entries.filter((e) => e.kind === "task")
+
+// Shared with test/models/todo_paste_test.rb: both parsers must produce these rows.
+const sharedCases = JSON.parse(readFileSync(new URL("../shared/todo_paste_cases.json", import.meta.url), "utf8"))
+
+describe("parseTaskTags: shared cases with TodoPaste", () => {
+  for (const row of sharedCases) {
+    it(`shared case: ${row.name}`, () => {
+      const got = parseTaskTags(row.line)
+      assert.deepEqual({ content: got.content, id: got.id, due: got.due }, { content: row.content, id: row.id, due: row.due })
+    })
+  }
+})
+
+describe("previewBulkEntries: reordered tags", () => {
+  it("shows a reversed (due) (id) line as its content, not as an id-bearing add", () => {
+    const result = previewBulkEntries("## G\n- [ ] Buy milk (due: 2026-09-30) (id: 1a)\n- [ ] Buy eggs (id: 1a) (due: 2026-09-30)")
+    assert.deepEqual(tasks(result).map((t) => t.content), [ "Buy milk", "Buy eggs" ])
+  })
+})
 
 describe("previewBulkEntries: JSON", () => {
   it("keeps strings and objects with content, rejects a bare number", () => {

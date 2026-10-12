@@ -1,12 +1,11 @@
-// Mirrors TodoPaste's grammar (app/models/todo_paste.rb). The modal only
-// ever creates items, so an (id:) tag is discarded and a removal marker
-// is rejected rather than honoured.
+// Mirrors TodoPaste's grammar (app/models/todo_paste.rb), including parseTaskTags,
+// pinned by test/shared/todo_paste_cases.json. The modal only creates items, so an
+// (id:) tag is discarded and a removal marker is rejected, not honoured.
 const TASK_LINE = /^- \[( |x)\] (.*)$/
 const HEADING_LINE = /^##\s*(.*)$/
-const ID_TAG = /^(.*?)\s*\(id:\s*([^)]*)\)$/
-const DUE_TAG = /^(.*?)\s*\(due:\s*([^)]*)\)$/
+const TAG = /^(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)$/is
 const VALID_ID_BODY = /^([0-9a-z]+)(;delete!)?$/
-const VALID_DUE_VALUE = /^(none|\d{4}-\d{2}-\d{2})$/
+const DUE_SHAPE = /^\d{4}-\d{2}-\d{2}$/
 
 // Convenience only: the server re-parses and re-validates independently.
 export function previewBulkEntries(raw) {
@@ -59,30 +58,76 @@ function invalidTask(raw, reason = "invalid") {
   return { kind: "task", valid: false, reason, raw }
 }
 
-function extractIdTag(rest) {
-  const match = rest.match(ID_TAG)
-  if (!match) return { content: rest, deleting: false }
+// Mirrors TodoPaste#extract_tags: the same right-to-left scan, binding rules and
+// content. Returns the content with consumed tags removed, plus the bound id,
+// due ("none", YYYY-MM-DD or null) and whether the bound id carries ;delete!.
+export function parseTaskTags(rest) {
+  const ids = []
+  const dues = []
+  let literalDue = false
+  let stop = rest.length
 
-  const [ , pre, body ] = match
-  const valid = body.match(VALID_ID_BODY)
-  if (!valid) return { content: rest, deleting: false }
+  for (;;) {
+    const match = rest.slice(0, stop).match(TAG)
+    if (!match) break
 
-  return { content: pre, deleting: !!valid[2] }
+    const key = (match[2] ?? match[4]).toLowerCase()
+    const body = match[3] ?? match[5]
+    const start = match[1].length
+
+    if (key === "id") {
+      const valid = body.match(VALID_ID_BODY)
+      if (!valid) break
+
+      ids.push({ start, stop, id: parseInt(valid[1], 36), deleting: !!valid[2] })
+    } else {
+      if (literalDue || dues.length > 0) break
+
+      const due = parseDue(body)
+      if (due === null) literalDue = true
+      else dues.push({ start, stop, due })
+    }
+
+    stop = start
+  }
+
+  const boundId = ids.length === 1 ? ids[0] : null
+  const boundDue = dues[0] ?? null
+  const consumed = [ boundId, boundDue ].filter(Boolean).sort((a, b) => b.start - a.start)
+
+  let content = rest
+  for (const span of consumed) content = content.slice(0, span.start) + content.slice(span.stop)
+
+  return {
+    content: trimAsciiSpace(content),
+    id: boundId ? boundId.id : null,
+    due: boundDue ? boundDue.due : null,
+    deleting: boundId ? boundId.deleting : false,
+  }
 }
 
-function stripDueTag(content) {
-  const match = content.match(DUE_TAG)
-  if (!match) return content
+// Returns "none", the date itself when it names a real calendar day, or null.
+function parseDue(value) {
+  if (value === "none") return "none"
+  if (!DUE_SHAPE.test(value)) return null
 
-  const [ , pre, value ] = match
-  return VALID_DUE_VALUE.test(value) ? pre : content
+  const [ year, month, day ] = value.split("-").map(Number)
+  const date = new Date(0)
+  date.setUTCFullYear(year, month - 1, day)
+  const real = date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  return real ? value : null
+}
+
+// Ruby's strip removes only ASCII whitespace; JS trim() also removes U+3000 and NBSP.
+function trimAsciiSpace(text) {
+  return text.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, "")
 }
 
 function classifyMarkdownTask(checked, rest, rawLine) {
-  const { content: withoutId, deleting } = extractIdTag(rest)
-  if (deleting) return invalidTask(rawLine, "delete_unsupported")
+  const tags = parseTaskTags(rest)
+  if (tags.deleting) return invalidTask(rawLine, "delete_unsupported")
 
-  const content = stripDueTag(withoutId).trim()
+  const content = tags.content
   return content ? validTask(content, checked) : invalidTask(rawLine)
 }
 

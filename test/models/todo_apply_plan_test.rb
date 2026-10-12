@@ -100,6 +100,15 @@ class TodoApplyPlanTest < ActiveSupport::TestCase
     assert_not_equal other_item, deletes.first.item
   end
 
+  test "a reversed (id: …) (due: …) line binds the item and plans no operation" do
+    item = @note.todo_items.create!(content: "Renew passport", due_date: Date.new(2026, 9, 1))
+
+    plan = plan_for("## Groceries\n- [ ] Renew passport (id: #{item.id.to_s(36)}) (due: 2026-09-01)")
+
+    assert_empty plan.operations
+    assert_empty plan.skipped
+  end
+
   test "content change on a bound id produces a delete and an add, both present" do
     item = @note.todo_items.create!(content: "Buy milk")
 

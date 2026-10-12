@@ -13,8 +13,8 @@ class TodoPaste
 
   TASK_LINE = /\A- \[( |x)\] (.*)\z/
   HEADING_LINE = /\A##\s*(.*)\z/
-  ID_TAG = /\A(.*?)\s*\(id:\s*([^)]*)\)\z/m
-  DUE_TAG = /\A(.*?)\s*\(due:\s*([^)]*)\)\z/m
+  TAG = /\A(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)\z/mi
+  Span = Struct.new(:start, :stop, :value, :delete, keyword_init: true)
   VALID_ID_BODY = /\A([0-9a-z]+)(;delete!)?\z/
   VALID_DUE_VALUE = /\A(none|\d{4}-\d{2}-\d{2})\z/
 
@@ -66,32 +66,57 @@ class TodoPaste
   end
 
   def build_line(heading, checked, rest)
-    content, id, delete = extract_id(rest)
-    content, due = extract_due(content)
+    content, id, delete, due = extract_tags(rest)
     Line.new(heading: heading, checked: checked, content: content.strip, due: due, id: id, delete: delete)
   end
 
-  # The id tag is the rightmost suffix. A body that doesn't cleanly match
-  # <base36> or <base36>;delete! leaves the whole group as literal
-  # content — fail-closed, so a typo'd command can never silently bind.
-  def extract_id(rest)
-    return [ rest, nil, false ] unless (match = ID_TAG.match(rest))
+  # An AI editing todos.md may reorder or mangle these tags; losing an id would
+  # turn an update into a duplicate, and binding the wrong one would overwrite
+  # another item, so repeated ids bind none. Cases: test/shared/todo_paste_cases.json.
+  def extract_tags(rest)
+    ids = []
+    dues = []
+    literal_due = false
+    stop = rest.length
 
-    pre, body = match[1], match[2]
-    return [ rest, nil, false ] unless (valid = VALID_ID_BODY.match(body))
+    while (match = TAG.match(rest[0, stop]))
+      key = (match[2] || match[4]).downcase
+      body = match[3] || match[5]
+      start = match[1].length
 
-    [ pre, valid[1].to_i(36), valid[2].present? ]
+      if key == "id"
+        valid = VALID_ID_BODY.match(body)
+        break if valid.nil?
+
+        ids << Span.new(start: start, stop: stop, value: valid[1].to_i(36), delete: valid[2].present?)
+      else
+        break if literal_due || dues.any?
+
+        due = parse_due(body)
+        if due.nil?
+          literal_due = true
+        else
+          dues << Span.new(start: start, stop: stop, value: due)
+        end
+      end
+
+      stop = start
+    end
+
+    bound_id = ids.size == 1 ? ids.first : nil
+    bound_due = dues.first
+    consumed = [ bound_id, bound_due ].compact.sort_by { |span| -span.start }
+    content = consumed.reduce(rest) { |text, span| text[0...span.start] + text[span.stop..] }
+
+    [ content, bound_id&.value, bound_id&.delete || false, bound_due&.value ]
   end
 
-  def extract_due(content)
-    return [ content, nil ] unless (match = DUE_TAG.match(content))
+  def parse_due(value)
+    return :none if value == "none"
+    return nil unless VALID_DUE_VALUE.match?(value)
 
-    pre, value = match[1], match[2]
-    return [ content, nil ] unless VALID_DUE_VALUE.match?(value)
-
-    due = value == "none" ? :none : Date.iso8601(value)
-    [ pre, due ]
+    Date.iso8601(value)
   rescue ArgumentError
-    [ content, nil ]
+    nil
   end
 end

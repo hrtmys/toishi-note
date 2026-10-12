@@ -73,6 +73,95 @@ class TodoPasteTest < ActiveSupport::TestCase
     assert_equal :none, result.lines.sole.due
   end
 
+  test "reversed tags (id before due) parse the same as the emitted order" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_equal 12 * 36 + 8, line.id
+  end
+
+  test "reversed tags separated by extra spaces parse cleanly" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk   (id: c8)    (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_equal 12 * 36 + 8, line.id
+  end
+
+  test "a due tag alone parses to a due with no id" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01)").lines.sole
+    assert_equal "Buy milk", line.content
+    assert_equal Date.new(2026, 9, 1), line.due
+    assert_nil line.id
+  end
+
+  test "parentheses inside content survive reversed tags" do
+    result = TodoPaste.parse("## G\n- [ ] Draft report (draft) (id: c8) (due: 2026-09-01)\n- [ ] パスポートを更新（期限あり）(id: c9) (due: 2026-09-01)")
+    assert_equal [ "Draft report (draft)", "パスポートを更新（期限あり）" ], result.lines.map(&:content)
+    assert_equal [ 12 * 36 + 8, 12 * 36 + 9 ], result.lines.map(&:id)
+  end
+
+  test "a repeated id tag binds no id and keeps both in content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-09-01) (id: d9)").lines.sole
+    assert_equal "Buy milk (id: c8) (id: d9)", line.content
+    assert_nil line.id
+    assert_equal Date.new(2026, 9, 1), line.due
+  end
+
+  # Shared with test/javascript/bulk_todo_preview.test.js: both parsers must
+  # produce these rows, so the preview and the apply cannot drift.
+  SHARED_CASES = JSON.parse(File.read(Rails.root.join("test/shared/todo_paste_cases.json")))
+
+  SHARED_CASES.each do |row|
+    test "shared case: #{row['name']}" do
+      line = TodoPaste.parse("## G\n- [ ] #{row['line']}").lines.sole
+      assert_equal row["content"], line.content
+      if row["id"].nil?
+        assert_nil line.id
+      else
+        assert_equal row["id"], line.id
+      end
+      expected_due = shared_due(row["due"])
+      if expected_due.nil?
+        assert_nil line.due
+      else
+        assert_equal expected_due, line.due
+      end
+    end
+  end
+
+  def shared_due(value)
+    return nil if value.nil?
+
+    value == "none" ? :none : Date.iso8601(value)
+  end
+
+  test "an id before a malformed due tag still binds, and the due stays literal content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: bogus)").lines.sole
+    assert_equal "Buy milk (due: bogus)", line.content
+    assert_equal 12 * 36 + 8, line.id
+    assert_nil line.due
+  end
+
+  test "an impossible calendar date is a malformed due, so an id before it still binds" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-13-45)").lines.sole
+    assert_equal "Buy milk (due: 2026-13-45)", line.content
+    assert_equal 12 * 36 + 8, line.id
+    assert_nil line.due
+  end
+
+  test "a malformed id at the end still stops the scan, so a due before it stays content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01) (id: !!!)").lines.sole
+    assert_equal "Buy milk (due: 2026-09-01) (id: !!!)", line.content
+    assert_nil line.id
+    assert_nil line.due
+  end
+
+  test "a valid due to the left of a malformed due stays content" do
+    line = TodoPaste.parse("## G\n- [ ] Buy milk (due: 2026-09-01) (due: bogus)").lines.sole
+    assert_equal "Buy milk (due: 2026-09-01) (due: bogus)", line.content
+    assert_nil line.due
+  end
+
   test "ignores the preamble prose before any heading" do
     result = TodoPaste.parse(<<~MD)
       This is a snapshot of open tasks from Toishi Note, for handing off to an AI assistant.
