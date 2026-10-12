@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
-import { noteSaveQueue } from "./autosave_controller"
+import { queueForNote, writeWrapperVersion } from "./autosave_controller"
 
 // Owns the "changed on another device" banner, shown on a 409 (see
 // autosave_controller.js's note:conflict event). Never auto-resolves —
@@ -23,10 +23,13 @@ export default class extends Controller {
       event.preventDefault()
       event.returnValue = ""
     }
+
+    this.queue().attach(this.element, { version: Number(this.element.dataset.noteLockVersion) })
   }
 
   disconnect() {
     this.element.removeEventListener("note:conflict", this.showBound)
+    this.queue().detach(this.element)
     this.stopWarning()
   }
 
@@ -35,7 +38,7 @@ export default class extends Controller {
     // Held edits exist only in this tab until the user decides; closing
     // or reloading it now would lose them without a word.
     const queue = this.queue()
-    if (queue?.held && queue.hasUnsaved) window.addEventListener("beforeunload", this.warnBeforeUnload)
+    if (queue.held && queue.hasUnsaved) window.addEventListener("beforeunload", this.warnBeforeUnload)
   }
 
   stopWarning() {
@@ -43,7 +46,7 @@ export default class extends Controller {
   }
 
   queue() {
-    return noteSaveQueue(this.element)
+    return queueForNote(this.element.dataset.noteUrl, this.element.dataset.noteLockVersion)
   }
 
   // Discards whatever's in progress and shows the server's current
@@ -51,7 +54,7 @@ export default class extends Controller {
   reload() {
     if (!window.confirm(this.reloadConfirmValue)) return
 
-    this.queue()?.discard()
+    this.queue().discard()
     this.stopWarning()
     window.location.reload()
   }
@@ -61,7 +64,6 @@ export default class extends Controller {
   // resubmission has landed; a failure keeps it open with a toast.
   keepMine() {
     const queue = this.queue()
-    if (!queue) return
     if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.disabled = true
 
     const fields = Array.from(this.element.querySelectorAll("[data-controller~='autosave'][name]"))
@@ -71,7 +73,7 @@ export default class extends Controller {
 
     Promise.all(saves)
       .then((outcomes) => {
-        this.element.dataset.noteLockVersion = queue.version
+        writeWrapperVersion(queue)
         if (outcomes.every((outcome) => outcome === "saved")) {
           this.bannerTarget.classList.add("d-none")
         } else if (outcomes.includes("failed")) {

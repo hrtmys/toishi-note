@@ -295,6 +295,7 @@ ja:
       failed: "%{filename} のアップロードに失敗しました"
     autosave:
       save_failed: "変更を保存できませんでした — 通信状況を確認してください。"
+      changed_elsewhere: "「%{title}」は別の場所で変更されたため保存できませんでした。"
     scrap:
       show_more: *scrap_show_more
       show_less: *scrap_show_less

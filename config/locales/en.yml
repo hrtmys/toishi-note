@@ -323,6 +323,7 @@ en:
       failed: "Failed to upload %{filename}"
     autosave:
       save_failed: "Couldn't save your changes — check your connection."
+      changed_elsewhere: "“%{title}” couldn't be saved because it was changed elsewhere."
     scrap:
       show_more: *scrap_show_more
       show_less: *scrap_show_less

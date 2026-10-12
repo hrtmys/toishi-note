@@ -6,6 +6,6 @@
     placeholder="<%= t("notes.title_placeholder") %>"
     aria-label="<%= t("notes.title_placeholder") %>"
     data-controller="autosave" 
-    data-action="input->autosave#save compositionstart->autosave#compositionstart compositionend->autosave#compositionend" 
+    data-action="input->autosave#save compositionstart->autosave#compositionstart compositionend->autosave#compositionend autosave:server-value->autosave#serverValue blur->autosave#blur" 
     data-autosave-url-value="<%= note_path(note) %>"
     name="note[title]">

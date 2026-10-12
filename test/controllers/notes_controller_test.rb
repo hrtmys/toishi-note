@@ -297,6 +297,42 @@ class NotesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(%r{[/"]}, exported_filename(response.headers["Content-Disposition"]))
   end
 
+
+  test "a content save that changes the auto-title sends a server_value for this note's title input instead of replacing it" do
+    note = @folder.notes.create!(notebook: @notebook, title: "", note_type: "md", content: "Old line")
+
+    patch note_url(note), params: { note: { content: "Draft", lock_version: note.lock_version } }, as: :turbo_stream
+    assert_response :success
+    assert_equal "Draft", note.reload.title
+
+    stream = Nokogiri::HTML5.fragment(response.body).at_css('turbo-stream[action="server_value"]')
+    assert stream, "expected a server_value stream"
+    assert_equal %(#note_title_input[data-autosave-url-value="#{note_path(note)}"]), stream["targets"]
+    assert_equal "Draft", stream["value"]
+    assert_equal note_path(note), stream["note-url"]
+    assert_select 'turbo-stream[action="replace"][target="note_title_input"]', count: 0
+
+    patch note_url(note), params: { note: { title: "Mine", lock_version: note.lock_version } }, as: :turbo_stream
+    assert_response :success
+    assert_select %(turbo-stream[action="update"][target="note_#{note.id}_title"])
+    assert_select 'turbo-stream[action="server_value"]', count: 0
+  end
+
+  test "an auto-title made of markup is escaped in the sidebar label and round-trips raw through server_value" do
+    note = @folder.notes.create!(notebook: @notebook, title: "", note_type: "md", content: "Old line")
+    raw = "<img src=x onerror=alert(1)>"
+
+    patch note_url(note), params: { note: { content: "#{raw}\nbody", lock_version: note.lock_version } }, as: :turbo_stream
+    assert_response :success
+    assert_equal raw, note.reload.title
+
+    assert_not_includes response.body, "<img src=x"
+    label = Nokogiri::HTML5.fragment(response.body).at_css(%(turbo-stream[action="update"][target="note_#{note.id}_title"] template))
+    assert_includes label.inner_html, "&lt;img"
+    stream = Nokogiri::HTML5.fragment(response.body).at_css('turbo-stream[action="server_value"]')
+    assert_equal raw, stream["value"]
+  end
+
   private
 
     def exported_filename(disposition)

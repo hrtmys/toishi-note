@@ -1,3 +1,7 @@
+<% if @current_note %>
+  <%# The editor's live queue state can't be restored from a cloned page. %>
+  <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<% end %>
 <div class="container-fluid vh-100 d-flex flex-column p-0">
   <div class="row g-0 flex-grow-1 overflow-hidden">
 
@@ -31,12 +35,12 @@
           <% if @current_note %>
           <%# note-conflict is unconditional (title editing, and its autosave, happens for every
               note type) — editor only joins it for md notes, which also autosave content.
-              data-note-lock-version is the one shared version both fields' autosave reads and
-              writes, so editing title then content moments later doesn't conflict with itself —
-              see autosave_controller.js. %>
+              data-note-lock-version mirrors the note's save queue version, which both fields
+              share — see lib/save_queue.js. %>
           <div class="p-4 d-flex flex-column h-100"
               data-controller="note-conflict<%= ' editor' if @current_note.note_type == 'md' %>"
               data-note-lock-version="<%= @current_note.lock_version %>"
+              data-note-url="<%= note_path(@current_note) %>"
               data-note-conflict-reload-confirm-value="<%= t("notes.conflict.reload_confirm") %>">
 
             <div data-note-conflict-target="banner" class="alert alert-warning d-none d-flex justify-content-between align-items-center mb-2 py-2 flex-shrink-0" role="alert">

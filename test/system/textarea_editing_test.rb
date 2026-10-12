@@ -74,21 +74,37 @@ class TextareaEditingTest < ApplicationSystemTestCase
       assert_equal "- first\n- second\nplain", textarea.value
     end
 
-    phase "6 list typing on a slow connection never conflicts with itself" do
-      clear(textarea)
-      wait_until("the cleared note never saved") { @note.reload.content == "" }
-      # Each save takes longer than the pause between bursts, so on a single
-      # device a later save always starts while an earlier one is in flight.
-      delay_fetch(1500)
-      textarea.send_keys("- 一つ目", :enter)
-      sleep 0.7
-      textarea.send_keys("二つ目", :enter)
-      sleep 0.7
-      textarea.send_keys("三つ目")
-      final = textarea.value
-      wait_until("the last burst never saved") { @note.reload.content == final }
+    phase "6 a content save's auto-title fills an untouched title but never overwrites one being typed" do
+      title = find("#note_title_input")
+      title.send_keys([ :control, "a" ], :backspace)
+      textarea.send_keys([ :control, "a" ], "Draft")
+      assert_field "note_title_input", with: "Draft"
+
+      execute_script(<<~JS)
+        window.__gatedSaveStarted = false
+        const innerFetch = window.fetch
+        let gated = false
+        window.fetch = (url, options = {}, ...rest) => {
+          if (!gated && String(url).includes("/notes/#{@note.id}") && (options.method || "GET").toUpperCase() !== "GET") {
+            gated = true
+            window.__gatedSaveStarted = true
+            return new Promise((resolve) => { window.__releaseSave = resolve }).then(() => innerFetch(url, options, ...rest))
+          }
+          return innerFetch(url, options, ...rest)
+        }
+      JS
+      textarea.send_keys([ :control, "a" ], "Second draft")
+      wait_until("the content save never started") { evaluate_script("window.__gatedSaveStarted") }
+
+      title.click
+      title.send_keys([ :control, "a" ], "私の題")
+      execute_script("window.__releaseSave()")
+
+      wait_until("the typed title never saved") { @note.reload.title == "私の題" }
+      assert_field "note_title_input", with: "私の題"
+      assert evaluate_script("document.activeElement === document.querySelector('#note_title_input')"), "the title input lost focus"
+      assert_equal "Second draft", @note.reload.content
       assert_selector "[data-note-conflict-target='banner'].d-none", visible: :all
-      restore_fetch
     end
   end
 

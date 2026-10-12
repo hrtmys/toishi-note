@@ -54,5 +54,26 @@ class NavigationTest < ApplicationSystemTestCase
         flunk "Chrome won't offer to install the app: #{errors.map { |e| e['errorId'] }.join(', ')}"
       end
     end
+
+    phase "4 leaving or reloading within the debounce saves first, and a pinned, restored note never conflicts" do
+      row = find("#note_#{@note_a.id}_title").ancestor("li")
+      row.hover
+      row.find(".hover-target-icon[title='#{I18n.t("home.notes.pin")}']").click
+      wait_until("the wrapper never adopted the pin's lock_version") do
+        evaluate_script("document.querySelector('[data-note-lock-version]').dataset.noteLockVersion") == @note_a.reload.lock_version.to_s
+      end
+
+      textarea = find("textarea[name='note[content]']")
+      textarea.send_keys(" first tail")
+      within("#notes-list") { click_on @note_b.title }
+      assert_field "note_title_input", with: @note_b.title
+      assert_includes @note_a.reload.content.to_s, "first tail"
+
+      go_back
+      find("textarea[name='note[content]']").send_keys(" second tail")
+      execute_script("window.__beforeReload = true; location.reload()")
+      wait_until("the reload was blocked or never happened") { evaluate_script("window.__beforeReload") != true }
+      wait_until("the second tail never saved") { @note_a.reload.content.to_s.include?("second tail") }
+    end
   end
 end
