@@ -1,4 +1,3 @@
-// Unit tests for lib/scroll_follow.js.
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import * as scrollFollow from "../../app/javascript/lib/scroll_follow.js"
@@ -84,5 +83,26 @@ describe("previewAnchor", () => {
 
   it("counts caret offsets in UTF-16 code units across surrogate pairs", () => {
     assert.deepEqual(anchorAt("😀😀\n\nb|"), { block: 1, start: 0, end: 1, count: 2 })
+  })
+
+  it("places a single-line block's caret at its end as a thin band at the block's end", () => {
+    const a = anchorAt("# A\n\n" + "あ".repeat(300) + "|")
+    assert.equal(a.block, 1)
+    assert.equal(a.start, 1)
+    assert.equal(a.end, 1)
+  })
+
+  it("places a single-line block's caret at its character share as a thin band", () => {
+    const a = anchorAt("# A\n\n" + "あ".repeat(150) + "|" + "あ".repeat(150))
+    assert.equal(a.block, 1)
+    assert.ok(Math.abs(a.start - 0.5) <= 0.01, `start ${a.start}`)
+    assert.ok(Math.abs(a.end - 0.5) <= 0.01, `end ${a.end}`)
+  })
+
+  it("places a one-character single-line block's caret as a thin band at its end", () => {
+    const a = anchorAt("x|")
+    assert.equal(a.block, 0)
+    assert.equal(a.start, 1)
+    assert.equal(a.end, 1)
   })
 })
