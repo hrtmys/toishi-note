@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import { renderMarkdownIntoElement } from "../lib/markdown_renderer"
+import { previewAnchor, revealScrollTop } from "../lib/scroll_follow"
 
 export default class extends Controller {
   static targets = [
@@ -67,6 +68,10 @@ export default class extends Controller {
     // apart from the browser's own caret-follow autoscroll.
     this._lastInputAt = Date.now()
 
+    // Captured now: by the debounced render the caret may have moved on.
+    this._followCaret = true
+    this._followCaretPos = this.textareaTarget.selectionEnd
+
     clearTimeout(this.previewTimer)
     this.previewTimer = setTimeout(() => this.renderPreviewNow(), 200)
   }
@@ -83,6 +88,9 @@ export default class extends Controller {
     // relative position here, restore it right after the sync render, and
     // let the MutationObserver below re-apply it while async inserts land.
     const preview = this.previewAreaTarget
+    const follow = this._followCaret
+    this._followCaret = false
+    this._pinMode = follow ? "follow" : "ratio"
     const max = preview.scrollHeight - preview.clientHeight
     this._pinnedRatio = max <= 0 ? 0 : preview.scrollTop / max
     this._pinnedToBottom = max > 0 && (max - preview.scrollTop) < 2
@@ -94,11 +102,14 @@ export default class extends Controller {
   }
 
   // One-way editor -> preview proportional follow. Preview -> editor is
-  // deliberately absent, and a manual preview scroll clears the pinned
-  // ratio (see _onPreviewScroll), so the two never fight each other.
+  // deliberately absent, and a manual preview scroll clears the pin
+  // (see _onPreviewScroll), so the two never fight each other.
   setupPreviewScrollStability() {
+    this._pinMode = null
     this._pinnedRatio = null
     this._pinnedToBottom = false
+    this._followCaret = false
+    this._followCaretPos = 0
     this._restoreUntil = 0
     this._applyingScroll = false
     this._lastAppliedScrollTop = null
@@ -125,7 +136,9 @@ export default class extends Controller {
       // anything else is the user taking over, so stop re-pinning.
       if (this._lastAppliedScrollTop !== null &&
           Math.abs(this.previewAreaTarget.scrollTop - this._lastAppliedScrollTop) < 1) return
+      this._pinMode = null
       this._pinnedRatio = null
+      this._followCaret = false
     }
     this.textareaTarget.addEventListener("scroll", this._onTextareaScroll)
     this.previewAreaTarget.addEventListener("scroll", this._onPreviewScroll)
@@ -147,6 +160,7 @@ export default class extends Controller {
       this._previewObserver.disconnect()
       this._previewObserver = null
     }
+    this._pinMode = null
     this._pinnedRatio = null
   }
 
@@ -155,6 +169,8 @@ export default class extends Controller {
     const editor = this.textareaTarget
     const editorMax = editor.scrollHeight - editor.clientHeight
     const ratio = editorMax <= 0 ? 0 : editor.scrollTop / editorMax
+    this._pinMode = "ratio"
+    this._followCaret = false
     this._pinnedRatio = ratio
     this._pinnedToBottom = ratio > 0.98
     this._restoreUntil = Date.now() + 800
@@ -162,16 +178,21 @@ export default class extends Controller {
   }
 
   restorePinnedPreviewScroll() {
-    if (this._pinnedRatio === null) return
+    if (this._pinMode === null) return
     if (Date.now() > this._restoreUntil) {
+      this._pinMode = null
       this._pinnedRatio = null
       return
     }
     const preview = this.previewAreaTarget
     const max = preview.scrollHeight - preview.clientHeight
+    const top = this._pinMode === "follow"
+      ? this.followTop()
+      : Math.round(this._pinnedToBottom ? Math.max(max, 0) : this._pinnedRatio * Math.max(max, 0))
+    if (top === null) return
     this._applyingScroll = true
     try {
-      preview.scrollTop = Math.round(this._pinnedToBottom ? Math.max(max, 0) : this._pinnedRatio * Math.max(max, 0))
+      preview.scrollTop = top
       this._lastAppliedScrollTop = preview.scrollTop
     } finally {
       // The scroll event from a programmatic scrollTop is dispatched
@@ -182,5 +203,29 @@ export default class extends Controller {
         if (this._scrollToken === token) this._applyingScroll = false
       }, 50)
     }
+  }
+
+  // Block indices only map to children while the renderer keeps one element per token.
+  followTop() {
+    const preview = this.previewAreaTarget
+    const anchor = previewAnchor(this.textareaTarget.value, this._followCaretPos)
+    if (anchor === null) return null
+
+    let top = 0
+    let height = preview.scrollHeight
+    if (anchor.block !== null && preview.children.length === anchor.count) {
+      const rect = preview.children[anchor.block].getBoundingClientRect()
+      top = rect.top - preview.getBoundingClientRect().top + preview.scrollTop
+      height = rect.height
+    }
+
+    return revealScrollTop({
+      top: top + anchor.start * height,
+      bottom: top + anchor.end * height,
+      scrollTop: preview.scrollTop,
+      viewHeight: preview.clientHeight,
+      maxScrollTop: preview.scrollHeight - preview.clientHeight,
+      margin: 40
+    })
   }
 }
