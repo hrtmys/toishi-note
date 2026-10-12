@@ -70,8 +70,12 @@ class TextareaEditingTest < ApplicationSystemTestCase
       spy_exec_command
       textarea.send_keys(:enter)
       assert_equal [ "insertText", "\n- " ], evaluate_script("window.__execCommandCalls[0]")
-      textarea.send_keys("second", :enter, :enter, "plain")
-      assert_equal "- first\n- second\nplain", textarea.value
+      textarea.send_keys("second", :enter, :enter)
+      assert_equal "- first\n- second\n\n", textarea.value
+      textarea.send_keys([ :control, "z" ])
+      assert_equal "- first\n- second\n- ", textarea.value
+      textarea.send_keys(:enter, "plain")
+      assert_equal "- first\n- second\n\nplain", textarea.value
     end
 
     phase "6 a content save's auto-title fills an untouched title but never overwrites one being typed" do
