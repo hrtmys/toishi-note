@@ -1,0 +1,61 @@
+import { marked } from "marked"
+
+const RENDERED = new Set([ "heading", "paragraph", "list", "blockquote", "code", "table", "hr" ])
+const SILENT = new Set([ "space", "def" ])
+
+export function revealScrollTop({ top, bottom, scrollTop, viewHeight, maxScrollTop, margin }) {
+  if (top >= scrollTop + margin && bottom <= scrollTop + viewHeight - margin) return null
+
+  const target = bottom - top > viewHeight - 2 * margin || top < scrollTop + margin
+    ? top - margin
+    : bottom + margin - viewHeight
+
+  return Math.min(Math.max(target, 0), maxScrollTop)
+}
+
+export function previewAnchor(markdown, caret) {
+  const trimmed = markdown.trim()
+  if (trimmed === "") return null
+
+  const leading = markdown.length - markdown.trimStart().length
+  const at = Math.min(Math.max(caret - leading, 0), trimmed.length)
+
+  const tokens = marked.lexer(trimmed)
+  const sourceKept = tokens.map((token) => token.raw).join("") === trimmed
+  const typesKnown = tokens.every((token) => RENDERED.has(token.type) || SILENT.has(token.type))
+  if (!sourceKept || !typesKnown) return wholeDocument(trimmed, at)
+
+  const blocks = []
+  let offset = 0
+  for (const token of tokens) {
+    if (RENDERED.has(token.type)) blocks.push({ start: offset, raw: token.raw })
+    offset += token.raw.length
+  }
+  if (blocks.length === 0) return wholeDocument(trimmed, at)
+
+  const index = Math.max(blocks.findLastIndex((block) => block.start <= at), 0)
+  const block = blocks[index]
+
+  // marked's raw swallows trailing newlines; they are not lines of the block.
+  const lines = countNewlines(block.raw.replace(/\n+$/, "")) + 1
+  const { start, end } = lineShare(lines, countNewlines(trimmed.slice(block.start, at)))
+
+  return { block: index, start, end, count: blocks.length }
+}
+
+function wholeDocument(trimmed, at) {
+  const lines = countNewlines(trimmed) + 1
+  const { start, end } = lineShare(lines, countNewlines(trimmed.slice(0, at)))
+
+  return { block: null, start, end, count: null }
+}
+
+function lineShare(lines, newlines) {
+  const line = Math.min(newlines, lines - 1)
+
+  return { start: line / lines, end: (line + 1) / lines }
+}
+
+function countNewlines(text) {
+  return text.split("\n").length - 1
+}
