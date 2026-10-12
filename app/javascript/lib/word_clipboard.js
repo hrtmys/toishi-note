@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify"
-import { marked } from "marked"
+import { marked } from "./marked_config.js"
 import { normalizeListGaps, trimMarkdown } from "./markdown_source.js"
 
 const FONT_FAMILY = "'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif"

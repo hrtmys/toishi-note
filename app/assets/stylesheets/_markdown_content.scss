@@ -45,6 +45,19 @@
     max-width: 100%;
     height: auto;
   }
+
+  // Like GitHub: the checkbox takes the bullet's place. marked emits no
+  // task-list class, and a loose list wraps the checkbox in a <p>.
+  li:has(> input[type="checkbox"]:first-child),
+  li:has(> p:first-child > input[type="checkbox"]:first-child) {
+    list-style-type: none;
+
+    input[type="checkbox"]:first-child {
+      margin: 0 0.2em 0.25em;
+      margin-inline-start: -1.4em;
+      vertical-align: middle;
+    }
+  }
 }
 
 // Scrap items are compact cards, so images there get rounded corners to

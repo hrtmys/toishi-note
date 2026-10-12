@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify"
-import { marked } from "marked"
+import { marked } from "./marked_config.js"
 import { normalizeListGaps, trimMarkdown } from "./markdown_source.js"
 
 // hljs, KaTeX, and Mermaid are each several hundred KB and only needed by
