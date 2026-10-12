@@ -70,6 +70,11 @@ class NavigationTest < ApplicationSystemTestCase
       assert_includes @note_a.reload.content.to_s, "first tail"
 
       go_back
+      # Until Back renders Note A, the textarea found is still Note B's.
+      assert_field "note_title_input", with: @note_a.title
+      wait_until("the Back visit never finished rendering") do
+        evaluate_script("!['data-turbo-preview', 'aria-busy'].some((name) => document.documentElement.hasAttribute(name))")
+      end
       find("textarea[name='note[content]']").send_keys(" second tail")
       execute_script("window.__beforeReload = true; location.reload()")
       wait_until("the reload was blocked or never happened") { evaluate_script("window.__beforeReload") != true }
