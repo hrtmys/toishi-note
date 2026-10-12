@@ -262,12 +262,12 @@ describe("one queue per note", () => {
     const queue = saveQueueLib.noteQueue(url, { version: 1, send })
     const pageA = {}
     const pageB = {}
-    queue.attach(pageA, { version: 1, snapshot: false })
+    queue.attach(pageA, { version: 1 })
     assert.equal(saveQueueLib.noteQueue(url), queue)
 
     queue.schedule("content", "from A")
     queue.flush()
-    queue.attach(pageB, { version: 1, snapshot: false })
+    queue.attach(pageB, { version: 1 })
     queue.schedule("title", "from B")
     queue.flush()
     await tick()
@@ -277,142 +277,88 @@ describe("one queue per note", () => {
     assert.deepEqual(calls[1].payload, { field: "title", value: "from B", version: 2 })
   })
 
-  it("a snapshot with a lower rendered version never lowers what is sent", async () => {
-    const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 7, send })
-    queue.attach({}, { version: 7, snapshot: false })
-    queue.attach({}, { version: 5, snapshot: true, snapshotSeq: queue.seq })
-
-    queue.request("content", "x")
-    await tick()
-    assert.equal(calls[0].payload.version, 7)
-  })
-
   it("a hold survives the same wrapper reconnecting and is dropped when another instance attaches", async () => {
     const { calls, send } = controlledSend()
     const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
     const page = {}
-    queue.attach(page, { version: 1, snapshot: false })
+    queue.attach(page, { version: 1 })
     queue.request("content", "mine")
     await tick()
     calls[0].resolve({ status: 409, version: 2 })
     await tick()
 
     queue.detach(page)
-    queue.attach(page, { version: 1, snapshot: false })
+    queue.attach(page, { version: 1 })
     assert.equal(queue.held, true)
 
-    queue.attach({}, { version: 2, snapshot: false })
+    queue.attach({}, { version: 2 })
     assert.equal(queue.held, false)
     assert.equal(queue.hasUnsaved, false)
   })
 
-  it("a fresh render older than the queue holds as stale and sends nothing", async () => {
-    const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 4, send })
-    queue.attach({}, { version: 4, snapshot: false })
-
-    assert.equal(queue.attach({}, { version: 3, snapshot: false }), "stale")
-    assert.equal(queue.held, true)
-    assert.equal(queue.holdReason, "stale")
-    queue.schedule("content", "typed on the stale page")
-    mock.timers.tick(1000)
-    await tick()
-    assert.equal(calls.length, 0)
-  })
-
-  it("a 409 hold is distinguishable from a stale hold", async () => {
-    const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
-    queue.attach({}, { version: 1, snapshot: false })
-    queue.request("content", "mine")
-    await tick()
-    calls[0].resolve({ status: 409, version: 2 })
-    await tick()
-    assert.equal(queue.holdReason, "conflict")
-  })
-
-  it("a fresh render with a higher version is adopted without a hold", () => {
+  it("a higher-version attach is adopted without a hold", () => {
     const { send } = controlledSend()
     const queue = saveQueueLib.noteQueue(freshUrl(), { version: 4, send })
-    queue.attach({}, { version: 6, snapshot: false })
+    queue.attach({}, { version: 6 })
     assert.equal(queue.held, false)
     assert.equal(queue.version, 6)
   })
 
-  it("a lower snapshot stamped at the queue's current sequence neither holds nor lowers", async () => {
-    const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
-    queue.attach({}, { version: 1, snapshot: false })
-    queue.request("content", "saved")
-    await tick()
-    calls[0].resolve({ status: 200, version: 2 })
-    await tick()
-
-    queue.attach({}, { version: 1, snapshot: true, snapshotSeq: queue.seq })
-    assert.equal(queue.held, false)
-    assert.equal(queue.version, 2)
-  })
-
-  it("a snapshot stamped before later values were sequenced holds as stale", async () => {
-    const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 1, send })
-    queue.attach({}, { version: 1, snapshot: false })
-    const stamp = queue.seq
-    queue.request("content", "saved from another URL")
-    await tick()
-    calls[0].resolve({ status: 200, version: 2 })
-    await tick()
-
-    assert.equal(queue.attach({}, { version: 1, snapshot: true, snapshotSeq: stamp }), "stale")
-    assert.equal(queue.held, true)
-    assert.equal(queue.holdReason, "stale")
-  })
-
-  it("a snapshot with no stamp holds as stale", () => {
-    const { send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 3, send })
-    queue.attach({}, { version: 3, snapshot: false })
-
-    assert.equal(queue.attach({}, { version: 3, snapshot: true }), "stale")
-    assert.equal(queue.held, true)
-    assert.equal(queue.holdReason, "stale")
-  })
-
-  for (const [ name, staleAttach ] of [
-    [ "a stale fresh render", { version: 1, snapshot: false } ],
-    [ "an unstamped snapshot", { version: 1, snapshot: true } ]
-  ]) {
-    it(`a value scheduled before ${name} holds is still sent with the queue's version; one scheduled after waits`, async () => {
+  for (const [ name, extra ] of [ [ "fresh render", {} ], [ "snapshot", { snapshot: true } ] ]) {
+    it(`a lower-version ${name} lowers what the next save sends, without holding`, async () => {
       const { calls, send } = controlledSend()
-      const queue = saveQueueLib.noteQueue(freshUrl(), { version: 2, send })
-      queue.attach({}, { version: 2, snapshot: false })
+      const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
+      queue.attach({}, { version: 5 })
 
-      const before = queue.schedule("content", "typed on the live page")
-      assert.equal(queue.attach({}, staleAttach), "stale")
-      queue.schedule("title", "typed on the stale page")
-      mock.timers.tick(500)
+      queue.attach({}, { version: 3, ...extra })
+      assert.equal(queue.held, false)
+      queue.request("content", "typed on the older page")
       await tick()
-      assert.deepEqual(calls.map((c) => c.payload), [ { field: "content", value: "typed on the live page", version: 2 } ])
-      calls[0].resolve({ status: 200, version: 3 })
-      assert.equal(await before, "saved")
+      assert.equal(calls[0].payload.version, 3)
+      calls[0].resolve({ status: 409, version: 6 })
       await tick()
-      assert.equal(calls.length, 1)
       assert.equal(queue.held, true)
     })
   }
 
-  it("re-attaching after a hold never discards a value scheduled before it", async () => {
+  it("a response to a save sent before the lowering doesn't raise the version; one sent after does", async () => {
     const { calls, send } = controlledSend()
-    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 2, send })
-    queue.attach({}, { version: 2, snapshot: false })
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
+    queue.attach({}, { version: 5 })
 
-    queue.schedule("content", "typed before the hold")
-    queue.attach({}, { version: 1, snapshot: false })
-    queue.attach({}, { version: 2, snapshot: false })
+    queue.request("content", "in flight")
+    await tick()
+    queue.attach({}, { version: 3 })
+    calls[0].resolve({ status: 200, version: 6 })
+    await tick()
+    assert.equal(queue.version, 3)
+
+    queue.request("content", "after lowering")
+    await tick()
+    assert.equal(calls[1].payload.version, 3)
+    calls[1].resolve({ status: 200, version: 7 })
+    await tick()
+    assert.equal(queue.version, 7)
+  })
+
+  it("a value scheduled before the lowering is still sent and stays pending after its 409", async () => {
+    const { calls, send } = controlledSend()
+    const queue = saveQueueLib.noteQueue(freshUrl(), { version: 5, send })
+    queue.attach({}, { version: 5 })
+
+    const typed = queue.schedule("content", "typed before")
+    queue.attach({}, { version: 3 })
     mock.timers.tick(500)
     await tick()
-    assert.deepEqual(calls.map((c) => c.payload.value), [ "typed before the hold" ])
+    assert.deepEqual(calls.map((c) => c.payload), [ { field: "content", value: "typed before", version: 3 } ])
+    calls[0].resolve({ status: 409, version: 6 })
+    assert.equal(await typed, "conflict")
+    assert.equal(queue.held, true)
+    assert.equal(queue.hasUnsaved, true)
+
+    queue.keepMine()
+    await tick()
+    assert.deepEqual(calls[1].payload, { field: "content", value: "typed before", version: 6 })
   })
 
   it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {
