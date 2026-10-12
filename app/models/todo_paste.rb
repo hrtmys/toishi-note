@@ -70,18 +70,20 @@ class TodoPaste
   end
 
   # Strips trailing (id: …) and (due: …) tags from the end, in either order,
-  # each at most once. A tag whose body doesn't validate stops the scan and
-  # stays literal content — fail-closed, so a typo'd command never binds.
+  # each at most once. A malformed id stops the scan. A malformed due stays
+  # literal content, but an id to its left still binds; a due to its left does not.
   def extract_tags(rest)
-    content = rest
+    current = rest
     seen = {}
     id = nil
     delete = false
     due = nil
+    literal = []
 
-    while (match = TAG.match(content))
+    while (match = TAG.match(current))
       key, body = match[2], match[3]
       break if seen[key]
+      break if key == "due" && literal.any?
 
       if key == "id"
         valid = VALID_ID_BODY.match(body)
@@ -89,18 +91,18 @@ class TodoPaste
 
         id = valid[1].to_i(36)
         delete = valid[2].present?
-      else
-        parsed = parse_due(body)
-        break if parsed.nil?
-
+        seen[key] = true
+      elsif (parsed = parse_due(body))
         due = parsed
+        seen[key] = true
+      else
+        literal.unshift(current[match[1].length..])
       end
 
-      seen[key] = true
-      content = match[1]
+      current = match[1]
     end
 
-    [ content, id, delete, due ]
+    [ current + literal.join, id, delete, due ]
   end
 
   def parse_due(value)
