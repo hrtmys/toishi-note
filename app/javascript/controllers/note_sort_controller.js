@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { adoptNoteVersion } from "./autosave_controller"
 import { DEFAULT_SORT, nextSortState, sortNoteEntries } from "../lib/note_sort"
 
 // Client-side only, on purpose. Nothing here is persisted (pin state
@@ -31,7 +32,8 @@ export default class extends Controller {
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
 
-    fetch(`/notes/${button.dataset.noteId}`, {
+    const noteUrl = `/notes/${button.dataset.noteId}`
+    fetch(noteUrl, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -39,6 +41,8 @@ export default class extends Controller {
         ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       },
       body: JSON.stringify({ note: { is_pinned: pinned } }),
+    }).then((response) => {
+      if (response.ok) adoptNoteVersion(noteUrl, response.headers.get("X-Note-Lock-Version"))
     }).catch((error) => console.error("Failed to save pin state", error))
   }
 

@@ -257,6 +257,7 @@ en:
       reload: "Reload"
       reload_confirm: "Discard your unsaved changes and load the version from the other device?"
       keep_mine: "Keep mine"
+      stale_message: "This page is older than your latest save. Reload to see it."
   # Backs the "paste two texts, see a word-level diff" panel — shared as-is
   # between the md editor's Compare tab and the standalone tool under
   # Settings (see app/views/shared/_compare_panel.html.erb), so these keys
@@ -323,6 +324,7 @@ en:
       failed: "Failed to upload %{filename}"
     autosave:
       save_failed: "Couldn't save your changes — check your connection."
+      changed_elsewhere: "“%{title}” couldn't be saved because it was changed elsewhere."
     scrap:
       show_more: *scrap_show_more
       show_less: *scrap_show_less

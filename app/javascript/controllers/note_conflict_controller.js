@@ -1,12 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
-import { noteSaveQueue } from "./autosave_controller"
+import { queueForNote, writeWrapperVersion } from "./autosave_controller"
 
 // Owns the "changed on another device" banner, shown on a 409 (see
 // autosave_controller.js's note:conflict event). Never auto-resolves —
 // a reload would silently overwrite in-progress typing.
 export default class extends Controller {
-  static targets = [ "banner", "keepMineButton" ]
+  static targets = [ "banner", "keepMineButton", "message", "staleMessage" ]
   // Server-rendered (Rails t(), not the js: subtree) so it stays alongside
   // notes.conflict.reload/keep_mine — see notes/_title_input or wherever
   // this value is set in the view. Same pattern as prompt-form's
@@ -23,11 +23,28 @@ export default class extends Controller {
       event.preventDefault()
       event.returnValue = ""
     }
+
+    const queue = this.queue()
+    const attached = queue.attach(this.element, {
+      version: Number(this.element.dataset.noteLockVersion),
+      snapshot: this.element.hasAttribute("data-note-snapshot")
+    })
+    writeWrapperVersion(queue)
+    if (attached === "stale") this.showStale()
   }
 
   disconnect() {
     this.element.removeEventListener("note:conflict", this.showBound)
+    this.queue().detach(this.element)
     this.stopWarning()
+  }
+
+  // Keep mine would overwrite this tab's newer save with the page's older text.
+  showStale() {
+    if (this.hasMessageTarget) this.messageTarget.classList.add("d-none")
+    if (this.hasStaleMessageTarget) this.staleMessageTarget.classList.remove("d-none")
+    if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.classList.add("d-none")
+    this.bannerTarget.classList.remove("d-none")
   }
 
   show() {
@@ -43,15 +60,17 @@ export default class extends Controller {
   }
 
   queue() {
-    return noteSaveQueue(this.element)
+    return queueForNote(this.element.dataset.noteUrl, this.element.dataset.noteLockVersion)
   }
 
   // Discards whatever's in progress and shows the server's current
   // state. Confirmed first: this throws real unsaved edits away.
   reload() {
-    if (!window.confirm(this.reloadConfirmValue)) return
+    const queue = this.queue()
+    const nothingTyped = queue.holdReason === "stale" && !queue.hasUnsaved
+    if (!nothingTyped && !window.confirm(this.reloadConfirmValue)) return
 
-    this.queue()?.discard()
+    queue.discard()
     this.stopWarning()
     window.location.reload()
   }
@@ -61,7 +80,6 @@ export default class extends Controller {
   // resubmission has landed; a failure keeps it open with a toast.
   keepMine() {
     const queue = this.queue()
-    if (!queue) return
     if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.disabled = true
 
     const fields = Array.from(this.element.querySelectorAll("[data-controller~='autosave'][name]"))
@@ -71,7 +89,7 @@ export default class extends Controller {
 
     Promise.all(saves)
       .then((outcomes) => {
-        this.element.dataset.noteLockVersion = queue.version
+        writeWrapperVersion(queue)
         if (outcomes.every((outcome) => outcome === "saved")) {
           this.bannerTarget.classList.add("d-none")
         } else if (outcomes.includes("failed")) {

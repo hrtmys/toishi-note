@@ -52,11 +52,13 @@ class NotesController < ApplicationController
           streams = []
           # Either the title was submitted explicitly, or auto_set_title changed it as a side effect.
           if note_params.key?(:title) || @note.title != old_title
-            streams << turbo_stream.update("note_#{@note.id}_title", @note.title)
+            streams << turbo_stream.update("note_#{@note.id}_title", ERB::Util.html_escape(@note.title))
 
-            # If editing the content auto-changed the title, rewrite the title input's value too.
+            # The client decides whether to show it, so a title being typed is never overwritten.
             if note_params.key?(:content) && @note.title != old_title
-              streams << turbo_stream.replace("note_title_input", partial: "notes/title_input", locals: { note: @note })
+              streams << helpers.turbo_stream_action_tag(:server_value,
+                targets: %(#note_title_input[data-autosave-url-value="#{note_path(@note)}"]),
+                value: @note.title, "note-url": note_path(@note))
             end
           end
 
