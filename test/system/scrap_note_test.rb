@@ -68,6 +68,26 @@ class ScrapNoteTest < ApplicationSystemTestCase
       assert_equal expected, evaluate_script("window.__copiedText")
     end
 
+    phase "4b an add in flight survives a declined promote, a doubled Ctrl+Enter and an accepted delete" do
+      delay_fetch(500)
+      find(CONTENT).fill_in(with: "Pending scrap")
+      click_on I18n.t("home.common.add")
+      find(CONTENT).send_keys([ :control, :enter ])
+      find(CONTENT).send_keys([ :control, :enter ])
+      dismiss_confirm(I18n.t("home.scrap.promote_confirm")) { promote_button(@short).click }
+      accept_confirm(I18n.t("home.scrap.delete_confirm")) { delete_button(@long).click }
+      restore_fetch
+
+      within("#scrap_list_#{@note.id}") { assert_text "Pending scrap" }
+      assert_no_selector "#scrap_item_#{@long.id}"
+      assert_equal "", find(CONTENT).value
+      wait_until("the delete never saved") { !ScrapItem.exists?(@long.id) }
+      assert ScrapItem.exists?(@short.id)
+      assert_equal 1, @note.scrap_items.where(content: "Pending scrap").count
+      assert_no_toast I18n.t("js.forms.add_failed")
+      assert_no_toast I18n.t("js.forms.save_failed")
+    end
+
     phase "5 failed source and add saves toast and keep input" do
       force_fetch_rejection
       set_source(@short, "Claude")
@@ -76,10 +96,39 @@ class ScrapNoteTest < ApplicationSystemTestCase
       click_on I18n.t("home.common.add")
       assert_toast I18n.t("js.forms.add_failed")
       assert_equal "From a chat", find(CONTENT).value
+      assert_no_toast I18n.t("js.forms.save_failed")
+
+      accept_confirm(I18n.t("home.scrap.delete_confirm")) { delete_button(@short).click }
+      assert_toast I18n.t("js.forms.save_failed")
+      assert_selector "#scrap_item_#{@short.id}"
+      assert ScrapItem.exists?(@short.id)
+      restore_fetch
+    end
+
+    phase "6 promote opens the new note" do
+      accept_confirm(I18n.t("home.scrap.promote_confirm")) { promote_button(@short).click }
+      wait_until("promote never created the note") { @folder.notes.where(note_type: "md").exists? }
+      promoted = @folder.notes.find_by!(note_type: "md")
+      assert_current_path(/note_id=#{promoted.id}/)
+      assert_field with: "Short fragment"
+      assert_not ScrapItem.exists?(@short.id)
+      assert_equal 1, @folder.notes.where(note_type: "md").count
     end
   end
 
   private
+
+    def promote_button(item)
+      row = find("#scrap_item_#{item.id}")
+      row.hover
+      row.find("button[title='#{I18n.t("home.scrap.promote_title")}']")
+    end
+
+    def delete_button(item)
+      row = find("#scrap_item_#{item.id}")
+      row.hover
+      row.find("button", text: "×")
+    end
 
     def set_source(item, value)
       row = find("#scrap_item_#{item.id}")
