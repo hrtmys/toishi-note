@@ -6,7 +6,7 @@ import { queueForNote, writeWrapperVersion } from "./autosave_controller"
 // autosave_controller.js's note:conflict event). Never auto-resolves —
 // a reload would silently overwrite in-progress typing.
 export default class extends Controller {
-  static targets = [ "banner", "keepMineButton", "message", "staleMessage" ]
+  static targets = [ "banner", "keepMineButton" ]
   // Server-rendered (Rails t(), not the js: subtree) so it stays alongside
   // notes.conflict.reload/keep_mine — see notes/_title_input or wherever
   // this value is set in the view. Same pattern as prompt-form's
@@ -24,28 +24,13 @@ export default class extends Controller {
       event.returnValue = ""
     }
 
-    const queue = this.queue()
-    const attached = queue.attach(this.element, {
-      version: Number(this.element.dataset.noteLockVersion),
-      snapshot: this.element.hasAttribute("data-note-snapshot"),
-      snapshotSeq: this.element.dataset.noteSnapshotSeq === undefined ? undefined : Number(this.element.dataset.noteSnapshotSeq)
-    })
-    writeWrapperVersion(queue)
-    if (attached === "stale") this.showStale()
+    this.queue().attach(this.element, { version: Number(this.element.dataset.noteLockVersion) })
   }
 
   disconnect() {
     this.element.removeEventListener("note:conflict", this.showBound)
     this.queue().detach(this.element)
     this.stopWarning()
-  }
-
-  // Keep mine would overwrite this tab's newer save with the page's older text.
-  showStale() {
-    if (this.hasMessageTarget) this.messageTarget.classList.add("d-none")
-    if (this.hasStaleMessageTarget) this.staleMessageTarget.classList.remove("d-none")
-    if (this.hasKeepMineButtonTarget) this.keepMineButtonTarget.classList.add("d-none")
-    this.bannerTarget.classList.remove("d-none")
   }
 
   show() {
@@ -67,11 +52,9 @@ export default class extends Controller {
   // Discards whatever's in progress and shows the server's current
   // state. Confirmed first: this throws real unsaved edits away.
   reload() {
-    const queue = this.queue()
-    const nothingTyped = queue.holdReason === "stale" && !queue.hasUnsaved
-    if (!nothingTyped && !window.confirm(this.reloadConfirmValue)) return
+    if (!window.confirm(this.reloadConfirmValue)) return
 
-    queue.discard()
+    this.queue().discard()
     this.stopWarning()
     window.location.reload()
   }

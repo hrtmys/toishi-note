@@ -23,7 +23,7 @@ export function allNoteQueues() {
 
 // Serializes one note's autosaves: at most one in flight, and each save
 // reads the lock version only when it is sent, after the previous response
-// updated it. A hold blocks values sequenced after it until keepMine() or discard().
+// updated it. After a 409 every save is held until keepMine() or discard().
 export class SaveQueue {
   constructor({ version, send, onChange }) {
     this.version = Number(version)
@@ -34,8 +34,7 @@ export class SaveQueue {
     this.inFlight = false
     this.inFlightField = null
     this.held = false
-    this.holdReason = null
-    this.holdSeq = 0
+    this.lowerSeq = 0
     this.conflictVersion = null
     this.wrapper = null
     this.wrapperConnected = false
@@ -83,8 +82,6 @@ export class SaveQueue {
     if (this.conflictVersion !== null) this.adopt(this.conflictVersion)
     this.conflictVersion = null
     this.held = false
-    this.holdReason = null
-    for (const entry of this.pending.values()) entry.conflicted = false
     this.changed()
     this.pump()
   }
@@ -99,7 +96,6 @@ export class SaveQueue {
     this.pending.clear()
     this.conflictVersion = null
     this.held = false
-    this.holdReason = null
     this.checkWaits()
     this.changed()
   }
@@ -108,23 +104,19 @@ export class SaveQueue {
     if (version !== null && version !== undefined && Number(version) > this.version) this.version = Number(version)
   }
 
-  // A snapshot's fields carry the typed text, so its older version is ignored
-  // unless values were sequenced after it was taken (e.g. from another URL).
-  attach(wrapper, { version, snapshot, snapshotSeq }) {
-    if (this.held && wrapper !== this.wrapper) this.dropHeldValues()
+  // An older page lowers the version, so its next save gets an honest 409
+  // instead of overwriting newer text.
+  attach(wrapper, { version }) {
+    if (this.held && wrapper !== this.wrapper) this.discard()
     this.wrapper = wrapper
     this.wrapperConnected = true
-
-    let result = null
-    const trusted = snapshot ? snapshotSeq !== undefined && snapshotSeq >= this.seq : Number(version) >= this.version
-    if (trusted) {
+    if (Number(version) < this.version) {
+      this.version = Number(version)
+      this.lowerSeq = this.seq
+    } else {
       this.adopt(version)
-    } else if (!this.held) {
-      this.hold("stale")
-      result = "stale"
     }
     this.changed()
-    return result
   }
 
   detach(wrapper) {
@@ -149,38 +141,6 @@ export class SaveQueue {
       wait.timer = setTimeout(() => this.endWait(wait), capMs)
       this.waits.push(wait)
     })
-  }
-
-  hold(reason) {
-    this.held = true
-    this.holdReason = reason
-    this.holdSeq = this.seq
-    this.checkWaits()
-  }
-
-  // Values typed before the hold came from an up-to-date page, so only later ones are dropped.
-  dropHeldValues() {
-    for (const [ field, entry ] of Array.from(this.scheduled)) {
-      if (entry.seq <= this.holdSeq) continue
-      clearTimeout(entry.timer)
-      entry.waiters.forEach((resolve) => resolve("discarded"))
-      this.scheduled.delete(field)
-    }
-    for (const [ field, entry ] of Array.from(this.pending)) {
-      if (entry.seq <= this.holdSeq && !entry.conflicted) continue
-      entry.waiters.forEach((resolve) => resolve("discarded"))
-      this.pending.delete(field)
-    }
-    this.conflictVersion = null
-    this.held = false
-    this.holdReason = null
-    this.checkWaits()
-    this.changed()
-    this.pump()
-  }
-
-  sendable(entry) {
-    return !this.held || (entry.seq <= this.holdSeq && !entry.conflicted)
   }
 
   cancelScheduled(field) {
@@ -225,19 +185,18 @@ export class SaveQueue {
   }
 
   changed() {
-    this.onChange?.()
+    this.onChange?.(this)
   }
 
   async pump() {
-    if (this.inFlight) return
-    const next = Array.from(this.pending).find(([ , entry ]) => this.sendable(entry))
-    if (!next) return
+    if (this.inFlight || this.held || this.pending.size === 0) return
 
-    const [ field, entry ] = next
+    const [ field, entry ] = this.pending.entries().next().value
     this.pending.delete(field)
     this.inFlight = true
     this.inFlightField = field
     this.inFlightSeq = entry.seq
+    const sentSeq = this.seq
 
     let outcome
     try {
@@ -248,12 +207,12 @@ export class SaveQueue {
         // The conflicted value is still unsaved; keep it for keepMine()
         // unless a newer value for the same field is already waiting.
         if (!this.pending.has(field)) this.pending.set(field, { value: entry.value, seq: entry.seq, waiters: [] })
-        // Values already waiting would carry the same outdated version.
-        for (const waiting of this.pending.values()) waiting.conflicted = true
-        this.hold("conflict")
+        this.held = true
       } else if (status >= 200 && status <= 299) {
         outcome = "saved"
-        this.adopt(version)
+        // A save sent before a lowering must not undo it.
+        if (sentSeq > this.lowerSeq) this.adopt(version)
+        this.changed()
       } else {
         outcome = "failed"
       }

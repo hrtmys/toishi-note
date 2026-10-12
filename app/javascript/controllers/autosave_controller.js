@@ -13,7 +13,7 @@ const prefetchCounters = new Map()
 let pausedVisit = null
 
 export function queueForNote(noteUrl, version) {
-  return noteQueue(noteUrl, { version: version ?? 0, send: transport(noteUrl), onChange: refreshLeaveListener })
+  return noteQueue(noteUrl, { version: version ?? 0, send: transport(noteUrl), onChange: queueChanged })
 }
 
 export function adoptNoteVersion(noteUrl, version) {
@@ -57,8 +57,6 @@ function transport(noteUrl) {
       // Only a 2xx body is a turbo stream; a 422/500 page rendered as one
       // would throw an obscure JS error instead of the save-failed toast.
       if (saveOutcome(response.status) === "saved") {
-        queue.adopt(result.version)
-        writeWrapperVersion(queue)
         const html = await response.text()
         if (html) window.Turbo.renderStreamMessage(html)
       }
@@ -71,6 +69,11 @@ function transport(noteUrl) {
       saveCounter++
     }
   }
+}
+
+function queueChanged(queue) {
+  writeWrapperVersion(queue)
+  refreshLeaveListener()
 }
 
 function flushAll() {
@@ -104,14 +107,6 @@ function refreshLeaveListener() {
 window.addEventListener("pagehide", flushAll)
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushAll()
-})
-
-document.addEventListener("turbo:before-cache", () => {
-  document.querySelectorAll("[data-note-url]").forEach((wrapper) => {
-    wrapper.setAttribute("data-note-snapshot", "")
-    const queue = findNoteQueue(wrapper.dataset.noteUrl)
-    if (queue) wrapper.dataset.noteSnapshotSeq = queue.seq
-  })
 })
 
 function takePrefetchCounter(kind, href) {
@@ -174,11 +169,13 @@ function toast(message) {
 // The toast element is replaced with the page, so it waits for the next render.
 function toastAfterVisit(message, visit) {
   const loadEvent = visit.kind === "frame" ? "turbo:frame-load" : "turbo:load"
-  // A newer visit, or this request failing, means the paused one never renders.
+  // Each of these means the paused request will never render.
   const events = [ loadEvent, "turbo:visit", "turbo:fetch-request-error" ]
+  if (visit.kind === "frame") events.push("turbo:frame-missing", "turbo:before-fetch-response")
   const finish = (event) => {
     const ours = event.type === "turbo:visit" || event.type === "turbo:load" || event.target === visit.target
     if (!ours) return
+    if (event.type === "turbo:before-fetch-response" && event.detail.fetchResponse.isHTML) return
     events.forEach((name) => document.removeEventListener(name, finish))
     if (event.type === loadEvent) toast(message)
   }

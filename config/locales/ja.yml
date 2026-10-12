@@ -237,7 +237,6 @@ ja:
       reload: "再読み込み"
       reload_confirm: "未保存の変更を破棄して、別のデバイスの内容を読み込みますか？"
       keep_mine: "この内容を保持"
-      stale_message: "このページは最新の保存より古い内容です。再読み込みして最新の内容を表示してください。"
   compare:
     modal_title: "比較"
     before_label: "変更前"
