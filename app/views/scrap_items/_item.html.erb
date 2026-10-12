@@ -7,10 +7,11 @@
   <div class="float-end d-flex ms-2">
     <%= button_to promote_note_scrap_item_path(item.note, item), method: :post,
         data: { turbo_confirm: t("home.scrap.promote_confirm") },
+        form: { data: { controller: "stream-submit", action: "submit->stream-submit#submit" } },
         class: "hover-target btn btn-sm text-primary opacity-75 py-0 px-2 border-0 bg-transparent", title: t("home.scrap.promote_title") do %>
       <i class="bi bi-file-earmark-plus"></i>
     <% end %>
-    <%= button_to "×", note_scrap_item_path(item.note, item), method: :delete, data: { turbo_confirm: t("home.scrap.delete_confirm") }, class: "hover-target btn btn-sm text-danger opacity-50 py-0 px-2 border-0 bg-transparent" %>
+    <%= button_to "×", note_scrap_item_path(item.note, item), method: :delete, data: { turbo_confirm: t("home.scrap.delete_confirm") }, form: { data: { controller: "stream-submit", action: "submit->stream-submit#submit" } }, class: "hover-target btn btn-sm text-danger opacity-50 py-0 px-2 border-0 bg-transparent" %>
   </div>
 
   <% if item.source.present? %>

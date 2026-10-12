@@ -1,11 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { t } from "../lib/translations"
 
-// Used on the small "add TODO" / "add scrap" forms: disables the submit
-// button for the duration of the request (so a fast double-click can't
-// submit it twice) and resets the form only once Turbo confirms the
-// submission actually succeeded — a validation failure or network error
-// leaves the user's typed input in place instead of silently discarding it.
+// Disables the add button while a submission is pending, and clears the form
+// only after it succeeds, so a failed add keeps the typed text.
 export default class extends Controller {
   static targets = [ "submit" ]
 
@@ -33,6 +30,7 @@ export default class extends Controller {
   // Submits the form on Ctrl+Enter (Cmd+Enter on Mac).
   submit(event) {
     event.preventDefault()
+    if (this.submitTarget.disabled) return
     this.element.requestSubmit()
   }
 }
