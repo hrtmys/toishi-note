@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify"
 import { marked } from "marked"
+import { normalizeListGaps, trimMarkdown } from "./markdown_source.js"
 
 const FONT_FAMILY = "'BIZ UDPGothic', 'Yu Gothic', 'Meiryo', sans-serif"
 const BODY_FONT_SIZE = "11pt"
@@ -48,14 +49,14 @@ function styleTree(root) {
 }
 
 function buildPlainText(markdown) {
-  const html = marked.parse(markdown.trim())
+  const html = marked.parse(normalizeListGaps(trimMarkdown(markdown)))
   const container = document.createElement("div")
   container.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
   return container.innerText.trim()
 }
 
 export function buildWordClipboard(markdown) {
-  const renderedHtml = marked.parse(markdown.trim())
+  const renderedHtml = marked.parse(normalizeListGaps(trimMarkdown(markdown)))
   const sanitizedHtml = DOMPurify.sanitize(renderedHtml, { USE_PROFILES: { html: true } })
   const container = document.createElement("div")
   container.innerHTML = sanitizedHtml

@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify"
 import { marked } from "marked"
+import { normalizeListGaps, trimMarkdown } from "./markdown_source.js"
 
 // hljs, KaTeX, and Mermaid are each several hundred KB and only needed by
 // the fraction of notes with a code block, math, or diagram. Loaded on
@@ -143,7 +144,7 @@ export function renderMarkdownIntoElement(element, markdown) {
   const token = Symbol("markdown-render")
   latestRenderPerElement.set(element, token)
 
-  const html = marked.parse(markdown.trim())
+  const html = marked.parse(normalizeListGaps(trimMarkdown(markdown)))
   element.innerHTML = DOMPurify.sanitize(html)
 
   const { mermaidBlocks, codeBlocks } = partitionCodeBlocks(element)
