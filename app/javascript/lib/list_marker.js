@@ -211,10 +211,15 @@ const isPlainParagraph = (line) => line.trim() !== ""
   && !fenceStep(null, line).inFence
   && !line.startsWith("|")
 
-// A run of plain paragraph lines counts as lazy continuation only when it hangs from an item.
+const isIndentedText = (line) => line.trim() !== ""
+  && indentWidth(line.match(/^[ \t]*/)[0]) > 0
+  && !QUOTE_PREFIX.test(line)
+  && !isListItem(line)
+
+// A lazy run counts as continuation only when it hangs from an item; indented text is part of that item's paragraph.
 function continuesItem(above, index, flags) {
   let j = index
-  while (j >= 0 && !flags[j] && isPlainParagraph(above[j])) j--
+  while (j >= 0 && !flags[j] && (isPlainParagraph(above[j]) || isIndentedText(above[j]))) j--
   return j >= 0 && !flags[j] && isItem(above[j])
 }
 
