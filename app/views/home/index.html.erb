@@ -1,3 +1,7 @@
+<% if @current_note %>
+  <%# The editor's live queue state can't be restored from a cloned page. %>
+  <% content_for :head do %><meta name="turbo-cache-control" content="no-cache"><% end %>
+<% end %>
 <div class="container-fluid vh-100 d-flex flex-column p-0">
   <div class="row g-0 flex-grow-1 overflow-hidden">
 

@@ -87,7 +87,8 @@ function warnIfLeavingLosesSaves(event) {
     wrapperConnected: queue.wrapperConnected,
     inFlight: queue.inFlight,
     inFlightKeepalive: queue.inFlightKeepalive,
-    waiting: queue.pending.size > 0
+    waiting: queue.pending.size > 0,
+    lowered: queue.lowered
   }))
   if (leaveDecision({ queues }) === "warn") {
     event.preventDefault()

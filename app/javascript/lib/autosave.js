@@ -25,7 +25,7 @@ export function leaveDecision({ queues }) {
       if (queue.wrapperConnected) return "warn"
       continue
     }
-    if (queue.waiting) return "warn"
+    if (queue.waiting || queue.lowered) return "warn"
     if (queue.inFlight && queue.inFlightKeepalive === false) return "warn"
   }
   return "leave"

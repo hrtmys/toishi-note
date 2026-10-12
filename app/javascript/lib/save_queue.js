@@ -1,7 +1,6 @@
 const DEBOUNCE_MS = 500
 
-// Keyed by note path, so every page instance of a note in this tab (fresh,
-// restored from a snapshot, or previewed) shares one queue and one version.
+// Keyed by note path, so every page instance of a note in this tab shares one queue and one version.
 const noteQueues = new Map()
 
 export function noteQueue(noteUrl, options) {
@@ -35,6 +34,7 @@ export class SaveQueue {
     this.inFlightField = null
     this.held = false
     this.lowerSeq = 0
+    this.lowered = false
     this.conflictVersion = null
     this.wrapper = null
     this.wrapperConnected = false
@@ -79,6 +79,7 @@ export class SaveQueue {
 
   // Resubmits the held values over the other device's version.
   keepMine() {
+    this.lowered = false
     if (this.conflictVersion !== null) this.adopt(this.conflictVersion)
     this.conflictVersion = null
     this.held = false
@@ -100,7 +101,9 @@ export class SaveQueue {
     this.changed()
   }
 
+  // While lowered, only this queue's own landed save may raise the version again.
   adopt(version) {
+    if (this.lowered) return
     if (version !== null && version !== undefined && Number(version) > this.version) this.version = Number(version)
   }
 
@@ -113,7 +116,9 @@ export class SaveQueue {
     if (Number(version) < this.version) {
       this.version = Number(version)
       this.lowerSeq = this.seq
-    } else {
+      this.lowered = true
+    } else if (Number(version) > this.version) {
+      this.lowered = false
       this.adopt(version)
     }
     this.changed()
@@ -211,7 +216,10 @@ export class SaveQueue {
       } else if (status >= 200 && status <= 299) {
         outcome = "saved"
         // A save sent before a lowering must not undo it.
-        if (sentSeq > this.lowerSeq) this.adopt(version)
+        if (sentSeq > this.lowerSeq) {
+          this.lowered = false
+          this.adopt(version)
+        }
         this.changed()
       } else {
         outcome = "failed"
