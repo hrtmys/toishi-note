@@ -1,7 +1,6 @@
 // Styles for the main app shell (home/_sidebar.html.erb and the note
 // editor it opens into) that don't belong to any one Stimulus controller.
 
-// Disable the blue focus glow on textareas/inputs.
 .form-control:focus {
   box-shadow: none !important;
   border-color: inherit;
@@ -18,14 +17,13 @@
   transition: all 0.2s ease;
 }
 
-.hover-container:hover .hover-target {
+.hover-container:hover .hover-target,
+.hover-container:focus-within .hover-target {
   opacity: 1;
   visibility: visible;
 }
 
-// Like .hover-target, but for the sidebar's icon-only buttons: collapses
-// width to 0 when hidden (not just fading) so they don't crowd the
-// notebook/folder/note name at narrower widths.
+// Collapses to zero width when hidden so it doesn't crowd the row's name.
 .hover-container .hover-target-icon {
   width: 0;
   opacity: 0;
@@ -42,8 +40,6 @@
   padding-right: 0.25rem !important;
 }
 
-// A pinned note's pin icon stays visible (and keeps its space) without
-// needing to hover.
 .hover-target.pin-active,
 .hover-target-icon.pin-active {
   opacity: 1;
@@ -53,35 +49,22 @@
   padding-right: 0.25rem !important;
 }
 
-// Highlights whichever of the three sort-mode buttons is active
-// (note_sort_controller.js).
 [data-note-sort-target="button"].active {
   background-color: #495057;
   color: #fff;
   border-color: #495057;
 }
 
-// B1: instant offcanvas restore (see showWithoutAnimation in
-// offcanvas_controller.js). Present only for the single show() that
-// re-opens the menu after a Turbo re-render, so notebook/folder taps
-// don't replay the slide-in animation on an already-open menu.
+// Set by offcanvas_controller.js so re-opening after a Turbo render doesn't replay the slide-in.
 .offcanvas-instant {
   transition: none !important;
 }
 
-// B3: per-row touch menus. Hidden everywhere by default; shown only on
-// touch devices. Desktops — including Windows touchscreen laptops whose
-// primary pointer is still a mouse — keep the hover reveal above as the
-// only affordance, and row titles keep their full width there.
 .row-actions-touch {
   display: none;
 }
 
-// B4: the note header's export/delete buttons must not reserve layout
-// while hidden — they squeezed the title down to about half width.
-// Collapse them until hovered instead; the hover reveal itself stays
-// for desktop. Touch devices use the ellipsis menu, so never flash
-// these via a tap-synthesized hover there.
+// display, not visibility: hidden buttons must not reserve width next to the title.
 #note_editor_header .hover-target {
   display: none;
 }
@@ -90,10 +73,8 @@
   display: inline-block;
 }
 
-// Touch rules apply below the offcanvas breakpoint only: phones get the
-// tap-to-open menus, while desktop widths always keep hover reveal
-// (headless test browsers report hover:none at 1400px, and Windows
-// touchscreen laptops stay mouse-first there).
+// Capped at the offcanvas breakpoint: headless Chrome reports hover:none even
+// at desktop widths, and touchscreen laptops are mouse-first.
 @media (pointer: coarse) and (max-width: 991.98px), (hover: none) and (max-width: 991.98px) {
   .row-actions-touch {
     display: block;
@@ -101,6 +82,17 @@
 
   #note_editor_header:hover .hover-target {
     display: none;
+  }
+
+  // The note header's id rule above still wins, keeping its buttons in the menu.
+  .hover-container .hover-target {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .sidebar-icon-btn {
+    min-height: 2rem;
+    min-width: 2rem;
   }
 }
 
