@@ -1,4 +1,5 @@
 import { marked } from "marked"
+import { normalizeListGaps, trimMarkdown, trimMarkdownStart } from "./markdown_source.js"
 
 const RENDERED = new Set([ "heading", "paragraph", "list", "blockquote", "code", "table", "hr" ])
 const SILENT = new Set([ "space", "def" ])
@@ -69,10 +70,10 @@ export function revealCaret(textarea) {
 }
 
 export function previewAnchor(markdown, caret) {
-  const trimmed = markdown.trim()
+  const trimmed = normalizeListGaps(trimMarkdown(markdown))
   if (trimmed === "") return null
 
-  const leading = markdown.length - markdown.trimStart().length
+  const leading = markdown.length - trimMarkdownStart(markdown).length
   const at = Math.min(Math.max(caret - leading, 0), trimmed.length)
 
   const tokens = marked.lexer(trimmed)
