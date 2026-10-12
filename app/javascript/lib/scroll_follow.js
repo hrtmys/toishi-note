@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { marked } from "./marked_config.js"
 import { normalizeListGaps, trimMarkdown, trimMarkdownStart } from "./markdown_source.js"
 
 const RENDERED = new Set([ "heading", "paragraph", "list", "blockquote", "code", "table", "hr" ])
