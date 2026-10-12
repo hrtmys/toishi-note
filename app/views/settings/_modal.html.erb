@@ -1,9 +1,9 @@
-<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content" data-controller="settings" data-settings-url-value="<%= settings_path %>">
       <div class="modal-header">
-        <h5 class="modal-title"><%= t("settings.title") %></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h5 class="modal-title" id="settingsModalLabel"><%= t("settings.title") %></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<%= t("home.common.close") %>"></button>
       </div>
 
       <%# Only as many tabs as have real content behind them — see the

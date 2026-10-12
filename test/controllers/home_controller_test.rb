@@ -237,6 +237,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "html[lang=ja]"
     assert_select "button[title=?]", I18n.t("home.header.settings", locale: :ja)
+    assert_select "#settingsModal[aria-labelledby=settingsModalLabel] #settingsModalLabel", text: I18n.t("settings.title", locale: :ja)
+    assert_select "#settingsModal .btn-close[aria-label=?]", I18n.t("home.common.close", locale: :ja)
     assert_select "*", text: I18n.t("home.notebooks.heading", locale: :ja)
     assert_select "*", text: I18n.t("home.folders.heading", locale: :ja)
     assert_select "*", text: I18n.t("home.files.heading", locale: :ja)

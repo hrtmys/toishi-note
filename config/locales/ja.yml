@@ -84,6 +84,7 @@ ja:
       export: "エクスポート"
       add: "追加"
       more_actions: "その他の操作"
+      close: "閉じる"
     notebooks:
       heading: "NOTEBOOKS"
       new: "新規ノートブック"
