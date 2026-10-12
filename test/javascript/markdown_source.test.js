@@ -2,7 +2,7 @@
 // that the preview renderer, the scroll anchor and the Word copy all use.
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
-import { marked } from "marked"
+import { marked } from "../../app/javascript/lib/marked_config.js"
 import * as source from "../../app/javascript/lib/markdown_source.js"
 
 describe("normalizeListGaps", () => {

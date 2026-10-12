@@ -15,11 +15,15 @@ marked.use({
 
 function foldLazyTables(item, lexer) {
   const rawLines = item.raw.split("\n")
+  let line = 0
 
   item.tokens = item.tokens.reduce((tokens, token) => {
     const previous = tokens.at(-1)
-    // Lexed from dedented text, so the header line survives verbatim in the raw only when unindented.
-    const lazy = token.type === "table" && rawLines.includes(token.raw.split("\n")[0])
+    const start = line
+    line += countNewlines(token.raw)
+    // Item tokens are lexed from dedented text; an unchanged raw line means it was unindented.
+    const delimiter = start + 1
+    const lazy = token.type === "table" && rawLines[delimiter] === token.raw.split("\n")[1]
     if (!lazy || !["text", "paragraph"].includes(previous?.type)) {
       tokens.push(token)
       return tokens
@@ -30,6 +34,10 @@ function foldLazyTables(item, lexer) {
     previous.tokens = lexer.inline(previous.text)
     return tokens
   }, [])
+}
+
+function countNewlines(text) {
+  return text.split("\n").length - 1
 }
 
 export { marked }
