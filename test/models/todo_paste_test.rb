@@ -100,11 +100,30 @@ class TodoPasteTest < ActiveSupport::TestCase
     assert_equal [ 12 * 36 + 8, 12 * 36 + 9 ], result.lines.map(&:id)
   end
 
-  test "a repeated id tag, with the due between, keeps the older id in content" do
+  test "a repeated id tag binds no id and keeps both in content" do
     line = TodoPaste.parse("## G\n- [ ] Buy milk (id: c8) (due: 2026-09-01) (id: d9)").lines.sole
-    assert_equal "Buy milk (id: c8)", line.content
-    assert_equal 13 * 36 + 9, line.id
+    assert_equal "Buy milk (id: c8) (id: d9)", line.content
+    assert_nil line.id
     assert_equal Date.new(2026, 9, 1), line.due
+  end
+
+  # Shared with test/javascript/bulk_todo_preview.test.js: both parsers must
+  # produce these rows, so the preview and the apply cannot drift.
+  SHARED_CASES = JSON.parse(File.read(Rails.root.join("test/shared/todo_paste_cases.json")))
+
+  SHARED_CASES.each do |row|
+    test "shared case: #{row['name']}" do
+      line = TodoPaste.parse("## G\n- [ ] #{row['line']}").lines.sole
+      assert_equal row["content"], line.content
+      assert_equal row["id"], line.id
+      assert_equal shared_due(row["due"]), line.due
+    end
+  end
+
+  def shared_due(value)
+    return nil if value.nil?
+
+    value == "none" ? :none : Date.iso8601(value)
   end
 
   test "an id before a malformed due tag still binds, and the due stays literal content" do
