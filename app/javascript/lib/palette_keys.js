@@ -3,6 +3,12 @@ export function isPaletteShortcut(event) {
   return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p"
 }
 
+// Opening over another modal would steal its focus trap and Esc.
+export function paletteShortcutAction(event, { modalOpen }) {
+  if (!isPaletteShortcut(event)) return null
+  return modalOpen ? "swallow" : "open"
+}
+
 const ACTIONS = { ArrowDown: "next", ArrowUp: "previous", Enter: "visit", Escape: "close" }
 
 export function paletteKeyAction(event) {

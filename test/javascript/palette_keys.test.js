@@ -1,7 +1,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 
-import { isPaletteShortcut, paletteKeyAction, wrapIndex } from "../../app/javascript/lib/palette_keys.js"
+import { isPaletteShortcut, paletteShortcutAction, paletteKeyAction, wrapIndex } from "../../app/javascript/lib/palette_keys.js"
 
 const key = (k, mods = {}) => ({ key: k, ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, isComposing: false, ...mods })
 
@@ -14,6 +14,22 @@ describe("isPaletteShortcut", () => {
   it("does not open while composing or without a modifier", () => {
     assert.equal(isPaletteShortcut(key("p", { ctrlKey: true, isComposing: true })), false)
     assert.equal(isPaletteShortcut(key("p")), false)
+  })
+})
+
+describe("paletteShortcutAction", () => {
+  it("opens the palette when no modal is open", () => {
+    assert.equal(paletteShortcutAction(key("p", { ctrlKey: true }), { modalOpen: false }), "open")
+  })
+
+  it("swallows the shortcut while another modal is open, so neither the palette nor Print opens", () => {
+    assert.equal(paletteShortcutAction(key("p", { ctrlKey: true }), { modalOpen: true }), "swallow")
+    assert.equal(paletteShortcutAction(key("p", { metaKey: true }), { modalOpen: true }), "swallow")
+  })
+
+  it("ignores keys that are not the shortcut", () => {
+    assert.equal(paletteShortcutAction(key("p"), { modalOpen: true }), null)
+    assert.equal(paletteShortcutAction(key("p", { ctrlKey: true, isComposing: true }), { modalOpen: false }), null)
   })
 })
 

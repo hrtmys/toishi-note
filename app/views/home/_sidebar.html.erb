@@ -10,7 +10,7 @@
             data: { action: "click->offcanvas#close" } do %>
           <i class="bi bi-check2-square"></i>
         <% end %>
-        <button type="button" class="btn btn-sm btn-outline-secondary border-0 me-1" data-bs-toggle="modal" data-bs-target="#settingsModal" title="<%= t("home.header.settings") %>">
+        <button type="button" class="btn btn-sm btn-outline-secondary border-0 me-1" data-action="offcanvas#openSettings" title="<%= t("home.header.settings") %>">
           <i class="bi bi-gear"></i>
         </button>
         <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>

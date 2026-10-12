@@ -108,6 +108,7 @@ en:
       export: "Export"
       add: "Add"
       more_actions: "More actions"
+      close: "Close"
     notebooks:
       heading: "NOTEBOOKS"
       new: "New notebook"
