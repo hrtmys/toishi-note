@@ -473,9 +473,7 @@ describe("tabAction", () => {
     expectTab("-     a\n- |b", "-     a\n  - |b")
   })
 
-  it("leaves Tab on non-list text and during IME composition to the browser", () => {
-    const plain = caretAt("para|")
-    assert.equal(tab(plain.value, plain.caret), null)
+  it("leaves Tab during IME composition to the browser", () => {
     const composing = caretAt("- a\n- |b")
     assert.equal(tab(composing.value, composing.caret, { isComposing: true }), null)
   })
@@ -483,9 +481,156 @@ describe("tabAction", () => {
   it("swallows Shift+Tab on an unindented list line", () => {
     assert.deepEqual(tab("- a", 3, { shiftKey: true }), { edit: null })
   })
+})
 
-  it("leaves Tab on plain lines to the browser", () => {
-    assert.equal(tab("hello", 5), null)
+// "[" and "]" mark a selection, "|" a caret; the markers are stripped from the value.
+const marked = (text) => {
+  let value = ""
+  let selectionStart = 0
+  let selectionEnd = 0
+  for (const ch of text) {
+    if (ch === "[") selectionStart = value.length
+    else if (ch === "]") selectionEnd = value.length
+    else if (ch === "|") selectionStart = selectionEnd = value.length
+    else value += ch
+  }
+  return { value, selectionStart, selectionEnd }
+}
+const render = (value, start, end) => start === end
+  ? `${value.slice(0, start)}|${value.slice(start)}`
+  : `${value.slice(0, start)}[${value.slice(start, end)}]${value.slice(end)}`
+const runTab = (before, extra = {}) => {
+  const { value, selectionStart, selectionEnd } = marked(before)
+  return tabAction({ value, selectionStart, selectionEnd, shiftKey: false, isComposing: false, ...extra })
+}
+const expectEdit = (before, after, extra = {}) => {
+  const { value } = marked(before)
+  const result = runTab(before, extra)
+  assert.ok(result?.edit, `no edit for ${JSON.stringify(before)}`)
+  const { edit } = result
+  assert.deepEqual(
+    { before, after: render(apply(value, edit), edit.selectionStart, edit.selectionEnd) },
+    { before, after }
+  )
+}
+const expectSwallowedRange = (before, extra = {}) => {
+  assert.deepEqual(runTab(before, extra), { edit: null }, before)
+}
+const expectNullTab = (before, extra = {}) => {
+  assert.equal(runTab(before, extra), null, before)
+}
+
+describe("tabAction on non-list lines", () => {
+  it("inserts two spaces at the caret on a plain line", () => {
+    expectEdit("para|", "para  |")
+  })
+
+  it("inserts two spaces at a mid-line caret", () => {
+    expectEdit("pa|ra", "pa  |ra")
+  })
+
+  it("indents a one-line selection at the line start and keeps it selected", () => {
+    expectEdit("p[ar]a", "  p[ar]a")
+  })
+
+  it("removes two leading spaces on Shift+Tab and shifts the caret", () => {
+    expectEdit("  pa|ra", "pa|ra", { shiftKey: true })
+  })
+
+  it("swallows Shift+Tab on a plain line with no leading whitespace", () => {
+    expectSwallowedRange("pa|ra", { shiftKey: true })
+  })
+
+  it("indents a plain line inside a fenced code block", () => {
+    expectEdit("```\n|x\n```", "```\n  |x\n```")
+  })
+
+  it("indents an empty document", () => {
+    expectEdit("|", "  |")
+  })
+
+  it("returns null for Tab after Esc on a plain line", () => {
+    expectNullTab("para|", { escaped: true })
+  })
+
+  it("returns null for Tab after Esc on a list line", () => {
+    expectNullTab("- a\n- |b", { escaped: true })
+  })
+
+  it("treats a list-like line inside a fence as plain text", () => {
+    expectEdit("```\n- |x\n```", "```\n-   |x\n```")
+  })
+
+  it("removes one leading tab on Shift+Tab, keeping the spaces after it", () => {
+    expectEdit("\t  x|", "  x|", { shiftKey: true })
+  })
+})
+
+describe("tabAction over a multi-line selection", () => {
+  it("indents each list line in the range under its parent", () => {
+    expectEdit("- a\n[- b\n- c]", "- a\n[  - b\n  - c]")
+  })
+
+  it("indents the lines below a range's first item that has no level above it", () => {
+    expectEdit("[- a\n- b\n- c]", "[- a\n  - b\n  - c]")
+  })
+
+  it("outdents each list line in the range on Shift+Tab", () => {
+    expectEdit("- a\n[  - b\n  - c]", "- a\n[- b\n- c]", { shiftKey: true })
+  })
+
+  it("indents a plain line in the range and leaves a list line with no item above it alone", () => {
+    expectEdit("[para\n- a]", "[  para\n- a]")
+  })
+
+  it("leaves the line that starts at the selection end's column 0 out of the edit", () => {
+    expectEdit("- a\n[- b\n]- c", "- a\n[  - b]\n- c")
+  })
+
+  it("leaves a blank line inside the range alone", () => {
+    expectEdit("- a\n[- b\n\n- c]", "- a\n[  - b\n\n  - c]")
+  })
+
+  it("renumbers the ordered line that becomes first at its new level and keeps later numbers", () => {
+    expectEdit("1. a\n[2. b\n3. c]", "1. a\n[   1. b\n   3. c]")
+  })
+
+  it("swallows Tab on a range of quote lines", () => {
+    expectSwallowedRange("[> a\n> b]")
+  })
+})
+
+describe("tabAction's level walk", () => {
+  it("indents under a dash item whose tab gap ends at column 4", () => {
+    expectEdit("-\ta\n- |b", "-\ta\n    - |b")
+  })
+
+  it("indents under an ordered item whose tab gap ends at column 4", () => {
+    expectEdit("1.\ta\n2. |b", "1.\ta\n    1. |b")
+  })
+
+  it("skips a lazy paragraph line between items", () => {
+    expectEdit("- a\nlazy\n- |b", "- a\nlazy\n  - |b")
+  })
+
+  it("skips fenced lines between items", () => {
+    expectEdit("- a\n  ```\n  - x\n  ```\n- |b", "- a\n  ```\n  - x\n  ```\n  - |b")
+  })
+
+  it("swallows Tab on a nested item when the only item above is fenced", () => {
+    expectSwallowedRange("- a\n  ```\n  - x\n  ```\n  - |b")
+  })
+
+  it("counts a full-width space in a marker gap as one column", () => {
+    expectEdit("-\u3000a\n- |b", "-\u3000a\n  - |b")
+  })
+
+  it("stops the walk at an ATX heading", () => {
+    expectSwallowedRange("- a\n# H\n- |b")
+  })
+
+  it("walks past an indented continuation line to reach the item a lazy line hangs from", () => {
+    expectEdit("- a\n  more\nlazy\n- |b", "- a\n  more\nlazy\n  - |b")
   })
 })
 

@@ -237,6 +237,8 @@ ja:
       reload: "再読み込み"
       reload_confirm: "未保存の変更を破棄して、別のデバイスの内容を読み込みますか？"
       keep_mine: "この内容を保持"
+    editor:
+      tab_hint: "Tab でインデントします。エディタの外へ移るには Esc を押してから Tab を押してください。"
   compare:
     modal_title: "比較"
     before_label: "変更前"
