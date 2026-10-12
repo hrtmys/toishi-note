@@ -7,7 +7,7 @@
         data: { controller: "submit-on-change", action: "change->submit-on-change#submit" } %>
   <% end %>
 
-  <span class="flex-grow-1 <%= 'text-decoration-line-through text-muted' if item.is_checked %>">
+  <span class="flex-grow-1 text-break <%= 'text-decoration-line-through text-muted' if item.is_checked %>" style="min-width: 0;">
     <%= item.content %>
   </span>
 
