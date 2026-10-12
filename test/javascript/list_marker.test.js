@@ -2,7 +2,7 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
-  currentLine, enterAction, parseListMarker, renumberFollowingLines, tabAction
+  currentLine, enterAction, parseListMarker, tabAction
 } from "../../app/javascript/lib/list_marker.js"
 
 describe("parseListMarker", () => {
@@ -71,57 +71,6 @@ describe("parseListMarker", () => {
   })
 })
 
-describe("renumberFollowingLines", () => {
-  it("returns null when the current line is the last one", () => {
-    assert.equal(renumberFollowingLines("1. first", 8, "", 3), null)
-  })
-
-  it("returns null when no ordered line follows", () => {
-    assert.equal(renumberFollowingLines("1. first\nplain", 8, "", 3), null)
-    assert.equal(renumberFollowingLines("1. first\n- bullet", 8, "", 3), null)
-  })
-
-  it("renumbers consecutive same-indent followers", () => {
-    const value = "1. first\n2. second\n3. third"
-    assert.deepEqual(renumberFollowingLines(value, 8, "", 3), {
-      end: value.length,
-      text: "\n3. second\n4. third"
-    })
-  })
-
-  it("stops at a blank line or plain text and leaves the rest untouched", () => {
-    const value = "1. first\n2. second\n\n2. detached"
-    assert.deepEqual(renumberFollowingLines(value, 8, "", 3), {
-      end: 18,
-      text: "\n3. second"
-    })
-  })
-
-  it("stops the run at a deeper indent rather than renumbering across it", () => {
-    const nested = "1. first\n2. second\n  2. nested\n2. back"
-    assert.deepEqual(renumberFollowingLines(nested, 8, "", 3), {
-      end: 18,
-      text: "\n3. second"
-    })
-  })
-
-  it("keeps each follower's own delimiter", () => {
-    const value = "1) first\n2) second"
-    assert.deepEqual(renumberFollowingLines(value, 8, "", 3), {
-      end: value.length,
-      text: "\n3) second"
-    })
-  })
-
-  it("only touches the exact indent", () => {
-    const value = "  1. first\n  2. second\n1. outer"
-    assert.deepEqual(renumberFollowingLines(value, 10, "  ", 3), {
-      end: 22,
-      text: "\n  3. second"
-    })
-  })
-})
-
 describe("currentLine", () => {
   it("finds the line around a middle caret", () => {
     assert.deepEqual(currentLine("aaa\nbbb\nccc", 5), { lineStart: 4, lineEnd: 7, line: "bbb" })
@@ -171,11 +120,24 @@ describe("enterAction", () => {
     assert.equal(result.edit.selectionEnd, 10)
   })
 
-  it("renumbers the following ordered items", () => {
+  it("leaves the following ordered items' numbers alone", () => {
     const value = "1. first\n2. second"
     const { edit } = enter(value, 8)
-    assert.equal(apply(value, edit), "1. first\n2. \n3. second")
+    assert.equal(apply(value, edit), "1. first\n2. \n2. second")
     assert.equal(edit.selectionStart, "1. first\n2. ".length)
+  })
+
+  it("inserts the next number at the caret without renumbering the items below", () => {
+    expectEnter("1. a|\n2. b\n3. c", "1. a\n2. |\n2. b\n3. c")
+  })
+
+  it("does not rewrite a 400-item ordered list when Enter is pressed on its first item", () => {
+    const value = Array.from({ length: 400 }, (_, i) => `${i + 1}. item`).join("\n")
+    const caret = "1. item".length
+    const { edit } = enter(value, caret)
+    assert.equal(edit.start, caret)
+    assert.equal(edit.end, caret)
+    assert.equal(edit.text.split("\n").length - 1, 1)
   })
 
   it("continues each marker style", () => {
@@ -233,10 +195,10 @@ describe("enterAction", () => {
     expectEnter("+ [x] a|", "+ [x] a\n+ [ ] |")
   })
 
-  it("makes an empty nested item the parent's next item, renumbering an ordered parent", () => {
+  it("makes an empty nested item the parent's next item, leaving the items below it alone", () => {
     expectEnter("- a\n  - |", "- a\n- |")
     expectEnter("- a\n  - b\n    - |", "- a\n  - b\n  - |")
-    expectEnter("1. a\n   - |\n2. b", "1. a\n2. |\n3. b")
+    expectEnter("1. a\n   - |\n2. b", "1. a\n2. |\n2. b")
     expectEnter("- [x] a\n  - [ ] |", "- [x] a\n- [ ] |")
     expectEnter("* a\n  1. |", "* a\n* |")
     expectEnter("- a\n\n  - b\n  - |", "- a\n\n  - b\n- |")
