@@ -1,47 +1,54 @@
 // List-marker parsing shared with the list continuation UI.
 // Unit-tested; the controller owns key handling on top of these.
 
-// Recognizes six marker shapes: "-", "*", "+", "1.", "- [ ]" (task list),
-// and ">". Task-list is checked first since it's a superset of bare bullet.
+// A line may start with a ">" quote prefix, then a task, bullet or ordered marker.
+// Tasks are checked first since they're a superset of the bare bullet.
 // CommonMark counts only ASCII spaces as a gap, so the full-width and no-break ones map to spaces.
-const asciiGap = (text) => text.replace(/[　 ]/g, " ")
+const asciiGap = (text) => text.replace(/[\u3000\u00A0]/g, " ")
+
+const QUOTE_PREFIX = /^[ \t]*(?:>[ \t\u3000\u00A0]?)+/
+const THEMATIC_BREAK = /^[ \t]*([-*_])([ \t]*\1){2,}[ \t]*$/
+const BULLET_TASK = /^([ \t]*)([-*+])([ \t\u3000\u00A0]+)\[([ xX])\]([ \t\u3000\u00A0]+)/
+const ORDERED_TASK = /^([ \t]*)(\d+)([.)])([ \t\u3000\u00A0]+)\[([ xX])\]([ \t\u3000\u00A0]+)/
+const BULLET = /^([ \t]*)([-*+])([ \t\u3000\u00A0]+)/
+const ORDERED = /^([ \t]*)(\d+)([.)])([ \t\u3000\u00A0]+)/
+
+function listMarker(line, quote, matched, continued) {
+  const full = quote + matched
+  return { full, rest: line.slice(full.length), continued, quote }
+}
 
 export function parseListMarker(line) {
-  let m
+  const quote = line.match(QUOTE_PREFIX)?.[0] ?? ""
+  const text = line.slice(quote.length)
+  if (THEMATIC_BREAK.test(text)) return null
+  const quoteGap = asciiGap(quote)
 
-  m = line.match(/^([ \t]*)([-*+])([ \t　 ]+)\[([ xX])\]([ \t　 ]*)/)
+  let m = text.match(BULLET_TASK)
   if (m) {
-    return {
-      full: m[0],
-      rest: line.slice(m[0].length),
-      // A continued task starts unchecked, regardless of whether the
-      // item it followed was checked — carrying a checkmark forward
-      // onto a brand new, not-yet-done item would be actively wrong.
-      continued: `${m[1]}${m[2]}${asciiGap(m[3])}[ ]${asciiGap(m[5])}`
-    }
+    // A continued task starts unchecked, regardless of whether the
+    // item it followed was checked — carrying a checkmark forward
+    // onto a brand new, not-yet-done item would be actively wrong.
+    return listMarker(line, quote, m[0], `${quoteGap}${m[1]}${m[2]}${asciiGap(m[3])}[ ]${asciiGap(m[5])}`)
   }
 
-  m = line.match(/^([ \t]*)([-*+])([ \t　 ]+)/)
-  if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: asciiGap(m[0]) }
-  }
-
-  m = line.match(/^([ \t]*)(\d+)([.)])([ \t　 ]+)/)
+  m = text.match(ORDERED_TASK)
   if (m) {
     const nextNumber = parseInt(m[2], 10) + 1
-    return {
-      full: m[0],
-      rest: line.slice(m[0].length),
-      continued: `${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`
-    }
+    return listMarker(line, quote, m[0], `${quoteGap}${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}[ ]${asciiGap(m[6])}`)
   }
 
-  m = line.match(/^([ \t]*)(>)([ \t　 ]*)/)
+  m = text.match(BULLET)
+  if (m) return listMarker(line, quote, m[0], quoteGap + asciiGap(m[0]))
+
+  m = text.match(ORDERED)
   if (m) {
-    return { full: m[0], rest: line.slice(m[0].length), continued: asciiGap(m[0]) }
+    const nextNumber = parseInt(m[2], 10) + 1
+    return listMarker(line, quote, m[0], `${quoteGap}${m[1]}${nextNumber}${m[3]}${asciiGap(m[4])}`)
   }
 
-  return null
+  if (!quote) return null
+  return { full: quote, rest: text, continued: quoteGap, quote }
 }
 
 export function currentLine(value, caretPosition) {
@@ -87,8 +94,13 @@ export function enterAction({ value, selectionStart, selectionEnd, isComposing, 
   if (!marker) return null
 
   if (marker.rest.trim() === "") {
+    if (marker.quote && marker.quote !== marker.full) {
+      const text = asciiGap(marker.quote)
+      const caret = lineStart + text.length
+      return { edit: { start: lineStart, end: lineEnd, text, selectionStart: caret, selectionEnd: caret } }
+    }
     const indent = line.match(/^[ \t]*/)[0]
-    const isQuote = marker.full.trim().startsWith(">")
+    const isQuote = marker.quote !== ""
     const width = indentWidth(indent)
     const parent = width > 0 ? findParentItem(value, lineStart, width) : null
 
@@ -149,7 +161,7 @@ function itemsAbove(value, lineStart) {
       continue
     }
     // CommonMark: five or more spaces after a marker make the content start one space after it.
-    const [, lead, bullet, gap] = line.match(/^([ \t]*)([-*+]|\d+[.)])([ \t　 ]+)/)
+    const [, lead, bullet, gap] = line.match(/^([ \t]*)([-*+]|\d+[.)])([ \t\u3000\u00A0]+)/)
     const indent = indentWidth(lead)
     const spaces = indentWidth(gap)
     items.push({ indent, child: indent + bullet.length + (spaces >= 5 ? 1 : spaces) })
