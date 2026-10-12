@@ -1,12 +1,12 @@
 // List-marker parsing shared with the list continuation UI.
 // Unit-tested; the controller owns key handling on top of these.
 
-// Recognizes five marker shapes: "-", "*", "1.", "- [ ]" (task list),
+// Recognizes six marker shapes: "-", "*", "+", "1.", "- [ ]" (task list),
 // and ">". Task-list is checked first since it's a superset of bare bullet.
 export function parseListMarker(line) {
   let m
 
-  m = line.match(/^(\s*)([-*])(\s+)\[([ xX])\](\s*)/)
+  m = line.match(/^(\s*)([-*+])(\s+)\[([ xX])\](\s*)/)
   if (m) {
     return {
       full: m[0],
@@ -18,7 +18,7 @@ export function parseListMarker(line) {
     }
   }
 
-  m = line.match(/^(\s*)([-*])(\s+)/)
+  m = line.match(/^(\s*)([-*+])(\s+)/)
   if (m) {
     return { full: m[0], rest: line.slice(m[0].length), continued: m[0] }
   }
@@ -79,10 +79,32 @@ export function renumberFollowingLines(value, lineEnd, indent, firstNumber) {
   return { end, text }
 }
 
-// Enter on a list line: continue the marker, or exit when the line is the
-// empty marker this continuation just inserted (armedMarker). null leaves
-// Enter to the browser.
-export function enterAction({ value, selectionStart, selectionEnd, armedMarker, isComposing, shiftKey, ctrlKey, metaKey, altKey }) {
+function indentWidth(whitespace) {
+  let width = 0
+  for (const ch of whitespace) width += ch === "\t" ? 4 : 1
+  return width
+}
+
+// The nearest shallower non-blank line; null when it is not a list item.
+function findParentItem(value, lineStart, width) {
+  let end = lineStart - 1
+  while (end >= 0) {
+    const start = end > 0 ? value.lastIndexOf("\n", end - 1) + 1 : 0
+    const line = value.slice(start, end)
+    const lineEnd = end
+    end = start - 1
+    if (line.trim() === "" || indentWidth(line.match(/^\s*/)[0]) >= width) continue
+
+    const marker = parseListMarker(line)
+    if (!marker || marker.full.trim().startsWith(">")) return null
+    return { lineStart: start, lineEnd, marker }
+  }
+  return null
+}
+
+// Enter on a list line: continue the marker, or exit when the marker is empty.
+// null leaves Enter to the browser.
+export function enterAction({ value, selectionStart, selectionEnd, isComposing, shiftKey, ctrlKey, metaKey, altKey }) {
   if (isComposing || shiftKey || ctrlKey || metaKey || altKey) return null
   // Replacing a real selection isn't "continue the list here" in any
   // well-defined sense.
@@ -92,12 +114,34 @@ export function enterAction({ value, selectionStart, selectionEnd, armedMarker, 
   const marker = parseListMarker(line)
   if (!marker) return null
 
-  // A freshly typed "* " + Enter continues; only an armed one exits.
-  if (marker.rest.trim() === "" && armedMarker !== null) {
-    return {
-      edit: { start: lineStart, end: lineEnd, text: "", selectionStart: lineStart, selectionEnd: lineStart },
-      armedMarker: null
+  if (marker.rest.trim() === "") {
+    const indent = line.match(/^\s*/)[0]
+    const isQuote = marker.full.trim().startsWith(">")
+    const width = indentWidth(indent)
+    const parent = width > 0 ? findParentItem(value, lineStart, width) : null
+
+    if (parent && !isQuote) {
+      const renumbered = parent.marker.ordered
+        ? renumberFollowingLines(value, lineEnd, parent.marker.ordered.indent, parent.marker.ordered.number + 2)
+        : null
+      const caret = lineStart + parent.marker.continued.length
+      return {
+        edit: {
+          start: lineStart,
+          end: renumbered?.end ?? lineEnd,
+          text: parent.marker.continued + (renumbered?.text ?? ""),
+          selectionStart: caret,
+          selectionEnd: caret
+        }
+      }
     }
+
+    // Without the blank line, text typed after the exit joins the list as a lazy continuation.
+    const previous = lineStart > 0 ? value.slice(value.lastIndexOf("\n", lineStart - 2) + 1, lineStart - 1) : ""
+    const blank = previous.trim() !== "" ? "\n" : ""
+    const text = parent ? blank + indent : blank
+    const caret = lineStart + text.length
+    return { edit: { start: lineStart, end: lineEnd, text, selectionStart: caret, selectionEnd: caret } }
   }
 
   const caret = selectionStart + 1 + marker.continued.length
@@ -113,7 +157,7 @@ export function enterAction({ value, selectionStart, selectionEnd, armedMarker, 
         selectionEnd: caret
       }
     : { start: selectionStart, end: selectionEnd, text: `\n${marker.continued}`, selectionStart: caret, selectionEnd: caret }
-  return { edit, armedMarker: marker.continued }
+  return { edit }
 }
 
 // Tab/Shift+Tab on a list line. null leaves Tab to the browser (focus
@@ -139,10 +183,4 @@ export function tabAction({ value, selectionStart, selectionEnd, shiftKey, isCom
       selectionEnd: Math.max(lineStart, selectionEnd - removed)
     }
   }
-}
-
-// Real typing ends the pristine continued marker, so Enter continues
-// from there instead of exiting. Navigation keys leave it armed.
-export function disarmsContinuation(key) {
-  return key?.length === 1 || key === "Backspace" || key === "Delete"
 }

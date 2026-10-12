@@ -1,9 +1,8 @@
-// Unit tests for lib/list_marker.js. Mirrors the MARKERS matrix
-// from list_continuation_test.rb (now dash-wiring only).
+// Unit tests for lib/list_marker.js.
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import {
-  currentLine, disarmsContinuation, enterAction, parseListMarker, renumberFollowingLines, tabAction
+  currentLine, enterAction, parseListMarker, renumberFollowingLines, tabAction
 } from "../../app/javascript/lib/list_marker.js"
 
 describe("parseListMarker", () => {
@@ -47,7 +46,7 @@ describe("parseListMarker", () => {
   })
 
   it("reports an empty rest for a bare marker, the removal signal", () => {
-    for (const marker of ["- ", "* ", "1. ", "- [ ] ", "> "]) {
+    for (const marker of ["- ", "* ", "+ ", "1. ", "- [ ] ", "> "]) {
       const parsed = parseListMarker(marker)
       assert.ok(parsed, `expected ${marker} to parse`)
       assert.equal(parsed.rest.trim(), "", `expected empty rest for ${marker}`)
@@ -126,7 +125,7 @@ describe("currentLine", () => {
 })
 
 const enter = (value, caret, extra = {}) => enterAction({
-  value, selectionStart: caret, selectionEnd: caret, armedMarker: null,
+  value, selectionStart: caret, selectionEnd: caret,
   isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false, ...extra
 })
 const tab = (value, caret, extra = {}) => tabAction({
@@ -134,25 +133,30 @@ const tab = (value, caret, extra = {}) => tabAction({
 })
 const apply = (value, edit) => value.slice(0, edit.start) + edit.text + value.slice(edit.end)
 
+// "|" marks the caret in a before/after document; it is stripped before use.
+const caretAt = (text) => ({ value: text.replace("|", ""), caret: text.indexOf("|") })
+const expectEnter = (before, after) => {
+  const start = caretAt(before)
+  const expected = caretAt(after)
+  const result = enter(start.value, start.caret)
+  assert.ok(result?.edit, `no edit for ${JSON.stringify(before)}`)
+  const { edit } = result
+  assert.deepEqual(
+    { before, value: apply(start.value, edit), selectionStart: edit.selectionStart, selectionEnd: edit.selectionEnd },
+    { before, value: expected.value, selectionStart: expected.caret, selectionEnd: expected.caret }
+  )
+}
+const expectNoEnter = (before, extra) => {
+  const { value, caret } = caretAt(before)
+  assert.equal(enter(value, caret, extra), null, before)
+}
+
 describe("enterAction", () => {
-  it("continues a bullet and arms the inserted marker", () => {
+  it("continues a bullet", () => {
     const result = enter("- first", 7)
     assert.equal(apply("- first", result.edit), "- first\n- ")
     assert.equal(result.edit.selectionStart, 10)
     assert.equal(result.edit.selectionEnd, 10)
-    assert.equal(result.armedMarker, "- ")
-  })
-
-  it("removes an armed, still-empty marker line and disarms", () => {
-    const value = "- first\n- "
-    const result = enter(value, 10, { armedMarker: "- " })
-    assert.equal(apply(value, result.edit), "- first\n")
-    assert.equal(result.edit.selectionStart, 8)
-    assert.equal(result.armedMarker, null)
-  })
-
-  it("continues a typed-in empty marker that was never armed", () => {
-    assert.equal(apply("* ", enter("* ", 2).edit), "* \n* ")
   })
 
   it("renumbers the following ordered items", () => {
@@ -173,7 +177,7 @@ describe("enterAction", () => {
   it("leaves plain lines and selections to the browser", () => {
     assert.equal(enter("hello", 5), null)
     assert.equal(enterAction({
-      value: "- first", selectionStart: 2, selectionEnd: 7, armedMarker: null,
+      value: "- first", selectionStart: 2, selectionEnd: 7,
       isComposing: false, shiftKey: false, ctrlKey: false, metaKey: false, altKey: false
     }), null)
   })
@@ -183,15 +187,65 @@ describe("enterAction", () => {
       assert.equal(enter("- first", 7, { [mod]: true }), null, mod)
     }
   })
-})
 
-describe("disarmsContinuation", () => {
-  it("disarms on typed characters and deletions", () => {
-    for (const key of ["a", "あ", "Backspace", "Delete"]) assert.equal(disarmsContinuation(key), true, key)
+  it("exits an empty bullet, ordered, or task marker, leaving a blank line", () => {
+    expectEnter("- a\n- |", "- a\n\n|")
+    expectEnter("* a\n* |", "* a\n\n|")
+    expectEnter("1. a\n2. |", "1. a\n\n|")
+    expectEnter("1) a\n2) |", "1) a\n\n|")
+    expectEnter("- [ ] a\n- [ ] |", "- [ ] a\n\n|")
+    expectEnter("- [x] a\n- [x] |", "- [x] a\n\n|")
   })
 
-  it("keeps the marker armed on navigation and modifiers", () => {
-    for (const key of ["ArrowLeft", "Shift", "Enter"]) assert.equal(disarmsContinuation(key), false, key)
+  it("exits an empty blockquote marker, alone or as an item inside a quote", () => {
+    expectEnter("> q\n> |", "> q\n\n|")
+    expectEnter("> q\n>|", "> q\n\n|")
+    expectEnter("> - a\n> |", "> - a\n\n|")
+  })
+
+  it("adds the blank line only after a non-blank line", () => {
+    expectEnter("* |", "|")
+    expectEnter("para\n- |", "para\n\n|")
+    expectEnter("- a\n\n- |", "- a\n\n|")
+  })
+
+  it("exits mid-list, with trailing spaces, or with the caret before the marker", () => {
+    expectEnter("- a\n-   |", "- a\n\n|")
+    expectEnter("- a\n|- ", "- a\n\n|")
+    expectEnter("- a\n- |\n- c", "- a\n\n|\n- c")
+  })
+
+  it("treats + as a list marker", () => {
+    expectEnter("+ a\n+ |", "+ a\n\n|")
+    expectEnter("+ a|", "+ a\n+ |")
+    expectEnter("+ [x] a|", "+ [x] a\n+ [ ] |")
+  })
+
+  it("makes an empty nested item the parent's next item, renumbering an ordered parent", () => {
+    expectEnter("- a\n  - |", "- a\n- |")
+    expectEnter("- a\n  - b\n    - |", "- a\n  - b\n  - |")
+    expectEnter("1. a\n   - |\n2. b", "1. a\n2. |\n3. b")
+    expectEnter("- [x] a\n  - [ ] |", "- [x] a\n- [ ] |")
+    expectEnter("* a\n  1. |", "* a\n* |")
+    expectEnter("- a\n\n  - b\n  - |", "- a\n\n  - b\n- |")
+    expectEnter("- a\n\t- |", "- a\n- |")
+    expectEnter("- a\n  - |\n  - c", "- a\n- |\n  - c")
+  })
+
+  it("exits an indented line that has no list item above it", () => {
+    expectEnter("para\n  - |", "para\n\n|")
+    expectEnter("> a\n  - |", "> a\n\n|")
+    expectEnter("para\n  > |", "para\n\n|")
+  })
+
+  it("leaves a quote inside a list item and keeps the item's indent", () => {
+    expectEnter("- a\n  > q\n  > |", "- a\n  > q\n\n  |")
+  })
+
+  it("returns null for IME composition and Shift+Enter on an empty marker", () => {
+    expectNoEnter("- a\n- |", { isComposing: true })
+    expectNoEnter("- a\n  - |", { isComposing: true })
+    expectNoEnter("- a\n- |", { shiftKey: true })
   })
 })
 

@@ -1,18 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
-import { disarmsContinuation, enterAction, tabAction } from "../lib/list_marker"
+import { enterAction, tabAction } from "../lib/list_marker"
 import { performEdit } from "../lib/markdown_edits"
 
-// Continues Markdown list markers on Enter, removing an empty marker
-// instead of continuing it forever. Also lets Tab/Shift+Tab indent a
-// list line. Deliberately small, not a step towards CodeMirror.
+// Continues Markdown list markers on Enter; Enter on an empty marker exits the list,
+// or outdents one level under a parent item. Tab/Shift+Tab indent and outdent list lines.
 
 export default class extends Controller {
-  connect() {
-    // The marker text this controller's last continuation inserted, while
-    // the caret line is still that pristine empty item.
-    this.armedEmptyMarker = null
-  }
-
   keydown(event) {
     // Japanese IME composition sends its own Enter/Tab before either key
     // means anything to us — bail out completely to avoid a stray marker.
@@ -22,8 +15,6 @@ export default class extends Controller {
       this.handleEnter(event)
     } else if (event.key === "Tab") {
       this.handleTab(event)
-    } else if (disarmsContinuation(event.key)) {
-      this.armedEmptyMarker = null
     }
   }
 
@@ -33,7 +24,6 @@ export default class extends Controller {
       value: textarea.value,
       selectionStart: textarea.selectionStart,
       selectionEnd: textarea.selectionEnd,
-      armedMarker: this.armedEmptyMarker,
       isComposing: event.isComposing,
       shiftKey: event.shiftKey,
       ctrlKey: event.ctrlKey,
@@ -44,7 +34,6 @@ export default class extends Controller {
 
     event.preventDefault()
     performEdit(textarea, action.edit)
-    this.armedEmptyMarker = action.armedMarker
   }
 
   handleTab(event) {
