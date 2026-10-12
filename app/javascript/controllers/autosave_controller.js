@@ -10,7 +10,7 @@ let inflightKeepaliveBytes = 0
 // Bumped on every save sent or settled, so a prefetch taken before a save can be told apart.
 let saveCounter = 0
 const prefetchCounters = new Map()
-let pausedVisits = 0
+let pausedVisit = null
 
 export function queueForNote(noteUrl, version) {
   return noteQueue(noteUrl, { version: version ?? 0, send: transport(noteUrl), onChange: refreshLeaveListener })
@@ -152,10 +152,11 @@ document.addEventListener("turbo:before-fetch-request", (event) => {
 
   queues.forEach((queue) => queue.flush())
   event.preventDefault()
-  pausedVisits++
+  const visit = { kind, target: event.target }
+  pausedVisit = visit
   Promise.all(queues.map((queue) => queue.waitForPending(VISIT_PAUSE_CAP_MS))).then(() => {
     delete detail.fetchRequest
-    pausedVisits--
+    if (pausedVisit === visit) pausedVisit = null
     detail.resume()
   })
 })
@@ -171,12 +172,15 @@ function toast(message) {
 }
 
 // The toast element is replaced with the page, so it waits for the next render.
-function toastAfterVisit(message) {
-  // A newer visit or a failed fetch means the paused one never renders.
-  const events = [ "turbo:load", "turbo:frame-load", "turbo:visit", "turbo:fetch-request-error" ]
+function toastAfterVisit(message, visit) {
+  const loadEvent = visit.kind === "frame" ? "turbo:frame-load" : "turbo:load"
+  // A newer visit, or this request failing, means the paused one never renders.
+  const events = [ loadEvent, "turbo:visit", "turbo:fetch-request-error" ]
   const finish = (event) => {
+    const ours = event.type === "turbo:visit" || event.type === "turbo:load" || event.target === visit.target
+    if (!ours) return
     events.forEach((name) => document.removeEventListener(name, finish))
-    if (event.type === "turbo:load" || event.type === "turbo:frame-load") toast(message)
+    if (event.type === loadEvent) toast(message)
   }
   events.forEach((name) => document.addEventListener(name, finish))
 }
@@ -233,14 +237,14 @@ export default class extends Controller {
 
   routeConflict() {
     const queue = this.queue
-    const route = conflictRoute({ wrapperConnected: queue.wrapperConnected, visitPaused: pausedVisits > 0, title: queue.title, placeholder: queue.placeholder })
+    const route = conflictRoute({ wrapperConnected: queue.wrapperConnected, visitPaused: pausedVisit !== null, title: queue.title, placeholder: queue.placeholder })
     if (route.discard) queue.discard()
 
     const message = t("autosave.changed_elsewhere", { title: route.title })
     if (route.action === "toast_now") {
       toast(message)
     } else if (route.action === "toast_after_load") {
-      toastAfterVisit(message)
+      toastAfterVisit(message, pausedVisit)
     } else {
       const target = this.element.isConnected ? this.element : queue.wrapper
       target.dispatchEvent(new CustomEvent("note:conflict", { bubbles: true }))

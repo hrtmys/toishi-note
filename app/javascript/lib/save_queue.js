@@ -23,7 +23,7 @@ export function allNoteQueues() {
 
 // Serializes one note's autosaves: at most one in flight, and each save
 // reads the lock version only when it is sent, after the previous response
-// updated it. After a 409 every save is held until keepMine() or discard().
+// updated it. A hold blocks values sequenced after it until keepMine() or discard().
 export class SaveQueue {
   constructor({ version, send, onChange }) {
     this.version = Number(version)
@@ -35,6 +35,7 @@ export class SaveQueue {
     this.inFlightField = null
     this.held = false
     this.holdReason = null
+    this.holdSeq = 0
     this.conflictVersion = null
     this.wrapper = null
     this.wrapperConnected = false
@@ -83,6 +84,7 @@ export class SaveQueue {
     this.conflictVersion = null
     this.held = false
     this.holdReason = null
+    for (const entry of this.pending.values()) entry.conflicted = false
     this.changed()
     this.pump()
   }
@@ -109,18 +111,16 @@ export class SaveQueue {
   // A snapshot's fields carry the typed text, so its older version is ignored
   // unless values were sequenced after it was taken (e.g. from another URL).
   attach(wrapper, { version, snapshot, snapshotSeq }) {
-    if (this.held && wrapper !== this.wrapper) this.discard()
+    if (this.held && wrapper !== this.wrapper) this.dropHeldValues()
     this.wrapper = wrapper
     this.wrapperConnected = true
 
     let result = null
-    const trusted = snapshot ? snapshotSeq === undefined || snapshotSeq >= this.seq : Number(version) >= this.version
+    const trusted = snapshot ? snapshotSeq !== undefined && snapshotSeq >= this.seq : Number(version) >= this.version
     if (trusted) {
       this.adopt(version)
     } else if (!this.held) {
-      this.held = true
-      this.holdReason = "stale"
-      this.checkWaits()
+      this.hold("stale")
       result = "stale"
     }
     this.changed()
@@ -149,6 +149,38 @@ export class SaveQueue {
       wait.timer = setTimeout(() => this.endWait(wait), capMs)
       this.waits.push(wait)
     })
+  }
+
+  hold(reason) {
+    this.held = true
+    this.holdReason = reason
+    this.holdSeq = this.seq
+    this.checkWaits()
+  }
+
+  // Values typed before the hold came from an up-to-date page, so only later ones are dropped.
+  dropHeldValues() {
+    for (const [ field, entry ] of Array.from(this.scheduled)) {
+      if (entry.seq <= this.holdSeq) continue
+      clearTimeout(entry.timer)
+      entry.waiters.forEach((resolve) => resolve("discarded"))
+      this.scheduled.delete(field)
+    }
+    for (const [ field, entry ] of Array.from(this.pending)) {
+      if (entry.seq <= this.holdSeq && !entry.conflicted) continue
+      entry.waiters.forEach((resolve) => resolve("discarded"))
+      this.pending.delete(field)
+    }
+    this.conflictVersion = null
+    this.held = false
+    this.holdReason = null
+    this.checkWaits()
+    this.changed()
+    this.pump()
+  }
+
+  sendable(entry) {
+    return !this.held || (entry.seq <= this.holdSeq && !entry.conflicted)
   }
 
   cancelScheduled(field) {
@@ -197,9 +229,11 @@ export class SaveQueue {
   }
 
   async pump() {
-    if (this.inFlight || this.held || this.pending.size === 0) return
+    if (this.inFlight) return
+    const next = Array.from(this.pending).find(([ , entry ]) => this.sendable(entry))
+    if (!next) return
 
-    const [ field, entry ] = this.pending.entries().next().value
+    const [ field, entry ] = next
     this.pending.delete(field)
     this.inFlight = true
     this.inFlightField = field
@@ -210,12 +244,13 @@ export class SaveQueue {
       const { status, version } = await this.send({ field, value: entry.value, version: this.version })
       if (status === 409) {
         outcome = "conflict"
-        this.held = true
-        this.holdReason = "conflict"
         this.conflictVersion = version
         // The conflicted value is still unsaved; keep it for keepMine()
         // unless a newer value for the same field is already waiting.
         if (!this.pending.has(field)) this.pending.set(field, { value: entry.value, seq: entry.seq, waiters: [] })
+        // Values already waiting would carry the same outdated version.
+        for (const waiting of this.pending.values()) waiting.conflicted = true
+        this.hold("conflict")
       } else if (status >= 200 && status <= 299) {
         outcome = "saved"
         this.adopt(version)
