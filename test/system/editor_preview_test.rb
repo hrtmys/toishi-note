@@ -122,6 +122,27 @@ class EditorPreviewTest < ApplicationSystemTestCase
       wait_until("the typed exclamation mark never rendered") { preview_text?("new last line!") }
       assert_operator preview_scroll_top, :<, 5, "the follow pulled the preview back after a manual scroll"
     end
+    phase "5 typing at the end of a long code block keeps the typed line in the preview viewport" do
+      { "closed, last" => code_markdown(close: true),
+        "unclosed, last" => code_markdown(close: false),
+        "closed, mid-note" => code_markdown(close: true, after: true) }.each do |label, markdown|
+        execute_script(<<~JS, markdown)
+          const ta = document.querySelector("#{TEXTAREA}")
+          ta.value = arguments[0]
+          ta.dispatchEvent(new Event("input", { bubbles: true }))
+          document.querySelector("#{PREVIEW_AREA}").scrollTop = 0
+        JS
+        assert_selector ".markdown-content pre", text: "code line 80"
+        execute_script(<<~JS)
+          const ta = document.querySelector("#{TEXTAREA}")
+          ta.focus()
+          const caret = ta.value.indexOf("code line 80") + "code line 80".length
+          ta.setSelectionRange(caret, caret)
+        JS
+        find(TEXTAREA).send_keys("\ncode line 80x")
+        wait_until("#{label}: the typed code line never came into the preview viewport") { text_in_preview_viewport?("code line 80x") }
+      end
+    end
   end
 
   private
@@ -141,6 +162,42 @@ class EditorPreviewTest < ApplicationSystemTestCase
   def short_flowchart_markdown
     chain = ->(from, to) { (from..to).map { |i| "N#{i}" }.join("-->") }
     "```mermaid\nflowchart TD\n  #{chain.call(1, 12)}\n  #{chain.call(12, 24)}\n```\n\nend line"
+  end
+
+  def code_markdown(close:, after: false)
+    lines = (1..80).map { |i| "code line #{i}" }.join("\n")
+    md = "# Code\n\nintro\n\n```js\n#{lines}\n"
+    md += "```\n" if close
+    md += "\n" + Array.new(30) { |i| "Tail paragraph #{i}.\n" }.join("\n") if after
+    md
+  end
+
+  # Whether the rendered text itself (not its whole block) lies inside the preview's visible area.
+  def text_in_preview_viewport?(text)
+    evaluate_script(<<~JS)
+      (() => {
+        const preview = document.querySelector("#{PREVIEW_AREA}")
+        // Highlighting splits a line across spans, so map the match back through every text node.
+        const at = preview.textContent.indexOf(#{text.to_json})
+        if (at === -1) return false
+        const range = document.createRange()
+        const walker = document.createTreeWalker(preview, NodeFilter.SHOW_TEXT)
+        let offset = 0
+        while (walker.nextNode()) {
+          const node = walker.currentNode
+          const end = offset + node.data.length
+          if (offset <= at && at < end) range.setStart(node, at - offset)
+          if (offset < at + #{text.length} && at + #{text.length} <= end) {
+            range.setEnd(node, at + #{text.length} - offset)
+            const view = preview.getBoundingClientRect()
+            const rect = range.getBoundingClientRect()
+            return rect.top >= view.top && rect.bottom <= view.bottom
+          }
+          offset = end
+        }
+        return false
+      })()
+    JS
   end
 
   def overflows?(selector)
