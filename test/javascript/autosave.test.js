@@ -69,6 +69,17 @@ describe("visitDecision", () => {
   it("pauses and flushes a Drive visit while a non-held queue has unsaved work", () => {
     assert.deepEqual(decide({}), { pause: true, flush: true, dropPrefetch: false })
   })
+  it("blocks a visit away from a lowered note with unsaved values instead of flushing it", () => {
+    const d = decide({ queues: [ { held: false, lowered: true, hasUnsaved: true } ] })
+    assert.equal(d.block, true)
+    assert.equal(d.pause, false)
+    assert.equal(d.flush, false)
+  })
+  it("doesn't block for a lowered note with nothing unsaved", () => {
+    const d = decide({ queues: [ { held: false, lowered: true, hasUnsaved: false } ] })
+    assert.notEqual(d.block, true)
+    assert.equal(d.pause, false)
+  })
   it("never pauses or flushes a prefetch", () => {
     const d = decide({ kind: "prefetch" })
     assert.equal(d.pause, false)

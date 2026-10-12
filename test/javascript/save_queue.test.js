@@ -403,8 +403,29 @@ describe("one queue per note", () => {
     calls[1].resolve({ status: 200, version: 7 })
     await tick()
     assert.equal(queue.lowered, false)
-    queue.adopt(9)
-    assert.equal(queue.version, 9)
+    queue.adopt(8)
+    assert.equal(queue.version, 8)
+  })
+
+  it("ignores a toggle's version that skips one, so the next save sends the old version", async () => {
+    const { calls, send } = controlledSend()
+    const url = freshUrl()
+    const queue = saveQueueLib.noteQueue(url, { version: 2, send })
+    saveQueueLib.findNoteQueue(url).adopt(4)
+    queue.request("content", "x")
+    await tick()
+    assert.equal(calls[0].payload.version, 2)
+  })
+
+  it("ignores a toggle's version while a save is in flight", async () => {
+    const { calls, send } = controlledSend()
+    const url = freshUrl()
+    const queue = saveQueueLib.noteQueue(url, { version: 2, send })
+    queue.request("content", "in flight")
+    await tick()
+    saveQueueLib.findNoteQueue(url).adopt(3)
+    assert.equal(queue.version, 2)
+    calls[0].resolve({ status: 409, version: 3 })
   })
 
   it("adopting a toggle's version raises the next save's version, ignores a lower one, and creates no queue", async () => {
