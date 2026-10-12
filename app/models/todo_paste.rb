@@ -12,20 +12,26 @@ class TodoPaste
   end
 
   TASK_LINE = /\A- \[( |x)\] (.*)\z/
+  LENIENT_TASK_LINE = /\A[ \t]*(?:[-*+]|\d{1,9}[.)]) \[( |x|X)\] (.*)\z/
   HEADING_LINE = /\A##\s*(.*)\z/
+  LENIENT_HEADING_LINE = /\A(?:#){1,6} (.*)\z/
   TAG = /\A(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)\z/mi
   Span = Struct.new(:start, :stop, :value, :delete, keyword_init: true)
   VALID_ID_BODY = /\A([0-9a-z]+)(;delete!)?\z/
   VALID_DUE_VALUE = /\A(none|\d{4}-\d{2}-\d{2})\z/
 
-  def self.parse(text)
-    new(text)
+  # Lenient is the bulk-add modal's grammar. Apply stays strict, so a loose
+  # line such as a sub-step would otherwise become an unintended :add op.
+  def self.parse(text, lenient: false)
+    new(text, lenient: lenient)
   end
 
   attr_reader :lines
 
-  def initialize(text)
+  def initialize(text, lenient: false)
     @lines = []
+    @task_line = lenient ? LENIENT_TASK_LINE : TASK_LINE
+    @heading_line = lenient ? LENIENT_HEADING_LINE : HEADING_LINE
     parse!(text.to_s)
   end
 
@@ -48,7 +54,7 @@ class TodoPaste
         next
       end
 
-      if (title = line[HEADING_LINE, 1])
+      if (title = line[@heading_line, 1])
         if title.strip == "Structure"
           mode = :in_structure
         else
@@ -60,8 +66,8 @@ class TodoPaste
 
       next if mode == :in_structure
 
-      next unless (match = TASK_LINE.match(line))
-      @lines << build_line(heading, match[1] == "x", match[2])
+      next unless (match = @task_line.match(line))
+      @lines << build_line(heading, match[1] != " ", match[2])
     end
   end
 

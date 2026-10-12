@@ -117,7 +117,7 @@ class Note < ApplicationRecord
   # A removal marker has nothing to append to here — this path only ever
   # creates items — so such a line is dropped rather than built.
   def self.parse_bulk_todo_markdown(text)
-    TodoPaste.parse(text).lines.reject(&:delete?).map do |line|
+    TodoPaste.parse(text, lenient: true).lines.reject(&:delete?).map do |line|
       { "content" => line.content, "checked" => line.checked, "due_date" => line.due.is_a?(Date) ? line.due : nil }
     end
   end

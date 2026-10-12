@@ -1,8 +1,8 @@
-// Mirrors TodoPaste's grammar (app/models/todo_paste.rb), including parseTaskTags,
+// Mirrors TodoPaste's lenient grammar (app/models/todo_paste.rb), including parseTaskTags,
 // pinned by test/shared/todo_paste_cases.json. The modal only creates items, so an
 // (id:) tag is discarded and a removal marker is rejected, not honoured.
-const TASK_LINE = /^- \[( |x)\] (.*)$/
-const HEADING_LINE = /^##\s*(.*)$/
+const TASK_LINE = /^[ \t]*(?:[-*+]|\d{1,9}[.)]) \[( |x|X)\] (.*)$/
+const HEADING_LINE = /^#{1,6} (.*)$/
 const TAG = /^(.*?)[ \t\r\n\f\v]*(?:\((id|due):[ \t\r\n\f\v]*([^)]*)\)|（(id|due):[ \t\r\n\f\v]*([^）]*)）)$/is
 const VALID_ID_BODY = /^([0-9a-z]+)(;delete!)?$/
 const DUE_SHAPE = /^\d{4}-\d{2}-\d{2}$/
@@ -159,7 +159,7 @@ function parseMarkdownEntries(text) {
     if (mode === "in_structure") continue
 
     const taskMatch = line.match(TASK_LINE)
-    if (taskMatch) entries.push(classifyMarkdownTask(taskMatch[1] === "x", taskMatch[2], line))
+    if (taskMatch) entries.push(classifyMarkdownTask(taskMatch[1] !== " ", taskMatch[2], line))
   }
 
   return entries
