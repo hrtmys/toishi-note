@@ -4,6 +4,10 @@ Rails.application.routes.draw do
   # Rails' own PWA controller: the manifest is a browser-required document, not an API.
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
 
+  # Rails' built-in liveness check (200 once the app boots, 500 if it raises). Kept
+  # unauthenticated so an uptime monitor can reach it through a path-scoped proxy rule.
+  get "up" => "rails/health#show", as: :rails_health_check
+
   resource :setup, only: [ :new, :create ], controller: "setup"
   resource :session
   resources :passwords, param: :token
