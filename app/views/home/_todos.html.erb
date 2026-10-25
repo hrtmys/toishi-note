@@ -1,8 +1,8 @@
 <%# The Todos hub — a third mode of the main pane, mirroring Organize.
     Only the active view's data (todo_items or todo_notes) is loaded. %>
 <div class="h-100 d-flex flex-column overflow-hidden p-4">
-  <div class="d-flex justify-content-between align-items-center border-bottom mb-3 pb-2 flex-shrink-0">
-    <div class="d-flex align-items-center">
+  <div class="d-flex flex-wrap column-gap-2 justify-content-between align-items-center border-bottom mb-3 pb-2 flex-shrink-0">
+    <div class="d-flex align-items-center text-nowrap">
       <%= link_to root_path(notebook_id: current_notebook&.id, folder_id: current_folder&.id, note_id: current_note&.id),
           class: "btn btn-outline-secondary btn-sm me-3", title: t("home.todos.back") do %>
         <i class="bi bi-arrow-left"></i>
@@ -10,7 +10,7 @@
       <h4 class="fw-bold m-0"><%= t("home.header.all_open_todos") %></h4>
     </div>
 
-    <div class="d-flex align-items-center flex-shrink-0">
+    <div class="d-flex align-items-center flex-shrink-0 text-nowrap">
       <span class="me-2">
         <%= render partial: "home/todos_copy_button", locals: { url: todos_path(format: :md), label: t("home.todos.copy_all") } %>
       </span>

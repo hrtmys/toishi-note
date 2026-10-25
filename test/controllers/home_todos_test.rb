@@ -25,6 +25,18 @@ class HomeTodosTest < ActionDispatch::IntegrationTest
     assert_select "#todo_item_#{item.id} span.text-break[style*='min-width: 0']"
   end
 
+  test "the hub header wraps its controls onto a second line instead of clipping them at narrow widths" do
+    @note.todo_items.create!(content: "Open")
+
+    get root_url(todos: true)
+
+    assert_response :success
+    assert_select "div.flex-wrap.column-gap-2.border-bottom" do
+      assert_select "h4", text: I18n.t("home.header.all_open_todos")
+      assert_select "div.text-nowrap", count: 2
+    end
+  end
+
   test "an unknown view param falls back to project rather than erroring" do
     @note.todo_items.create!(content: "Open")
 
