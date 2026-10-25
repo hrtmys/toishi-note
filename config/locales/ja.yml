@@ -293,6 +293,7 @@ ja:
       note_moved: "ノートを移動しました。"
     todos:
       copy_all: "すべてコピー"
+      copy_failed: "TODOをコピーできませんでした — 通信状況を確認してください。"
     image_upload:
       uploading: "%{filename} をアップロード中…"
       failed: "%{filename} のアップロードに失敗しました"

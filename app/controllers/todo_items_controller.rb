@@ -21,7 +21,8 @@ class TodoItemsController < ApplicationController
     if @item.update(todo_item_params)
       streams = [
         turbo_stream.replace("todo_item_#{@item.id}", partial: "todo_items/item", locals: { item: @item }),
-        todo_progress_stream
+        todo_progress_stream,
+        todos_stats_stream
       ]
       # The "All open TODOs" cross-notebook view only lists unchecked
       # items, so checking one off there should remove it, not re-render.
@@ -76,5 +77,15 @@ class TodoItemsController < ApplicationController
   # mutates a note's todo_items needs the progress bar re-rendered.
   def todo_progress_stream
     turbo_stream.replace("todo_progress_#{@note.id}", partial: "todo_items/progress", locals: { note: @note })
+  end
+
+  # The hub's counterpart to the note page's progress bar above: a hub
+  # tick has no progress bar in its DOM, so its counts stayed stale.
+  def todos_stats_stream
+    # The partial's loaded_* helpers read the in-memory association,
+    # which #update only partially populated — reload it so the counts
+    # come from the post-update database state, not a stale target.
+    @note.todo_items.reset
+    turbo_stream.replace("todos_stats_#{@note.id}", partial: "home/todos_stats", locals: { note: @note })
   end
 end

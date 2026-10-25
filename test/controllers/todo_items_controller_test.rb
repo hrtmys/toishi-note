@@ -45,6 +45,13 @@ class TodoItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/all_todos_item_#{@item.id}/, @response.body)
   end
 
+  test "checking an item off also refreshes the todos hub stats for its note" do
+    patch note_todo_item_url(@note, @item), params: { is_checked: true }, as: :turbo_stream
+    assert_response :success
+    assert_match(/todos_stats_#{@note.id}/, @response.body)
+    assert_match(/1\/1/, @response.body)
+  end
+
   test "unchecking an item does not try to remove anything from the all-open-TODOs view" do
     @item.update!(is_checked: true)
     patch note_todo_item_url(@note, @item), params: { is_checked: false }, as: :turbo_stream

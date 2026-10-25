@@ -1,0 +1,4 @@
+<%# Hub group header stats for one note — rendered on the hub itself and
+    re-rendered by TodoItemsController#update's Turbo Stream, so a tick
+    on the hub refreshes the counts instead of leaving them stale. %>
+<span id="todos_stats_<%= note.id %>"><%= t("home.todos.stats", progress: note.loaded_todo_progress, overdue: note.loaded_overdue_count) %><%= " #{t("home.todos.checklist")}" if note.loaded_checklist? %></span>
