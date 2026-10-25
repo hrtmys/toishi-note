@@ -7,6 +7,16 @@ import { normalizeListGaps, trimMarkdown } from "./markdown_source.js"
 // demand, gated by a cheap content check, so the common case pays nothing.
 let mermaidConfigured = false
 
+// Indirected so tests can substitute a fake: the real Mermaid measures
+// text through browser layout APIs, so it never finishes a render under
+// jsdom. Production code always uses the default loader.
+let mermaidModuleLoader = () => import("mermaid")
+
+export function setMermaidModuleLoaderForTest(loader) {
+  mermaidModuleLoader = loader
+  mermaidConfigured = false
+}
+
 // The Note editor re-renders the preview on every keystroke (debounced),
 // unlike a Scrap item's one-shot render — so an older call's Mermaid
 // import/render can still be in flight when a newer keystroke replaces
@@ -16,7 +26,7 @@ let mermaidConfigured = false
 const latestRenderPerElement = new WeakMap()
 
 async function ensureMermaidConfigured() {
-  const mermaid = (await import("mermaid")).default
+  const mermaid = (await mermaidModuleLoader()).default
   if (!mermaidConfigured) {
     mermaid.initialize({ startOnLoad: false, theme: "default" })
     mermaidConfigured = true
@@ -55,8 +65,48 @@ async function highlightCodeBlocks(codeBlocks, element, token) {
 // guarantees it even when two renders overlap mid-typing.
 let mermaidRenderSeq = 0
 
+// Rebuilding innerHTML on every render destroys the SVG a previous
+// render produced, so an unchanged diagram would be re-rendered from
+// scratch on every keystroke — the flicker. Cache SVGs by source text.
+const mermaidSvgCache = new Map()
+const MERMAID_SVG_CACHE_LIMIT = 50
+
+function cacheMermaidSvg(source, svg) {
+  // Editing a diagram leaves one entry per intermediate valid state,
+  // but only recent diagrams matter — drop the whole cache at the limit
+  // rather than track eviction order.
+  if (mermaidSvgCache.size >= MERMAID_SVG_CACHE_LIMIT) mermaidSvgCache.clear()
+  mermaidSvgCache.set(source, svg)
+}
+
+function swapInMermaidSvg(block, svg) {
+  const container = document.createElement("div")
+  container.classList.add("mermaid")
+  container.innerHTML = svg
+  const pre = block.closest("pre")
+  if (pre) {
+    pre.replaceWith(container)
+  } else {
+    block.replaceWith(container)
+  }
+}
+
 async function renderMermaidBlocks(mermaidBlocks, element, token) {
   if (mermaidBlocks.length === 0) return
+
+  // Cache hits swap in here, before the first await — after this
+  // function's caller has rebuilt the element, a hit must land in the
+  // same synchronous pass or the raw code block paints for a frame.
+  const uncachedBlocks = []
+  for (const block of mermaidBlocks) {
+    const cachedSvg = mermaidSvgCache.get(block.textContent)
+    if (cachedSvg) {
+      swapInMermaidSvg(block, cachedSvg)
+    } else {
+      uncachedBlocks.push(block)
+    }
+  }
+  if (uncachedBlocks.length === 0) return
 
   let mermaid
   try {
@@ -70,13 +120,20 @@ async function renderMermaidBlocks(mermaidBlocks, element, token) {
   // Render each diagram off-DOM and swap it in only on success, so a
   // superseded render or a syntax error mid-typing never leaves an empty
   // div where the code block was. The previous <pre> stays until then.
-  for (let index = 0; index < mermaidBlocks.length; index++) {
-    const block = mermaidBlocks[index]
+  for (let index = 0; index < uncachedBlocks.length; index++) {
+    const block = uncachedBlocks[index]
     if (latestRenderPerElement.get(element) !== token) return
     if (!block.isConnected) return
 
-    const pre = block.closest("pre")
     const source = block.textContent
+
+    // A duplicate of this diagram earlier in the same pass may have
+    // filled the cache while this render was being set up.
+    const cachedSvg = mermaidSvgCache.get(source)
+    if (cachedSvg) {
+      swapInMermaidSvg(block, cachedSvg)
+      continue
+    }
 
     let svg
     try {
@@ -93,14 +150,8 @@ async function renderMermaidBlocks(mermaidBlocks, element, token) {
     if (latestRenderPerElement.get(element) !== token) return
     if (!block.isConnected) return
 
-    const container = document.createElement("div")
-    container.classList.add("mermaid")
-    container.innerHTML = svg
-    if (pre) {
-      pre.replaceWith(container)
-    } else {
-      block.replaceWith(container)
-    }
+    cacheMermaidSvg(source, svg)
+    swapInMermaidSvg(block, svg)
   }
 }
 

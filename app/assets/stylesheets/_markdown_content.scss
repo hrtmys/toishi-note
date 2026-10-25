@@ -3,6 +3,11 @@
 // lib/markdown_renderer.js.
 
 .markdown-content {
+  // An unbroken string like a pasted long URL has no wrap opportunity,
+  // so without this it forces the whole pane to scroll sideways. Code
+  // blocks are unaffected: <pre> keeps its own overflow-x scrolling.
+  overflow-wrap: break-word;
+
   table {
     width: 100%;
     margin-bottom: 1rem;
