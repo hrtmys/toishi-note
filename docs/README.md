@@ -2,7 +2,7 @@
 title: Docs
 description: Documentation index for Toishi Note
 status: living
-updated: 2026-08-09
+updated: 2026-10-25
 ---
 
 # Docs
@@ -17,6 +17,7 @@ Every file starts with YAML frontmatter (`title` / `description` / `status` / `u
 
 - **`product/`** — product direction and UX/UI decisions.
   - [roadmap.md](product/roadmap.md) — what ships from the v0.1.0 public beta through v2.0, and why each feature was accepted, rescoped, or dropped
+  - [editor.md](product/editor.md) — what the Markdown editor supports, for users: which list markers work (CommonMark only) and which characters are not converted
   - [ux-roadmap.md.old](product/ux-roadmap.md.old) — archived. Superseded by the above for *what ships when*, but still the record of *why* for the persona, the auth design, and several features that took more than one attempt to get right.
 - **`engineering/`** — dev environment and coding rules, for contributors.
   - [dev-environment.md](engineering/dev-environment.md) — `bin/d`/`Dockerfile.dev` design decisions
