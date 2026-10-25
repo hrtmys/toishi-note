@@ -38,7 +38,11 @@
   <body data-controller="navigation">
     <%= yield %>
 
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;" data-controller="toast">
+    <%# Bottom-center, not top-right: page controls live along the top
+        edge (the Todos hub's Copy button sat under the "Copied." toast),
+        while bottom-center clears both those and the editor's
+        bottom-right FAB. %>
+    <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1090;" data-controller="toast">
       <div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" data-toast-target="toast" data-action="toast:show@window->toast#show">
         <div class="d-flex">
           <div class="toast-body" data-toast-target="body"></div>

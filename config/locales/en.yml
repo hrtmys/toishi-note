@@ -321,6 +321,7 @@ en:
       note_moved: "Note moved."
     todos:
       copy_all: "Copy all"
+      copy_failed: "Couldn't copy the TODOs — check your connection."
     image_upload:
       uploading: "Uploading %{filename}…"
       failed: "Failed to upload %{filename}"
