@@ -22,7 +22,7 @@ Records the "why" behind [`Dockerfile.dev`](../../Dockerfile.dev) and [`bin/d`](
 
 ## System packages the base image doesn't include
 
-The base image (`ruby:4.0.4-slim`) is a plain Ruby image with no Node and none of what this app needs beyond that. What `Dockerfile.dev` adds, and why:
+The base image (`ruby:4.0.10-slim`) is a plain Ruby image with no Node and none of what this app needs beyond that. What `Dockerfile.dev` adds, and why:
 
 - **`libvips42t64`** — `image_processing`/`ruby-vips` (Gemfile) load it via FFI at runtime, not at `bundle install` time. Without it, the app doesn't even boot (`bin/rails` itself fails as soon as it requires `vips`).
 - **`chromium` + `chromium-driver`** — `bin/rails test:system` drives headless Chrome (see [`test/application_system_test_case.rb`](../../test/application_system_test_case.rb)). CI gets a browser for free from the GitHub-hosted runner image; this image doesn't, so `Dockerfile.dev` installs one explicitly. `chromium-driver` provides `chromedriver` on `PATH`, which Selenium's Selenium Manager picks up automatically — no extra Capybara config needed.
