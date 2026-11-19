@@ -5,7 +5,7 @@
 # Everything actually runs via bin/d, which bind-mounts the repo and runs as the host
 # uid/gid — see bin/d for why. Don't `docker run` this image by hand.
 
-ARG RUBY_VERSION=4.0.4
+ARG RUBY_VERSION=4.0.10
 FROM docker.io/library/ruby:${RUBY_VERSION}-slim
 
 # libvips42t64: image_processing/ruby-vips (Gemfile) load it via FFI at runtime, not at
